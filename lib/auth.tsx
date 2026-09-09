@@ -35,33 +35,80 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = React.useState(true)
 
   React.useEffect(() => {
-    if (isSupabaseConfigured && supabase) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session?.user) {
-          mapAndSetSupabaseUser(session.user)
-        } else {
-          setUser(null)
-        }
-        setIsLoading(false)
-      })
+    let isMounted = true
 
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        (_event, session) => {
-          if (session?.user) {
-            mapAndSetSupabaseUser(session.user)
-          } else {
+    const initAuth = async () => {
+      // 1. Check if user previously logged in as Guest
+      if (typeof window !== "undefined") {
+        try {
+          const isGuestSaved = localStorage.getItem("it_things_guest_session")
+          if (isGuestSaved === "true") {
+            if (isMounted) {
+              setUser({
+                id: "guest-user",
+                name: "Tamu Internal IT",
+                email: "tamu@it-internal.local",
+                role: "admin",
+                isGuest: true,
+              })
+              setIsLoading(false)
+            }
+            return
+          }
+        } catch (e) {
+          console.warn("Local storage check error:", e)
+        }
+      }
+
+      // 2. Check Supabase session
+      if (isSupabaseConfigured && supabase) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+          if (session?.user && isMounted) {
+            await mapAndSetSupabaseUser(session.user)
+          } else if (isMounted) {
             setUser(null)
           }
+        } catch (err) {
+          console.warn("Error checking supabase session:", err)
+          if (isMounted) setUser(null)
+        } finally {
+          if (isMounted) setIsLoading(false)
+        }
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (_event, session) => {
+            if (!isMounted) return
+            if (session?.user) {
+              await mapAndSetSupabaseUser(session.user)
+            } else {
+              const isGuestSaved =
+                typeof window !== "undefined"
+                  ? localStorage.getItem("it_things_guest_session") === "true"
+                  : false
+              if (!isGuestSaved) {
+                setUser(null)
+              }
+            }
+            setIsLoading(false)
+          }
+        )
+
+        return () => {
+          subscription.unsubscribe()
+        }
+      } else {
+        if (isMounted) {
+          setUser(null)
           setIsLoading(false)
         }
-      )
-
-      return () => {
-        subscription.unsubscribe()
       }
-    } else {
-      setUser(null)
-      setIsLoading(false)
+    }
+
+    initAuth()
+
+    return () => {
+      isMounted = false
     }
   }, [])
 
@@ -148,6 +195,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isGuest = !!user?.isGuest || user?.id === "guest-user"
 
   const signInAsGuest = () => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("it_things_guest_session", "true")
+      } catch (e) {
+        console.warn("Local storage write error:", e)
+      }
+    }
     setUser({
       id: "guest-user",
       name: "Tamu Internal IT",
@@ -158,6 +212,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("it_things_guest_session")
+      } catch (e) {
+        console.warn("Local storage remove error:", e)
+      }
+    }
     if (isSupabaseConfigured && supabase) {
       await supabase.auth.signOut()
     }
