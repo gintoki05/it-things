@@ -1,11 +1,12 @@
-﻿"use client"
+"use client"
 
 import * as React from "react"
 import { RetroWindow } from "@/components/retro/window"
 import { RetroButton } from "@/components/retro/button"
 import { RetroInput } from "@/components/retro/input"
-import { useAuth } from "@/lib/auth-context"
-import { PlusCircle } from "lucide-react"
+import { useAuth } from "@/lib/auth"
+import { PlusCircle, AlertCircle } from "lucide-react"
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 
 interface AddItemModalProps {
   isOpen: boolean
@@ -16,7 +17,7 @@ interface AddItemModalProps {
 const EMOJI_OPTIONS = ["🍜", "🌭", "🍪", "☕", "🌶️", "🥤", "🥪", "🍬", "📦"]
 
 export function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalProps) {
-  const { currentMember } = useAuth()
+  const { user } = useAuth()
   const [name, setName] = React.useState("")
   const [category, setCategory] = React.useState("Snack Gurih")
   const [notes, setNotes] = React.useState("")
@@ -37,7 +38,7 @@ export function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalProps) {
       category,
       notes.trim(),
       selectedEmoji,
-      currentMember || "Anonim"
+      user?.name || "Anonim"
     )
 
     // Reset & close
@@ -56,6 +57,16 @@ export function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalProps) {
         className="w-full max-w-lg shadow-retro-lg"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="size-4" />
+              <div>
+                <AlertTitle>INPUT INVALID</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </div>
+            </Alert>
+          )}
+
           <div className="space-y-1.5">
             <label className="block font-mono text-xs font-semibold text-[var(--foreground)]">
               PILIH IKON RETRO / EMOJI:
@@ -120,7 +131,7 @@ export function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalProps) {
 
           <div className="pt-2 border-t border-[var(--border)] flex items-center justify-between">
             <div className="font-mono text-[11px] text-[var(--foreground-muted)]">
-              Pengusul: <span className="font-bold text-[var(--foreground)]">{currentMember}</span>
+              Pengusul: <span className="font-bold text-[var(--foreground)]">{user?.name || "Anggota Tim"}</span>
             </div>
             <div className="flex gap-2">
               <RetroButton type="button" variant="outline" size="default" onClick={onClose}>

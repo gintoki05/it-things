@@ -1,4 +1,5 @@
-﻿import { createClient } from "@supabase/supabase-js"
+import { createClient } from "@supabase/supabase-js"
+import type { Database } from "@/lib/database.types"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
 // Support both standard anon key and the newer publishable key format
@@ -15,5 +16,5 @@ export const isSupabaseConfigured = Boolean(
 )
 
 export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseKey)
+  ? createClient<Database>(supabaseUrl, supabaseKey)
   : null

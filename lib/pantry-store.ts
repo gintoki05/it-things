@@ -21,189 +21,31 @@ export interface PantryItem {
   created_at: string
 }
 
-const DEFAULT_MOCK_ITEMS: PantryItem[] = [
-  {
-    id: "mock-1",
-    name: "Pop Mie (combine)",
-    detail: "Rasa bebas, nanti di-mix",
-    emoji: "🍜",
-    month_period: "2026-09",
-    proposed_by_id: "u-1",
-    proposed_by_name: "Dika",
-    voters: [
-      { id: "u-1", name: "Dika" },
-      { id: "u-2", name: "Andi" },
-      { id: "u-3", name: "Bima" },
-      { id: "u-4", name: "Dewi" },
-      { id: "u-5", name: "Raka" },
-      { id: "u-6", name: "Sari" },
-      { id: "u-7", name: "Fajar" },
-      { id: "u-8", name: "Agus" },
-    ],
-    created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
-  },
-  {
-    id: "mock-2",
-    name: "Sosis 2/3",
-    detail: "Untuk stok kulkas",
-    emoji: "🌭",
-    month_period: "2026-09",
-    proposed_by_id: "u-2",
-    proposed_by_name: "Andi",
-    voters: [
-      { id: "u-2", name: "Andi" },
-      { id: "u-1", name: "Dika" },
-      { id: "u-5", name: "Raka" },
-      { id: "u-7", name: "Fajar" },
-      { id: "u-8", name: "Agus" },
-      { id: "u-3", name: "Bima" },
-    ],
-    created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-  },
-  {
-    id: "mock-3",
-    name: "Jajan (menyesuaikan di JM)",
-    detail: "Lihat situasi dan diskon :D",
-    emoji: "🍪",
-    month_period: "2026-09",
-    proposed_by_id: "u-4",
-    proposed_by_name: "Dewi",
-    voters: [
-      { id: "u-4", name: "Dewi" },
-      { id: "u-6", name: "Sari" },
-      { id: "u-3", name: "Bima" },
-      { id: "u-9", name: "Nina" },
-      { id: "u-5", name: "Raka" },
-    ],
-    created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-  },
-  {
-    id: "mock-4",
-    name: "Saos Pedas 3",
-    detail: "Yang biasa, jangan yang terlalu pedas",
-    emoji: "🌶️",
-    month_period: "2026-09",
-    proposed_by_id: "u-5",
-    proposed_by_name: "Raka",
-    voters: [
-      { id: "u-5", name: "Raka" },
-      { id: "u-2", name: "Andi" },
-      { id: "u-7", name: "Fajar" },
-      { id: "u-3", name: "Bima" },
-      { id: "u-8", name: "Agus" },
-      { id: "u-1", name: "Dika" },
-      { id: "u-4", name: "Dewi" },
-    ],
-    created_at: new Date(Date.now() - 86400000).toISOString(),
-  },
-  {
-    id: "mock-5",
-    name: "Kecap 1",
-    detail: "Bango / sesuai stok",
-    emoji: "🥢",
-    month_period: "2026-09",
-    proposed_by_id: "u-3",
-    proposed_by_name: "Bima",
-    voters: [
-      { id: "u-3", name: "Bima" },
-      { id: "u-6", name: "Sari" },
-      { id: "u-9", name: "Nina" },
-      { id: "u-2", name: "Andi" },
-    ],
-    created_at: new Date(Date.now() - 60000000).toISOString(),
-  },
-  {
-    id: "mock-6",
-    name: "Susu UHT 4",
-    detail: "Full cream / low fat (bebas)",
-    emoji: "🥛",
-    month_period: "2026-09",
-    proposed_by_id: "u-4",
-    proposed_by_name: "Dewi",
-    voters: [
-      { id: "u-4", name: "Dewi" },
-      { id: "u-9", name: "Nina" },
-      { id: "u-7", name: "Fajar" },
-      { id: "u-2", name: "Andi" },
-      { id: "u-6", name: "Sari" },
-      { id: "u-5", name: "Raka" },
-    ],
-    created_at: new Date(Date.now() - 50000000).toISOString(),
-  },
-  {
-    id: "mock-7",
-    name: "Teh",
-    detail: "Teh celup / teh tubruk",
-    emoji: "🍵",
-    month_period: "2026-09",
-    proposed_by_id: "u-8",
-    proposed_by_name: "Agus",
-    voters: [
-      { id: "u-8", name: "Agus" },
-      { id: "u-5", name: "Raka" },
-      { id: "u-6", name: "Sari" },
-      { id: "u-4", name: "Dewi" },
-      { id: "u-3", name: "Bima" },
-    ],
-    created_at: new Date(Date.now() - 40000000).toISOString(),
-  },
-  {
-    id: "mock-8",
-    name: "Kopi Rentengan",
-    detail: "Indocafe / Good Day / Bebas",
-    emoji: "☕",
-    month_period: "2026-09",
-    proposed_by_id: "u-7",
-    proposed_by_name: "Fajar",
-    voters: [
-      { id: "u-7", name: "Fajar" },
-      { id: "u-2", name: "Andi" },
-      { id: "u-5", name: "Raka" },
-      { id: "u-3", name: "Bima" },
-      { id: "u-8", name: "Agus" },
-      { id: "u-1", name: "Dika" },
-      { id: "u-4", name: "Dewi" },
-    ],
-    created_at: new Date(Date.now() - 30000000).toISOString(),
-  },
-]
-
 export function usePantryStore(currentMonth: string = "2026-09") {
-  const [items, setItems] = React.useState<PantryItem[]>(DEFAULT_MOCK_ITEMS)
-  const [isLoading, setIsLoading] = React.useState(false)
+  const [items, setItems] = React.useState<PantryItem[]>([])
+  const [isLoading, setIsLoading] = React.useState(true)
   const [isUsingSupabase, setIsUsingSupabase] = React.useState(false)
+  const [tableMissing, setTableMissing] = React.useState(false)
+
+  // One-time cleanup of all legacy mock/test localStorage items on initial load
+  React.useEffect(() => {
+    try {
+      if (typeof window !== "undefined") {
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i)
+          if (key && key.startsWith("ti_pantry_")) {
+            localStorage.removeItem(key)
+          }
+        }
+      }
+    } catch {}
+  }, [])
 
   // Fetch Items & Votes from Supabase
   const fetchData = React.useCallback(async () => {
     if (!isSupabaseConfigured || !supabase) {
-      // LocalStorage / Mock fallback
-      try {
-        const local = localStorage.getItem(`ti_pantry_${currentMonth}`)
-        if (local) {
-          const parsed = JSON.parse(local)
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const normalized = parsed.map((item: any) => ({
-              ...item,
-              voters: Array.isArray(item.voters)
-                ? item.voters.map((v: any) => (typeof v === "string" ? { id: v, name: v } : v))
-                : Array.isArray(item.votes)
-                ? item.votes.map((v: any) => (typeof v === "string" ? { id: v, name: v } : v))
-                : [],
-            }))
-            setItems(normalized)
-          } else {
-            setItems(DEFAULT_MOCK_ITEMS)
-            localStorage.setItem(`ti_pantry_${currentMonth}`, JSON.stringify(DEFAULT_MOCK_ITEMS))
-          }
-        } else {
-          setItems(DEFAULT_MOCK_ITEMS)
-          localStorage.setItem(`ti_pantry_${currentMonth}`, JSON.stringify(DEFAULT_MOCK_ITEMS))
-        }
-      } catch {
-        setItems(DEFAULT_MOCK_ITEMS)
-      } finally {
-        setIsLoading(false)
-      }
+      setItems([])
+      setIsLoading(false)
       return
     }
 
@@ -215,7 +57,29 @@ export function usePantryStore(currentMonth: string = "2026-09") {
         .eq("month_period", currentMonth)
         .order("created_at", { ascending: true })
 
-      if (itemsErr) throw itemsErr
+      if (itemsErr) {
+        // Check if table does not exist in schema cache
+        if (
+          itemsErr.code === "PGRST205" ||
+          itemsErr.code === "PGRST204" ||
+          itemsErr.code === "42P01" ||
+          itemsErr.message?.includes("schema cache") ||
+          itemsErr.message?.includes("does not exist") ||
+          itemsErr.message?.includes("404")
+        ) {
+          setTableMissing(true)
+          try {
+            const local = localStorage.getItem(`ti_pantry_${currentMonth}`)
+            if (local) {
+              setItems(JSON.parse(local))
+            }
+          } catch {}
+          return
+        }
+        throw itemsErr
+      }
+
+      setTableMissing(false)
 
       const { data: dbVotes, error: votesErr } = await supabase
         .from("pantry_votes")
@@ -223,38 +87,49 @@ export function usePantryStore(currentMonth: string = "2026-09") {
 
       if (votesErr) throw votesErr
 
-      if (dbItems && dbItems.length > 0) {
-        const mapped: PantryItem[] = dbItems.map((it) => {
-          const itemVoters: Voter[] = (dbVotes || [])
-            .filter((v) => v.item_id === it.id)
-            .map((v) => ({
-              id: v.user_id,
-              name: v.user_name,
-              avatarUrl: v.user_avatar,
-            }))
+      const mapped: PantryItem[] = (dbItems || []).map((it) => {
+        const itemVoters: Voter[] = (dbVotes || [])
+          .filter((v) => v.item_id === it.id)
+          .map((v) => ({
+            id: v.user_id,
+            name: v.user_name,
+            avatarUrl: v.user_avatar,
+          }))
 
-          return {
-            id: it.id,
-            name: it.name,
-            detail: it.detail || "",
-            emoji: it.emoji || "📦",
-            month_period: it.month_period,
-            proposed_by_id: it.proposed_by_id,
-            proposed_by_name: it.proposed_by_name,
-            voters: itemVoters,
-            created_at: it.created_at,
+        return {
+          id: it.id,
+          name: it.name,
+          detail: it.detail || "",
+          emoji: it.emoji || "📦",
+          month_period: it.month_period,
+          proposed_by_id: it.proposed_by_id,
+          proposed_by_name: it.proposed_by_name,
+          voters: itemVoters,
+          created_at: it.created_at,
+        }
+      })
+
+      setItems(mapped)
+    } catch (err: unknown) {
+      const errorObj = err as { code?: string; message?: string }
+      if (
+        errorObj?.code === "PGRST205" ||
+        errorObj?.code === "PGRST204" ||
+        errorObj?.code === "42P01" ||
+        errorObj?.message?.includes("schema cache") ||
+        errorObj?.message?.includes("does not exist")
+      ) {
+        setTableMissing(true)
+        try {
+          const local = localStorage.getItem(`ti_pantry_${currentMonth}`)
+          if (local) {
+            setItems(JSON.parse(local))
           }
-        })
-        setItems(mapped)
+        } catch {}
       } else {
-        // Table exists but empty -> seed with default items or load local
-        const local = typeof window !== "undefined" ? localStorage.getItem(`ti_pantry_${currentMonth}`) : null
-        setItems(local ? JSON.parse(local) : DEFAULT_MOCK_ITEMS)
+        console.warn("Supabase fetch failed or tables not ready:", err)
+        setItems([])
       }
-    } catch (err) {
-      console.warn("Supabase fetch failed or tables not created yet, using local/mock items:", err)
-      const local = typeof window !== "undefined" ? localStorage.getItem(`ti_pantry_${currentMonth}`) : null
-      setItems(local ? JSON.parse(local) : DEFAULT_MOCK_ITEMS)
     } finally {
       setIsLoading(false)
     }
@@ -312,8 +187,9 @@ export function usePantryStore(currentMonth: string = "2026-09") {
       return updated
     })
 
-    // Sync to Supabase if configured
-    if (isSupabaseConfigured && supabase) {
+    // Sync to Supabase if configured and authenticated
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(itemId)
+    if (isSupabaseConfigured && supabase && isUUID && voter.id !== "guest-user") {
       const target = items.find((i) => i.id === itemId)
       const hasVoted = target?.voters.some((v) => v.id === voter.id)
 
@@ -344,7 +220,11 @@ export function usePantryStore(currentMonth: string = "2026-09") {
     emoji: string,
     user: Voter
   ) => {
-    const tempId = "item-" + Date.now()
+    const tempId =
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : "00000000-0000-4000-8000-" + String(Date.now()).slice(-12).padStart(12, "0")
+
     const newItem: PantryItem = {
       id: tempId,
       name,
@@ -366,7 +246,7 @@ export function usePantryStore(currentMonth: string = "2026-09") {
       return updated
     })
 
-    if (isSupabaseConfigured && supabase) {
+    if (isSupabaseConfigured && supabase && user.id !== "guest-user") {
       try {
         const { data, error } = await supabase
           .from("pantry_items")
@@ -382,7 +262,27 @@ export function usePantryStore(currentMonth: string = "2026-09") {
           .select()
           .single()
 
-        if (!error && data) {
+        if (error) {
+          if (
+            error.code === "PGRST205" ||
+            error.code === "PGRST204" ||
+            error.code === "42P01" ||
+            error.message?.includes("schema cache") ||
+            error.message?.includes("does not exist")
+          ) {
+            setTableMissing(true)
+          } else {
+            console.error(
+              "Supabase addItem error:",
+              error.message || error.details || error.hint || error.code || JSON.stringify(error)
+            )
+          }
+        } else if (data) {
+          // Replace tempId with actual UUID from database in state
+          setItems((prev) =>
+            prev.map((it) => (it.id === tempId ? { ...it, id: data.id } : it))
+          )
+
           await supabase.from("pantry_votes").insert({
             item_id: data.id,
             user_id: user.id,
@@ -391,18 +291,110 @@ export function usePantryStore(currentMonth: string = "2026-09") {
           })
           fetchData()
         }
-      } catch (err) {
-        console.error("Supabase addItem error:", err)
+      } catch (err: unknown) {
+        const errorObj = err as { code?: string; message?: string }
+        if (
+          errorObj?.code === "PGRST205" ||
+          errorObj?.code === "PGRST204" ||
+          errorObj?.code === "42P01"
+        ) {
+          setTableMissing(true)
+        } else {
+          console.error("Supabase addItem exception:", err)
+        }
       }
     }
+  }
+
+  // Delete Item
+  const deleteItem = async (
+    itemId: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    // Check if UUID format
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(itemId)
+
+    // Optimistic UI update
+    setItems((prev) => {
+      const updated = prev.filter((i) => i.id !== itemId)
+      try {
+        localStorage.setItem(`ti_pantry_${currentMonth}`, JSON.stringify(updated))
+      } catch {}
+      return updated
+    })
+
+    if (isSupabaseConfigured && supabase) {
+      if (!isUUID) {
+        // In local buffer or non-UUID temp ID
+        return { success: true }
+      }
+
+      try {
+        // Step 1: Clean up votes first to prevent foreign key constraint violation
+        const { error: votesError } = await supabase
+          .from("pantry_votes")
+          .delete()
+          .eq("item_id", itemId)
+
+        if (votesError) {
+          console.warn("Supabase delete votes warning:", votesError)
+        }
+
+        // Step 2: Delete the pantry item itself
+        const { error } = await supabase
+          .from("pantry_items")
+          .delete()
+          .eq("id", itemId)
+
+        if (error) {
+          if (
+            error.code === "PGRST205" ||
+            error.code === "PGRST204" ||
+            error.code === "42P01" ||
+            error.message?.includes("schema cache") ||
+            error.message?.includes("does not exist")
+          ) {
+            setTableMissing(true)
+            // Table doesn't exist in Supabase database, item already deleted locally!
+            return { success: true }
+          }
+          console.error("Supabase deleteItem error:", error)
+          await fetchData()
+          return {
+            success: false,
+            error: error.message || "Gagal menghapus item dari Supabase.",
+          }
+        }
+      } catch (err: unknown) {
+        const errorObj = err as { code?: string; message?: string }
+        const msg =
+          err instanceof Error ? err.message : "Terjadi kesalahan saat menghapus data."
+        if (
+          errorObj?.code === "PGRST205" ||
+          errorObj?.code === "PGRST204" ||
+          errorObj?.code === "42P01" ||
+          msg.includes("schema cache") ||
+          msg.includes("does not exist")
+        ) {
+          setTableMissing(true)
+          return { success: true }
+        }
+        console.error("Supabase deleteItem exception:", err)
+        await fetchData()
+        return { success: false, error: msg }
+      }
+    }
+
+    return { success: true }
   }
 
   return {
     items,
     isLoading,
     isUsingSupabase,
+    tableMissing,
     toggleVote,
     addItem,
+    deleteItem,
     refresh: fetchData,
   }
 }

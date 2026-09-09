@@ -1,41 +1,43 @@
-﻿"use client"
+"use client"
 
 import * as React from "react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
-import type { User, Session } from "@supabase/supabase-js"
+import type { User } from "@supabase/supabase-js"
 
-interface AuthUser {
+export interface AuthUser {
   id: string
   email: string
   name: string
   avatarUrl?: string
+  role?: "member" | "treasurer"
+  isGuest?: boolean
 }
 
 interface AuthContextType {
   user: AuthUser | null
   isLoading: boolean
   isSupabaseConnected: boolean
+  isTreasurer: boolean
+  isGuest: boolean
   signInWithGoogle: () => Promise<void>
-  signInAsDemo: (name?: string) => void
+  signInAsGuest: () => void
   signOut: () => Promise<void>
+  setDemoUserRole?: (role: "member" | "treasurer") => void
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined)
-
-const DEMO_USER_KEY = "it_things_demo_user"
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = React.useState(true)
 
   React.useEffect(() => {
-    // 1. If Supabase is configured, listen to real session
     if (isSupabaseConfigured && supabase) {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session?.user) {
           mapAndSetSupabaseUser(session.user)
         } else {
-          checkDemoUser()
+          setUser(null)
         }
         setIsLoading(false)
       })
@@ -55,40 +57,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         subscription.unsubscribe()
       }
     } else {
-      // 2. Fallback: Check local demo user
-      checkDemoUser()
+      setUser(null)
       setIsLoading(false)
     }
   }, [])
 
-  const mapAndSetSupabaseUser = (sbUser: User) => {
+  const mapAndSetSupabaseUser = async (sbUser: User) => {
     const meta = sbUser.user_metadata || {}
+    let role: "member" | "treasurer" = "member"
+
+    // Check team_members table for role
+    try {
+      if (supabase) {
+        const { data } = await supabase
+          .from("team_members")
+          .select("role")
+          .eq("user_id", sbUser.id)
+          .maybeSingle()
+
+        if (data?.role) {
+          role = data.role as "member" | "treasurer"
+        } else {
+          // If first time, insert as member
+          await supabase.from("team_members").upsert({
+            user_id: sbUser.id,
+            email: sbUser.email || "",
+            name: meta.full_name || meta.name || sbUser.email?.split("@")[0] || "Anggota Tim",
+            avatar_url: meta.avatar_url || meta.picture || "",
+            role: "member",
+          })
+        }
+      }
+    } catch (e) {
+      console.warn("Could not sync team_member role:", e)
+    }
+
     const authUser: AuthUser = {
       id: sbUser.id,
       email: sbUser.email || "",
       name: meta.full_name || meta.name || sbUser.email?.split("@")[0] || "Anggota Tim",
       avatarUrl: meta.avatar_url || meta.picture,
+      role,
     }
     setUser(authUser)
-    try {
-      localStorage.removeItem(DEMO_USER_KEY)
-    } catch {}
   }
 
-  const checkDemoUser = () => {
-    try {
-      const saved = localStorage.getItem(DEMO_USER_KEY)
-      if (saved) {
-        setUser(JSON.parse(saved))
-      }
-    } catch {}
+  const setDemoUserRole = (role: "member" | "treasurer") => {
+    setUser((prev) => (prev ? { ...prev, role } : prev))
   }
+
+  const isTreasurer = user?.role === "treasurer"
 
   const signInWithGoogle = async () => {
     if (!isSupabaseConfigured || !supabase) {
-      // Graceful demo fallback if keys not configured yet
-      signInAsDemo("Ajie (Lead Dev)")
-      return
+      throw new Error("Supabase belum dikonfigurasi. Periksa NEXT_PUBLIC_SUPABASE_URL dan key di .env.local.")
     }
 
     const origin = typeof window !== "undefined" ? window.location.origin : ""
@@ -109,17 +131,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const signInAsDemo = (name: string = "Ajie") => {
-    const demoUser: AuthUser = {
-      id: "demo-user-" + name.toLowerCase().replace(/\s+/g, "-"),
-      name: name,
-      email: `${name.toLowerCase().replace(/\s+/g, "")}@intra.it`,
-      avatarUrl: "",
-    }
-    setUser(demoUser)
-    try {
-      localStorage.setItem(DEMO_USER_KEY, JSON.stringify(demoUser))
-    } catch {}
+  const isGuest = !!user?.isGuest || user?.id === "guest-user"
+
+  const signInAsGuest = () => {
+    setUser({
+      id: "guest-user",
+      name: "Tamu Internal IT",
+      email: "tamu@it-internal.local",
+      role: "treasurer", // default to treasurer so they can test everything
+      isGuest: true,
+    })
   }
 
   const signOut = async () => {
@@ -127,9 +148,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await supabase.auth.signOut()
     }
     setUser(null)
-    try {
-      localStorage.removeItem(DEMO_USER_KEY)
-    } catch {}
   }
 
   return (
@@ -138,9 +156,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         isLoading,
         isSupabaseConnected: isSupabaseConfigured,
+        isTreasurer,
+        isGuest,
         signInWithGoogle,
-        signInAsDemo,
+        signInAsGuest,
         signOut,
+        setDemoUserRole,
       }}
     >
       {children}
@@ -155,3 +176,4 @@ export function useAuth() {
   }
   return context
 }
+

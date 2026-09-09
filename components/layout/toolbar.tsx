@@ -1,9 +1,9 @@
-﻿"use client"
+"use client"
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
 import { StatusChip } from "@/components/retro/status-chip"
-import { useAuth } from "@/lib/auth-context"
+import { useAuth } from "@/lib/auth"
 import { 
   Home, 
   UtensilsCrossed, 
@@ -23,7 +23,7 @@ interface ToolbarProps {
 }
 
 export function Toolbar({ activeTab, onTabChange, isUsingSupabase }: ToolbarProps) {
-  const { currentMember, lockSystem, setMember, teamMembers } = useAuth()
+  const { user, signOut } = useAuth()
   const [time, setTime] = React.useState<string>("")
 
   React.useEffect(() => {
@@ -61,25 +61,20 @@ export function Toolbar({ activeTab, onTabChange, isUsingSupabase }: ToolbarProp
             <StatusChip status="pending" label="SYS: LOCAL MODE" />
           )}
 
-          <div className="hidden md:flex items-center gap-1.5 px-2 py-0.5 rounded-[2px] bg-[var(--surface)] border border-[var(--border)] text-[11px]">
-            <Cpu className="size-3 text-[var(--primary)]" />
-            <span>USERS: {teamMembers.length}</span>
-          </div>
-
           <div className="hidden sm:block px-2 py-0.5 rounded-[2px] bg-[var(--surface)] border border-[var(--border)] text-[11px]">
             {time || "00:00:00"}
           </div>
 
-          {currentMember && (
+          {user && (
             <div className="flex items-center gap-1.5 pl-2 border-l border-[var(--border)]">
               <div className="flex items-center gap-1 text-[11px] font-semibold text-[var(--primary)]">
                 <UserCheck className="size-3.5" />
-                <span>{currentMember}</span>
+                <span>{user.name}</span>
               </div>
               <button
                 type="button"
-                onClick={lockSystem}
-                title="Lock / Ganti Akun"
+                onClick={() => signOut()}
+                title="Keluar / Ganti Akun"
                 className="p-1 hover:text-[var(--danger)] transition-colors"
               >
                 <LogOut className="size-3" />
