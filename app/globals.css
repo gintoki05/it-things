@@ -127,3 +127,42 @@
     @apply font-sans;
     }
 }
+
+/* Retro Utilities & 3D Bevels */
+.retro-window-frame {
+  background: #FFFFFF;
+  border: 1px solid #7D8E9E;
+  box-shadow: 1px 1px 0px rgba(0, 0, 0, 0.05);
+}
+
+.retro-titlebar {
+  background: linear-gradient(180deg, #ADC0D2 0%, #9FB2C4 100%);
+  border-bottom: 1px solid #7D8E9E;
+  color: #14253D;
+}
+
+.retro-button-3d {
+  background: #EEF2F6;
+  border: 1px solid #7D8E9E;
+  border-top-color: #DDE3EA;
+  border-left-color: #DDE3EA;
+  box-shadow: 1px 1px 0px #7D8E9E;
+  color: #14253D;
+}
+
+.retro-button-3d:hover:not(:disabled) {
+  background: #E2E8F0;
+}
+
+.retro-button-3d:active:not(:disabled) {
+  transform: translate(1px, 1px);
+  box-shadow: none;
+}
+
+.retro-browser-tab {
+  background: #E5E9EE;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  border: 1px solid #95A5B5;
+  border-bottom: none;
+}

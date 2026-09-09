@@ -1,15 +1,29 @@
-import { Geist, Geist_Mono } from "next/font/google"
-
+import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'})
-
-const fontMono = Geist_Mono({
+const ibmSans = IBM_Plex_Sans({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans",
+})
+
+const ibmMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-mono",
 })
+
+export const metadata = {
+  title: "IT-THINGS.EXE - Tim TI",
+  description: "Internal IT utility and team workspace — Looks old, works modern",
+  icons: {
+    icon: "/it-things-icon.png",
+    shortcut: "/it-things-icon.png",
+    apple: "/it-things-icon.png",
+  },
+}
 
 export default function RootLayout({
   children,
@@ -20,9 +34,9 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("antialiased", fontMono.variable, "font-sans", geist.variable)}
+      className={cn("antialiased", ibmMono.variable, ibmSans.variable)}
     >
-      <body>
+      <body className="font-sans antialiased bg-[#C4CCD3] text-[#14253D] selection:bg-[#3156A6] selection:text-white">
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
