@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useDesktop, AppId } from "./desktop-context"
 import { cn } from "@/lib/utils"
+import { RetroIcon } from "@/components/ui/retro-icon"
 
 interface DesktopWindowProps {
   id: AppId
@@ -142,7 +143,7 @@ export function DesktopWindow({ id, children, className, bodyClassName }: Deskto
         )}
       >
         <div className="flex items-center gap-2 truncate">
-          <span className="text-sm shrink-0">{win.icon}</span>
+          <RetroIcon name={win.icon || win.id} iconSize={32} className="size-4 shrink-0 object-contain" />
           <span className="truncate tracking-wide font-sans text-[12px]">{win.title}</span>
         </div>
 

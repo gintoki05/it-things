@@ -13,6 +13,7 @@ import { PantryApp } from "@/components/apps/pantry-app"
 import { WheelApp } from "@/components/apps/wheel-app"
 import { SplitBillApp } from "@/components/apps/split-bill-app"
 import { KasApp } from "@/components/apps/kas-app"
+import { TeamApp } from "@/components/apps/team-app"
 
 function DesktopWorkspace() {
   const [showLoginModal, setShowLoginModal] = React.useState(false)
@@ -59,6 +60,11 @@ function DesktopWorkspace() {
       {/* Retro Window: Kas.exe */}
       <DesktopWindow id="kas">
         <KasApp />
+      </DesktopWindow>
+
+      {/* Retro Window: Team.exe */}
+      <DesktopWindow id="team">
+        <TeamApp />
       </DesktopWindow>
 
       {/* Bottom Retro Taskbar */}

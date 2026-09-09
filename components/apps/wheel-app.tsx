@@ -21,6 +21,7 @@ import {
   Quote,
   Bike
 } from "lucide-react"
+import { RetroIcon } from "@/components/ui/retro-icon"
 
 export interface PlaceItem {
   id: string
@@ -460,9 +461,9 @@ export function WheelApp() {
               {/* Winner Name */}
               <div className="mt-2 text-center">
                 <div className="font-black text-xl sm:text-2xl text-[#14253D] tracking-tight flex items-center justify-center gap-2 leading-snug">
-                  <span className="text-lg select-none">🎉</span>
+                  <RetroIcon name="trophy" iconSize={32} className="size-6 inline-block object-contain" />
                   <span>{selectedWinner.name}</span>
-                  <span className="text-lg select-none">🎉</span>
+                  <RetroIcon name="trophy" iconSize={32} className="size-6 inline-block object-contain" />
                 </div>
               </div>
 

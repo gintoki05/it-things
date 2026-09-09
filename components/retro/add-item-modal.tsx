@@ -7,6 +7,7 @@ import { RetroInput } from "@/components/retro/input"
 import { useAuth } from "@/lib/auth"
 import { PlusCircle, AlertCircle } from "lucide-react"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
+import { RetroIcon, RetroIconName } from "@/components/ui/retro-icon"
 
 interface AddItemModalProps {
   isOpen: boolean
@@ -14,14 +15,25 @@ interface AddItemModalProps {
   onAdd: (name: string, category: string, notes: string, emoji: string, proposedBy: string) => void
 }
 
-const EMOJI_OPTIONS = ["🍜", "🌭", "🍪", "☕", "🌶️", "🥤", "🥪", "🍬", "📦"]
+const ICON_OPTIONS: RetroIconName[] = [
+  "pantry",
+  "coffee",
+  "gift",
+  "favorite",
+  "like",
+  "idea",
+  "task",
+  "trophy",
+  "poll",
+  "archive",
+]
 
 export function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalProps) {
   const { user } = useAuth()
   const [name, setName] = React.useState("")
   const [category, setCategory] = React.useState("Snack Gurih")
   const [notes, setNotes] = React.useState("")
-  const [selectedEmoji, setSelectedEmoji] = React.useState("🍜")
+  const [selectedEmoji, setSelectedEmoji] = React.useState<string>("pantry")
   const [error, setError] = React.useState("")
 
   if (!isOpen) return null
@@ -69,21 +81,22 @@ export function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalProps) {
 
           <div className="space-y-1.5">
             <label className="block font-mono text-xs font-semibold text-[var(--foreground)]">
-              PILIH IKON RETRO / EMOJI:
+              PILIH IKON RETRO:
             </label>
             <div className="flex flex-wrap gap-2">
-              {EMOJI_OPTIONS.map((em) => (
+              {ICON_OPTIONS.map((iconName) => (
                 <button
-                  key={em}
+                  key={iconName}
                   type="button"
-                  onClick={() => setSelectedEmoji(em)}
-                  className={`size-9 rounded-[3px] border flex items-center justify-center text-lg transition-colors ${
-                    selectedEmoji === em
-                      ? "border-[var(--primary)] bg-[var(--primary-soft)] scale-105"
-                      : "border-[var(--border)] bg-white dark:bg-[var(--surface-muted)] hover:bg-[var(--surface-muted)]"
+                  onClick={() => setSelectedEmoji(iconName)}
+                  title={iconName}
+                  className={`size-9 rounded-[3px] border flex items-center justify-center p-1 transition-all ${
+                    selectedEmoji === iconName
+                      ? "border-[#1E4E8C] bg-blue-100/60 shadow-inner scale-105"
+                      : "border-[var(--border)] bg-white dark:bg-[var(--surface-muted)] hover:bg-[#EEF2F6]"
                   }`}
                 >
-                  {em}
+                  <RetroIcon name={iconName} iconSize={32} className="size-6 object-contain" />
                 </button>
               ))}
             </div>

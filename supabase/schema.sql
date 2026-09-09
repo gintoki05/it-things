@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS public.team_members (
     email TEXT,
     name TEXT NOT NULL,
     avatar_url TEXT,
-    role TEXT NOT NULL DEFAULT 'member', -- 'member' | 'treasurer'
+    role TEXT NOT NULL DEFAULT 'member', -- 'member' | 'treasurer' | 'admin'
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -144,8 +144,24 @@ ALTER TABLE public.kas_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kas_dues ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
--- HELPER FUNCTION: is_treasurer()
+-- HELPER FUNCTIONS: is_admin() & is_treasurer()
 -- ============================================================
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.team_members
+    WHERE user_id = (auth.uid())::text
+      AND role = 'admin'
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated, anon;
+
 CREATE OR REPLACE FUNCTION public.is_treasurer()
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -156,7 +172,7 @@ AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.team_members
     WHERE user_id = (auth.uid())::text
-      AND role = 'treasurer'
+      AND role IN ('treasurer', 'admin')
   );
 $$;
 

@@ -4,12 +4,14 @@ import * as React from "react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import type { User } from "@supabase/supabase-js"
 
+export type UserRole = "member" | "treasurer" | "admin"
+
 export interface AuthUser {
   id: string
   email: string
   name: string
   avatarUrl?: string
-  role?: "member" | "treasurer"
+  role?: UserRole
   isGuest?: boolean
 }
 
@@ -17,12 +19,13 @@ interface AuthContextType {
   user: AuthUser | null
   isLoading: boolean
   isSupabaseConnected: boolean
+  isAdmin: boolean
   isTreasurer: boolean
   isGuest: boolean
   signInWithGoogle: () => Promise<void>
   signInAsGuest: () => void
   signOut: () => Promise<void>
-  setDemoUserRole?: (role: "member" | "treasurer") => void
+  setDemoUserRole?: (role: UserRole) => void
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined)
@@ -64,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const mapAndSetSupabaseUser = async (sbUser: User) => {
     const meta = sbUser.user_metadata || {}
-    let role: "member" | "treasurer" = "member"
+    let role: UserRole = "member"
 
     // Check team_members table for role
     try {
@@ -76,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .maybeSingle()
 
         if (data?.role) {
-          role = data.role as "member" | "treasurer"
+          role = data.role as UserRole
         } else {
           // If first time, insert as member
           await supabase.from("team_members").upsert({
@@ -102,11 +105,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(authUser)
   }
 
-  const setDemoUserRole = (role: "member" | "treasurer") => {
+  const setDemoUserRole = async (role: UserRole) => {
     setUser((prev) => (prev ? { ...prev, role } : prev))
+    if (isSupabaseConfigured && supabase && user && user.id !== "guest-user") {
+      try {
+        await supabase
+          .from("team_members")
+          .update({ role })
+          .eq("user_id", user.id)
+      } catch (e) {
+        console.warn("Could not update role in Supabase:", e)
+      }
+    }
   }
 
-  const isTreasurer = user?.role === "treasurer"
+  const isAdmin = user?.role === "admin"
+  const isTreasurer = user?.role === "treasurer" || user?.role === "admin"
 
   const signInWithGoogle = async () => {
     if (!isSupabaseConfigured || !supabase) {
@@ -138,7 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       id: "guest-user",
       name: "Tamu Internal IT",
       email: "tamu@it-internal.local",
-      role: "treasurer", // default to treasurer so they can test everything
+      role: "admin", // default to admin so they can test everything
       isGuest: true,
     })
   }
@@ -156,6 +170,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         isLoading,
         isSupabaseConnected: isSupabaseConfigured,
+        isAdmin,
         isTreasurer,
         isGuest,
         signInWithGoogle,

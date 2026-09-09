@@ -19,9 +19,9 @@ export const metadata = {
   title: "IT-THINGS.EXE - Tim TI",
   description: "Internal IT utility and team workspace — Looks old, works modern",
   icons: {
-    icon: "/it-things-icon.png",
-    shortcut: "/it-things-icon.png",
-    apple: "/it-things-icon.png",
+    icon: "/IT-THINGS-icon-pack/it-things-icon-pack/png-64/grid.png",
+    shortcut: "/IT-THINGS-icon-pack/it-things-icon-pack/png-64/grid.png",
+    apple: "/IT-THINGS-icon-pack/it-things-icon-pack/png-128/grid.png",
   },
 }
 

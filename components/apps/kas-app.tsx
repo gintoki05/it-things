@@ -2,6 +2,8 @@
 
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
+import { useTeamStore } from "@/lib/team-store"
+import { useDesktop } from "@/components/desktop/desktop-context"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import {
   Wallet,
@@ -80,10 +82,36 @@ const DEFAULT_MEMBERS: KasDueMember[] = [
 
 export function KasApp() {
   const { user, isTreasurer, isGuest } = useAuth()
+  const { members: teamMembers } = useTeamStore()
+  const { openWindow } = useDesktop()
 
   const [activeTab, setActiveTab] = React.useState<"ledger" | "dues">("ledger")
   const [transactions, setTransactions] = React.useState<KasTransaction[]>(INITIAL_TRANSACTIONS)
   const [duesMembers, setDuesMembers] = React.useState<KasDueMember[]>(DEFAULT_MEMBERS)
+
+  // Sync dues checklist with master team members
+  React.useEffect(() => {
+    if (teamMembers && teamMembers.length > 0) {
+      setDuesMembers((prev) => {
+        return teamMembers.map((tm) => {
+          const existing = prev.find(
+            (p) =>
+              p.userId === tm.id ||
+              p.userId === tm.user_id ||
+              p.name.toLowerCase() === tm.name.toLowerCase()
+          )
+          return {
+            userId: tm.id,
+            name: tm.name,
+            avatarUrl: tm.avatar_url,
+            amount: existing ? existing.amount : 20000,
+            isPaid: existing ? existing.isPaid : false,
+            paidAt: existing?.paidAt,
+          }
+        })
+      })
+    }
+  }, [teamMembers])
 
   // Transaction form
   const [showTxForm, setShowTxForm] = React.useState(false)
@@ -340,8 +368,8 @@ export function KasApp() {
                 onChange={(e) => setTxType(e.target.value as any)}
                 className="w-full bg-white border border-[#7D8E9E] p-1.5 rounded-[2px] text-xs font-sans font-bold"
               >
-                <option value="in">💰 Uang Masuk (+)</option>
-                <option value="out">💸 Uang Keluar (-)</option>
+                <option value="in">(+) Uang Masuk</option>
+                <option value="out">(-) Uang Keluar</option>
               </select>
             </div>
 
@@ -482,9 +510,19 @@ export function KasApp() {
               <Users className="size-3.5 text-[#2E5AA8]" />
               <span>IURAN RUTIN BULAN INI (Rp 20.000 / orang)</span>
             </div>
-            <span className="text-[11px] text-gray-600">
-              {duesMembers.filter((m) => m.isPaid).length} / {duesMembers.length} Lunas
-            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => openWindow("team")}
+                title="Buka aplikasi team.exe untuk mengatur daftar peserta & role"
+                className="px-2 py-0.5 text-[10px] bg-[#C0C0C0] text-black border border-t-white border-l-white border-b-[#404040] border-r-[#404040] hover:bg-[#D4D4D4] flex items-center gap-1 font-sans"
+              >
+                👥 Kelola di team.exe
+              </button>
+              <span className="text-[11px] text-gray-600">
+                {duesMembers.filter((m) => m.isPaid).length} / {duesMembers.length} Lunas
+              </span>
+            </div>
           </div>
 
           <div className="divide-y divide-[#E2E8F0]">

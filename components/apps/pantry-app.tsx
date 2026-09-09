@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { UserAvatar } from "@/components/retro/user-avatar"
+import { RetroIcon } from "@/components/ui/retro-icon"
 
 export function PantryApp() {
   const { user } = useAuth()
@@ -283,8 +284,8 @@ export function PantryApp() {
                   <span>Memuat usulan belanja...</span>
                 </div>
               ) : items.length === 0 ? (
-                <div className="py-8 text-center font-mono text-xs text-[#526374] space-y-1 bg-[#FAFBFD] border border-dashed border-[#CBD5E1] rounded my-2">
-                  <div className="text-2xl">🛒</div>
+                <div className="py-8 text-center font-mono text-xs text-[#526374] space-y-2 bg-[#FAFBFD] border border-dashed border-[#CBD5E1] rounded my-2">
+                  <RetroIcon name="pantry" iconSize={64} className="size-12 mx-auto object-contain" />
                   <div className="font-bold text-slate-800">Daftar belanja masih kosong</div>
                   <div>Tulis usulan cemilan atau kebutuhan pantry di form bawah.</div>
                 </div>
@@ -304,8 +305,8 @@ export function PantryApp() {
                           <span className="font-mono text-[11px] font-bold text-gray-400 w-4 text-center shrink-0">
                             {idx + 1}
                           </span>
-                          <span className="size-8 rounded bg-[#EEF2F6] border border-[#CBD5E1] flex items-center justify-center text-base shrink-0">
-                            {item.emoji}
+                          <span className="size-8 rounded bg-[#EEF2F6] border border-[#CBD5E1] flex items-center justify-center p-1 shrink-0">
+                            <RetroIcon name={item.emoji} iconSize={32} className="size-5 object-contain" />
                           </span>
                           <div className="min-w-0">
                             <div className="font-bold text-xs text-[#14253D] truncate flex items-center gap-1.5">

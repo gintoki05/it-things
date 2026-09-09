@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useDesktop, AppId } from "./desktop-context"
 import { cn } from "@/lib/utils"
+import { RetroIcon } from "@/components/ui/retro-icon"
 
 export function DesktopIcons() {
   const { windows, openWindow } = useDesktop()
@@ -43,8 +44,8 @@ export function DesktopIcons() {
                 : "hover:bg-white/10"
             )}
           >
-            <div className="size-12 rounded bg-[#2D4564]/40 border border-white/20 shadow-md flex items-center justify-center text-2xl group-hover:scale-105 transition-transform">
-              {item.icon}
+            <div className="size-12 rounded bg-[#2D4564]/40 border border-white/20 shadow-md flex items-center justify-center p-1 group-hover:scale-105 transition-transform">
+              <RetroIcon name={item.icon || item.id} iconSize={48} className="size-9 object-contain drop-shadow" />
             </div>
             <span className="mt-1 font-mono text-[11px] text-white font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] tracking-tight leading-snug px-1 rounded truncate max-w-full">
               {item.filename}

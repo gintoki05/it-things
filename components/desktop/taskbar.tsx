@@ -5,6 +5,7 @@ import { useDesktop, AppId } from "./desktop-context"
 import { useAuth } from "@/lib/auth"
 import { cn } from "@/lib/utils"
 import { UserAvatar } from "@/components/retro/user-avatar"
+import { RetroIcon } from "@/components/ui/retro-icon"
 import { 
   LogOut, 
   LogIn, 
@@ -13,7 +14,9 @@ import {
   Sparkles, 
   Laptop,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Crown,
+  User
 } from "lucide-react"
 
 interface TaskbarProps {
@@ -22,11 +25,12 @@ interface TaskbarProps {
 
 export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
   const { windows, activeWindowId, openWindow, toggleWindow } = useDesktop()
-  const { user, isTreasurer, isSupabaseConnected, signOut, setDemoUserRole } = useAuth()
+  const { user, isAdmin, isTreasurer, isSupabaseConnected, signOut, setDemoUserRole } = useAuth()
 
   const [isStartOpen, setIsStartOpen] = React.useState(false)
   const [time, setTime] = React.useState("12:00")
   const startMenuRef = React.useRef<HTMLDivElement>(null)
+  const startBtnRef = React.useRef<HTMLButtonElement>(null)
 
   // Clock
   React.useEffect(() => {
@@ -47,14 +51,28 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
   // Close start menu when clicking outside
   React.useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (startMenuRef.current && !startMenuRef.current.contains(e.target as Node)) {
+      if (
+        startMenuRef.current &&
+        !startMenuRef.current.contains(e.target as Node) &&
+        startBtnRef.current &&
+        !startBtnRef.current.contains(e.target as Node)
+      ) {
+        setIsStartOpen(false)
+      }
+    }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
         setIsStartOpen(false)
       }
     }
     if (isStartOpen) {
       document.addEventListener("mousedown", handleClickOutside)
+      document.addEventListener("keydown", handleKeyDown)
     }
-    return () => document.removeEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+      document.removeEventListener("keydown", handleKeyDown)
+    }
   }, [isStartOpen])
 
   const openWindows = Object.values(windows).filter((w) => w.isOpen)
@@ -90,7 +108,11 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
               <div className="min-w-0 flex-1">
                 <div className="font-bold text-[11px] truncate">{user?.name || "Tamu Internal IT"}</div>
                 <div className="flex items-center gap-1 text-[10px] text-gray-600">
-                  {isTreasurer ? (
+                  {isAdmin ? (
+                    <span className="text-purple-700 font-semibold flex items-center gap-0.5">
+                      <ShieldCheck className="size-3" /> Administrator
+                    </span>
+                  ) : isTreasurer ? (
                     <span className="text-amber-700 font-semibold flex items-center gap-0.5">
                       <ShieldCheck className="size-3" /> Bendahara
                     </span>
@@ -116,7 +138,7 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                   }}
                   className="w-full flex items-center gap-2.5 px-2.5 py-1.5 hover:bg-[#1E4E8C] hover:text-white rounded-[2px] transition-colors text-left"
                 >
-                  <span className="text-base">{item.icon}</span>
+                  <RetroIcon name={item.icon || item.id} iconSize={32} className="size-5 object-contain shrink-0" />
                   <div className="min-w-0">
                     <div className="font-bold text-[11px]">{item.filename}</div>
                     <div className="text-[9px] opacity-80 truncate">{item.title.split(" - ")[1]}</div>
@@ -125,25 +147,69 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
               ))}
             </div>
 
-            {/* Role Switcher (Treasurer Demo) */}
+            {/* Role Switcher */}
             <div className="p-1.5 bg-[#E8EEF5] border border-[#A4B5C6] rounded text-[10px]">
               <div className="font-bold flex items-center justify-between mb-1">
                 <span>Mode Peran:</span>
-                <span className={isTreasurer ? "text-amber-700 font-bold" : "text-gray-600"}>
-                  {isTreasurer ? "👑 Bendahara" : "👤 Anggota"}
+                <span
+                  className={
+                    isAdmin
+                      ? "text-purple-700 font-bold flex items-center gap-1"
+                      : isTreasurer
+                      ? "text-amber-700 font-bold flex items-center gap-1"
+                      : "text-gray-600 font-bold flex items-center gap-1"
+                  }
+                >
+                  {isAdmin ? (
+                    <>
+                      <ShieldCheck className="size-3 text-purple-700" /> Admin
+                    </>
+                  ) : isTreasurer ? (
+                    <>
+                      <Crown className="size-3 text-amber-700" /> Bendahara
+                    </>
+                  ) : (
+                    <>
+                      <User className="size-3 text-gray-600" /> Anggota
+                    </>
+                  )}
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  if (setDemoUserRole) {
-                    setDemoUserRole(isTreasurer ? "member" : "treasurer")
-                  }
-                }}
-                className="w-full py-1 px-2 bg-white border border-[#7D8E9E] hover:bg-gray-50 rounded active:translate-y-px text-center font-mono text-[10px] text-[#1E4E8C] font-semibold"
-              >
-                Ganti ke {isTreasurer ? "Mode Anggota Biasa" : "Mode Bendahara Kas"}
-              </button>
+              <div className="grid grid-cols-3 gap-1">
+                <button
+                  type="button"
+                  onClick={() => setDemoUserRole && setDemoUserRole("member")}
+                  className={`py-0.5 px-1 border rounded text-[9px] font-mono text-center transition-colors ${
+                    user?.role === "member"
+                      ? "bg-[#1E4E8C] text-white font-bold border-[#102A45]"
+                      : "bg-white text-gray-700 hover:bg-gray-100 border-[#7D8E9E]"
+                  }`}
+                >
+                  Member
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDemoUserRole && setDemoUserRole("treasurer")}
+                  className={`py-0.5 px-1 border rounded text-[9px] font-mono text-center transition-colors ${
+                    user?.role === "treasurer"
+                      ? "bg-amber-600 text-white font-bold border-amber-800"
+                      : "bg-white text-gray-700 hover:bg-gray-100 border-[#7D8E9E]"
+                  }`}
+                >
+                  Bendahara
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDemoUserRole && setDemoUserRole("admin")}
+                  className={`py-0.5 px-1 border rounded text-[9px] font-mono text-center transition-colors ${
+                    user?.role === "admin"
+                      ? "bg-purple-700 text-white font-bold border-purple-900"
+                      : "bg-white text-gray-700 hover:bg-gray-100 border-[#7D8E9E]"
+                  }`}
+                >
+                  Admin
+                </button>
+              </div>
             </div>
 
             {/* Auth Action */}
@@ -182,6 +248,7 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
       <footer className="fixed bottom-0 left-0 right-0 h-[44px] bg-[#D4DDE6] border-t-2 border-t-white border-b border-b-[#5E7287] shadow-md flex items-center px-1.5 gap-2 select-none z-50">
         {/* Start Button */}
         <button
+          ref={startBtnRef}
           type="button"
           onClick={() => setIsStartOpen((prev) => !prev)}
           className={cn(
@@ -216,7 +283,7 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                     : "bg-[#D4DDE6] border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] text-gray-700 hover:bg-[#DEE6EE]"
                 )}
               >
-                <span className="text-sm shrink-0">{win.icon}</span>
+                <RetroIcon name={win.icon || win.id} iconSize={32} className="size-4 shrink-0 object-contain" />
                 <span className="truncate text-[11px] font-sans">{win.filename}</span>
               </button>
             )

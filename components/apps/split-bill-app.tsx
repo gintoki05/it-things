@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
+import { useTeamStore } from "@/lib/team-store"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { 
   Receipt, 
@@ -80,6 +81,7 @@ const INITIAL_BILL: SplitBillData = {
 
 export function SplitBillApp() {
   const { user } = useAuth()
+  const { members: teamMembers } = useTeamStore()
   const [bill, setBill] = React.useState<SplitBillData>(INITIAL_BILL)
   const [copiedWA, setCopiedWA] = React.useState(false)
   const [copiedBank, setCopiedBank] = React.useState(false)
@@ -220,9 +222,9 @@ export function SplitBillApp() {
   }
 
   // Add Participant
-  const handleAddParticipant = () => {
-    if (!newParticipantName.trim()) return
-    const name = newParticipantName.trim()
+  const addParticipantByName = (rawName: string) => {
+    if (!rawName.trim()) return
+    const name = rawName.trim()
 
     setBill((prev) => {
       const exists = prev.participants.some((p) => p.name.toLowerCase() === name.toLowerCase())
@@ -252,7 +254,10 @@ export function SplitBillApp() {
         total_amount: grandTotal,
       }
     })
+  }
 
+  const handleAddParticipant = () => {
+    addParticipantByName(newParticipantName)
     setNewParticipantName("")
   }
 
@@ -497,6 +502,36 @@ export function SplitBillApp() {
                 <span>Tambah</span>
               </button>
             </div>
+
+            {/* Quick-add chips from master team members */}
+            {teamMembers && teamMembers.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 py-1 text-[10px] border-t border-dashed border-[#CBD5E1]">
+                <span className="text-gray-500 font-mono">Pilih cepat:</span>
+                {teamMembers.map((tm) => {
+                  const isAlreadyIn = bill.participants.some(
+                    (p) => p.name.toLowerCase() === tm.name.toLowerCase()
+                  )
+                  return (
+                    <button
+                      key={tm.id}
+                      type="button"
+                      disabled={isAlreadyIn}
+                      onClick={() => addParticipantByName(tm.name)}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono border transition-all flex items-center gap-1 ${
+                        isAlreadyIn
+                          ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                          : "bg-[#EEF2F6] hover:bg-[#DCE4EC] text-[#1E4E8C] border-[#95A5B5] active:translate-y-px"
+                      }`}
+                      title={isAlreadyIn ? `${tm.name} sudah masuk tagihan` : `Klik untuk menambahkan ${tm.name}`}
+                    >
+                      <span>{tm.avatar_url || "👤"}</span>
+                      <span>{tm.name.split(" ")[0]}</span>
+                      {!isAlreadyIn && <span className="text-emerald-700 font-bold">+</span>}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
 
             {/* Participants Rows */}
             <div className="divide-y divide-[#E2E8F0] max-h-64 overflow-y-auto no-scrollbar">

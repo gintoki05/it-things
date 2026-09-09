@@ -2,7 +2,7 @@
 
 import * as React from "react"
 
-export type AppId = "pantry" | "wheel" | "splitbill" | "kas"
+export type AppId = "pantry" | "wheel" | "splitbill" | "kas" | "team"
 
 export interface WindowState {
   id: AppId
@@ -37,7 +37,7 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
   pantry: {
     id: "pantry",
     title: "Pantry.exe - Usulan & Voting Belanja",
-    icon: "📦",
+    icon: "pantry",
     filename: "pantry.exe",
     isOpen: true,
     isMinimized: false,
@@ -51,7 +51,7 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
   wheel: {
     id: "wheel",
     title: "Wheel.exe - Mau Makan Apa?",
-    icon: "🎡",
+    icon: "wheel",
     filename: "wheel.exe",
     isOpen: false,
     isMinimized: false,
@@ -65,7 +65,7 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
   splitbill: {
     id: "splitbill",
     title: "SplitBill.exe - Kalkulator & Tracker Patungan",
-    icon: "🧾",
+    icon: "splitbill",
     filename: "splitbill.exe",
     isOpen: false,
     isMinimized: false,
@@ -79,7 +79,7 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
   kas: {
     id: "kas",
     title: "Kas.exe - Buku Kas & Iuran Tim",
-    icon: "💰",
+    icon: "kas",
     filename: "kas.exe",
     isOpen: false,
     isMinimized: false,
@@ -89,6 +89,20 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 760, height: 570 },
     defaultSize: { width: 760, height: 570 },
     defaultPos: { x: 200, y: 84 },
+  },
+  team: {
+    id: "team",
+    title: "Team.exe - Pengaturan Peserta & Role",
+    icon: "team",
+    filename: "team.exe",
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    zIndex: 14,
+    position: { x: 230, y: 104 },
+    size: { width: 740, height: 560 },
+    defaultSize: { width: 740, height: 560 },
+    defaultPos: { x: 230, y: 104 },
   },
 }
 
