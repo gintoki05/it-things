@@ -28,9 +28,9 @@ export interface PlaceItem {
   category: string
   budget_level: "hemat" | "sedang" | "sultan"
   service_type: "dine_in" | "delivery" | "both"
-  maps_url?: string
-  notes?: string
-  proposed_by_name?: string
+  maps_url?: string | null
+  notes?: string | null
+  proposed_by_name?: string | null
 }
 
 export interface SpinHistory {
@@ -143,7 +143,18 @@ export function WheelApp() {
           .order("created_at", { ascending: false })
 
         if (dbPlaces && dbPlaces.length > 0) {
-          setPlaces(dbPlaces)
+          setPlaces(
+            dbPlaces.map((p) => ({
+              id: p.id,
+              name: p.name,
+              category: p.category || "Umum",
+              budget_level: (p.budget_level as "hemat" | "sedang" | "sultan") || "hemat",
+              service_type: (p.service_type as "dine_in" | "delivery" | "both") || "both",
+              maps_url: p.maps_url,
+              notes: p.notes,
+              proposed_by_name: p.proposed_by_name,
+            }))
+          )
         }
 
         const { data: dbHistory } = await supabase
@@ -153,7 +164,15 @@ export function WheelApp() {
           .limit(8)
 
         if (dbHistory) {
-          setHistory(dbHistory)
+          setHistory(
+            dbHistory.map((h) => ({
+              id: h.id,
+              place_name: h.place_name,
+              category: h.category || undefined,
+              spun_by_name: h.spun_by_name || "Anggota Tim",
+              created_at: h.created_at,
+            }))
+          )
         }
       } catch (e) {
         console.warn("Could not fetch wheel data from Supabase:", e)

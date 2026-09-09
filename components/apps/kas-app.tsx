@@ -26,7 +26,7 @@ export interface KasTransaction {
   amount: number
   category: string
   description: string
-  receipt_url?: string
+  receipt_url?: string | null
   created_by_name: string
   created_at: string
 }

@@ -6,7 +6,7 @@ import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 export interface Voter {
   id: string
   name: string
-  avatarUrl?: string
+  avatarUrl?: string | null
 }
 
 export interface PantryItem {

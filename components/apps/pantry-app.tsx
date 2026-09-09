@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
-import { usePantryStore, PantryItem } from "@/lib/pantry-store"
+import { usePantryStore, PantryItem, Voter } from "@/lib/pantry-store"
 import { detectEmoji } from "@/lib/emoji-helper"
 import {
   Calendar,
@@ -49,7 +49,7 @@ export function PantryApp() {
   const totalVotesCount = items.reduce((acc, curr) => acc + (curr.voters?.length || 0), 0)
 
   const uniqueVoters = React.useMemo(() => {
-    const map = new Map<string, { id: string; name: string; avatarUrl?: string }>()
+    const map = new Map<string, Voter>()
     items.forEach((item) => {
       ;(item.voters || []).forEach((v) => {
         if (v && v.name && !map.has(v.id || v.name)) {
