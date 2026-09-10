@@ -100,7 +100,7 @@ export function useTeamStore() {
             name: d.name,
             email: d.email || "",
             avatar_url: d.avatar_url || "👤",
-            role: (d.role as "member" | "treasurer") || "member",
+            role: (d.role as UserRole) || "member",
             created_at: d.created_at,
           }))
           setMembers(mapped)

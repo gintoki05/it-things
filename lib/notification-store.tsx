@@ -18,6 +18,7 @@ export interface NotificationToast {
 interface NotificationContextType {
   isMuted: boolean
   unreadChatCount: number
+  activeVoteCount: number
   activeToast: NotificationToast | null
   toggleMute: () => void
   dismissToast: () => void
@@ -30,14 +31,67 @@ interface NotificationContextType {
 const NotificationContext = React.createContext<NotificationContextType | undefined>(undefined)
 
 const MUTED_STORAGE_KEY = "it_things_notifications_muted"
+const LAST_READ_CHAT_KEY = "it_things_last_read_chat"
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
   const [isMuted, setIsMuted] = React.useState<boolean>(false)
   const [unreadChatCount, setUnreadChatCount] = React.useState<number>(0)
+  const [activeVoteCount, setActiveVoteCount] = React.useState<number>(0)
   const [activeToast, setActiveToast] = React.useState<NotificationToast | null>(null)
   const [browserPermission, setBrowserPermission] = React.useState<NotificationPermission | "unsupported">("default")
   const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
+
+  // ─── Fetch Active Vote Count ────────────────────────────────
+  const fetchActiveVoteCount = React.useCallback(async () => {
+    if (!isSupabaseConfigured || !supabase) return
+    try {
+      const nowIso = new Date().toISOString()
+      const { data, error } = await supabase
+        .from("vote_groups")
+        .select("id, is_closed, expires_at")
+        .eq("is_closed", false)
+        .gt("expires_at", nowIso)
+
+      if (!error && data) {
+        setActiveVoteCount(data.length)
+      }
+    } catch (err) {
+      console.warn("fetchActiveVoteCount error:", err)
+    }
+  }, [])
+
+  // ─── Fetch Initial Unread Chat Count ────────────────────────
+  const fetchInitialUnreadChat = React.useCallback(async () => {
+    if (!isSupabaseConfigured || !supabase) return
+    try {
+      const lastRead = typeof window !== "undefined" ? localStorage.getItem(LAST_READ_CHAT_KEY) : null
+      if (!lastRead) {
+        // Initial visit: set checkpoint to current time so historical messages aren't unread
+        if (typeof window !== "undefined") {
+          localStorage.setItem(LAST_READ_CHAT_KEY, new Date().toISOString())
+        }
+        setUnreadChatCount(0)
+        return
+      }
+
+      let query = supabase
+        .from("chat_messages")
+        .select("id", { count: "exact", head: true })
+        .gt("created_at", lastRead)
+
+      if (user?.id) {
+        query = query.neq("user_id", user.id)
+      }
+
+      const { count, error } = await query
+      if (!error && typeof count === "number") {
+        setUnreadChatCount(count)
+      }
+    } catch (err) {
+      console.warn("fetchInitialUnreadChat error:", err)
+    }
+  }, [user?.id])
 
   // Load saved mute state & check browser notification support
   React.useEffect(() => {
@@ -58,6 +112,47 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       setBrowserPermission("unsupported")
     }
   }, [])
+
+  // Sync active votes and initial unread on mount
+  React.useEffect(() => {
+    fetchActiveVoteCount()
+    fetchInitialUnreadChat()
+
+    const handleVoteChanged = () => {
+      fetchActiveVoteCount()
+    }
+    if (typeof window !== "undefined") {
+      window.addEventListener("vote-changed", handleVoteChanged)
+    }
+
+    if (!isSupabaseConfigured || !supabase) {
+      return () => {
+        if (typeof window !== "undefined") {
+          window.removeEventListener("vote-changed", handleVoteChanged)
+        }
+      }
+    }
+
+    const voteChannel = supabase
+      .channel("global-vote-badges")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "vote_groups" },
+        () => {
+          fetchActiveVoteCount()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      if (supabase) {
+        supabase.removeChannel(voteChannel)
+      }
+      if (typeof window !== "undefined") {
+        window.removeEventListener("vote-changed", handleVoteChanged)
+      }
+    }
+  }, [fetchActiveVoteCount, fetchInitialUnreadChat])
 
   const toggleMute = React.useCallback(() => {
     setIsMuted((prev) => {
@@ -83,6 +178,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const clearUnreadChat = React.useCallback(() => {
     setUnreadChatCount(0)
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(LAST_READ_CHAT_KEY, new Date().toISOString())
+      } catch {
+        // Ignore localStorage error
+      }
+    }
   }, [])
 
   const requestNotificationPermission = React.useCallback(async () => {
@@ -248,6 +350,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       value={{
         isMuted,
         unreadChatCount,
+        activeVoteCount,
         activeToast,
         toggleMute,
         dismissToast,

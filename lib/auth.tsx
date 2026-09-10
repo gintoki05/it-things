@@ -288,9 +288,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+const ROOT_ADMIN_EMAILS = ["ajieprastyo@gmail.com"]
+
   const mapAndSetSupabaseUser = async (sbUser: User) => {
     const meta = sbUser.user_metadata || {}
-    let role: UserRole = "member"
+    const isRootAdmin = !!(sbUser.email && ROOT_ADMIN_EMAILS.includes(sbUser.email.toLowerCase()))
+    let role: UserRole = isRootAdmin ? "admin" : "member"
     let displayName = meta.full_name || meta.name || sbUser.email?.split("@")[0] || "Anggota Tim"
     let avatarUrl = meta.avatar_url || meta.picture
 
@@ -304,17 +307,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .maybeSingle()
 
         if (data) {
-          if (data.role) role = data.role as UserRole
+          if (isRootAdmin) {
+            role = "admin"
+            if (data.role !== "admin") {
+              supabase.from("team_members").update({ role: "admin" }).eq("user_id", sbUser.id).then(() => {})
+            }
+          } else if (data.role) {
+            role = data.role as UserRole
+          }
           if (data.name) displayName = data.name
           if (data.avatar_url) avatarUrl = data.avatar_url
         } else {
-          // If first time, insert as member
+          // If first time, insert as admin if root admin, else member
+          const initialRole: UserRole = isRootAdmin ? "admin" : "member"
+          role = initialRole
           await supabase.from("team_members").upsert({
             user_id: sbUser.id,
             email: sbUser.email || "",
             name: displayName,
             avatar_url: avatarUrl || "",
-            role: "member",
+            role: initialRole,
           })
         }
       }
@@ -349,8 +361,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const isGuest = !!user?.isGuest || user?.id === "guest-user" || user?.role === "guest"
-  const isAdmin = !isGuest && user?.role === "admin"
-  const isTreasurer = !isGuest && (user?.role === "treasurer" || user?.role === "admin")
+  const isAdmin =
+    !isGuest &&
+    (user?.role === "admin" || (!!user?.email && ROOT_ADMIN_EMAILS.includes(user.email.toLowerCase())))
+  const isTreasurer = !isGuest && (user?.role === "treasurer" || isAdmin)
 
   const signInWithGoogle = async () => {
     if (!isSupabaseConfigured || !supabase) {

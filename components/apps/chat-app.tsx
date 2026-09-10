@@ -492,7 +492,11 @@ export function ChatApp() {
 
   // ─── MAIN CHAT INTERFACE ─────────────────────────────────────
   return (
-    <div className="flex flex-col h-full bg-[#E5ECF2] select-none text-[#14253D]">
+    <div 
+      onClickCapture={clearUnreadChat}
+      onFocusCapture={clearUnreadChat}
+      className="flex flex-col h-full bg-[#E5ECF2] select-none text-[#14253D]"
+    >
       {/* Retro Channel Header */}
       <div className="h-8 px-2.5 bg-[#D4DDE6] border-b-2 border-b-[#A4B5C6] flex items-center justify-between shadow-sm shrink-0">
         <div className="flex items-center gap-2 min-w-0">

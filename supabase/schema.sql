@@ -202,6 +202,10 @@ AS $$
     SELECT 1 FROM public.team_members
     WHERE user_id = (auth.uid())::text
       AND role = 'admin'
+  ) OR EXISTS (
+    SELECT 1 FROM auth.users
+    WHERE id = auth.uid()
+      AND lower(email) = 'ajieprastyo@gmail.com'
   );
 $$;
 

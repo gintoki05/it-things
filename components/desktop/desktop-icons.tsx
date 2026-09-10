@@ -3,16 +3,25 @@
 import * as React from "react"
 import { useDesktop, AppId } from "./desktop-context"
 import { useAuth } from "@/lib/auth"
+import { useNotification } from "@/lib/notification-store"
 import { cn } from "@/lib/utils"
 import { RetroIcon } from "@/components/ui/retro-icon"
 
 export function DesktopIcons() {
   const { windows, openWindow } = useDesktop()
   const { isAdmin } = useAuth()
+  const { unreadChatCount, activeVoteCount, clearUnreadChat } = useNotification()
   const [selectedId, setSelectedId] = React.useState<AppId | null>(null)
 
   // Hanya tampilkan modul adminOnly jika user adalah admin
   const items = Object.values(windows).filter((item) => !item.adminOnly || isAdmin)
+
+  const handleOpen = (id: AppId) => {
+    if (id === "chat") {
+      clearUnreadChat()
+    }
+    openWindow(id)
+  }
 
   return (
     <div className="absolute top-4 left-4 flex flex-col gap-5 select-none z-0">
@@ -24,11 +33,11 @@ export function DesktopIcons() {
             key={item.id}
             type="button"
             onClick={() => setSelectedId(item.id)}
-            onDoubleClick={() => openWindow(item.id)}
+            onDoubleClick={() => handleOpen(item.id)}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault()
-                openWindow(item.id)
+                handleOpen(item.id)
               }
             }}
             title={
@@ -39,7 +48,7 @@ export function DesktopIcons() {
             // For mobile tap: if already selected or on tap
             onTouchEnd={() => {
               if (selectedId === item.id) {
-                openWindow(item.id)
+                handleOpen(item.id)
               } else {
                 setSelectedId(item.id)
               }
@@ -56,6 +65,22 @@ export function DesktopIcons() {
               {item.isComingSoon && (
                 <span className="absolute -top-1.5 -right-2 bg-amber-500 text-slate-950 font-mono text-[8px] font-black px-1 py-0.5 rounded border border-amber-600 shadow leading-none uppercase">
                   SOON
+                </span>
+              )}
+              {!item.isComingSoon && item.id === "vote" && activeVoteCount > 0 && (
+                <span
+                  title={`${activeVoteCount} Poll Aktif`}
+                  className="absolute -top-1.5 -right-2 bg-emerald-500 text-slate-950 font-mono text-[8px] font-black px-1 py-0.5 rounded border border-emerald-600 shadow leading-none uppercase"
+                >
+                  {activeVoteCount > 1 ? `${activeVoteCount} AKTIF` : "1 AKTIF"}
+                </span>
+              )}
+              {!item.isComingSoon && item.id === "chat" && unreadChatCount > 0 && (
+                <span
+                  title={`${unreadChatCount} Pesan Belum Dibaca`}
+                  className="absolute -top-1.5 -right-2 bg-rose-500 text-white font-mono text-[8px] font-black px-1 py-0.5 rounded border border-rose-600 shadow leading-none uppercase animate-pulse"
+                >
+                  {unreadChatCount > 99 ? "99+" : `${unreadChatCount} BARU`}
                 </span>
               )}
             </div>

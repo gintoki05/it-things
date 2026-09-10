@@ -451,17 +451,60 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
             {isMuted ? <VolumeX className="size-3" /> : <Volume2 className="size-3" />}
           </button>
 
-          {/* Guest Badge in Tray */}
-          {isGuest && (
-            <div
-              title="Akses Terbatas: Hanya Baca (Read-Only)"
-              className="flex items-center gap-1 bg-amber-200/90 border border-amber-500/60 px-1.5 py-0.5 rounded-[2px] text-amber-900 font-bold text-[10px]"
-            >
-              <Eye className="size-3 text-amber-800" />
-              <span className="hidden sm:inline">TAMU (READ-ONLY)</span>
-              <span className="sm:hidden">TAMU</span>
-            </div>
-          )}
+          {/* User Profile & Role Pill in Tray */}
+          <button
+            type="button"
+            onClick={() => {
+              if (isGuest && onOpenLoginModal) {
+                onOpenLoginModal()
+              } else {
+                setIsProfileModalOpen(true)
+              }
+            }}
+            title={
+              isGuest
+                ? "Mode Tamu (Read-Only) - Klik untuk Masuk dengan Google"
+                : `Login sebagai: ${user?.name || "User"} (${isAdmin ? "Administrator" : isTreasurer ? "Bendahara" : "Anggota Tim"}) - Klik untuk edit profil`
+            }
+            className={cn(
+              "h-5.5 px-1.5 rounded-[2px] border transition-colors cursor-pointer flex items-center gap-1.5 active:translate-y-px text-[11px] font-sans select-none",
+              isGuest
+                ? "bg-amber-100 hover:bg-amber-200 border-amber-400 text-amber-900"
+                : "bg-[#BDCCD9] hover:bg-[#A8BCCC] border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white text-[#14253D]"
+            )}
+          >
+            <UserAvatar
+              src={user?.avatarUrl}
+              name={user?.name || (isGuest ? "Tamu" : "User")}
+              size="size-3.5"
+              textClass="text-[8px]"
+            />
+            <span className="font-bold text-[10px] max-w-[70px] sm:max-w-[100px] truncate leading-none">
+              {isGuest ? "Tamu" : (user?.name?.split(" ")[0] || "User")}
+            </span>
+            <span className="h-3 w-px bg-[#7D8E9E]/50" />
+            {isGuest ? (
+              <span className="flex items-center gap-0.5 text-amber-800 text-[9px] font-bold">
+                <Eye className="size-2.5 shrink-0" />
+                <span className="hidden sm:inline">Tamu</span>
+              </span>
+            ) : isAdmin ? (
+              <span className="flex items-center gap-0.5 text-purple-700 text-[9px] font-bold">
+                <ShieldCheck className="size-2.5 shrink-0 text-purple-700" />
+                <span className="hidden sm:inline">Admin</span>
+              </span>
+            ) : isTreasurer ? (
+              <span className="flex items-center gap-0.5 text-amber-700 text-[9px] font-bold">
+                <Crown className="size-2.5 shrink-0 text-amber-600" />
+                <span className="hidden sm:inline">Bendahara</span>
+              </span>
+            ) : (
+              <span className="flex items-center gap-0.5 text-slate-600 text-[9px] font-semibold">
+                <User className="size-2.5 shrink-0 text-slate-500" />
+                <span className="hidden sm:inline">Anggota</span>
+              </span>
+            )}
+          </button>
 
           {/* Connection Indicator */}
           <div

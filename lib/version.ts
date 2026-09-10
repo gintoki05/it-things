@@ -5,12 +5,23 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.2.1"
+export const APP_VERSION = "v2.2.2"
 export const APP_BUILD = "2026.09.10"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.2.2",
+    date: "10 Sep 2026",
+    codename: "Desktop Icon Activity Badges",
+    changes: [
+      "Badge chip retro pada ikon desktop Vote.exe jika ada polling/vote aktif.",
+      "Badge chip retro dengan animasi pulse pada ikon desktop Chat.exe jika ada pesan belum dibaca.",
+      "Sinkronisasi realtime untuk jumlah vote aktif dan unread chat lintas jendela.",
+      "Perbaikan integritas hak akses Admin (database & client) agar penghapusan/moderasi pesan chat selalu berfungsi.",
+    ],
+  },
   {
     version: "v2.2.1",
     date: "10 Sep 2026",

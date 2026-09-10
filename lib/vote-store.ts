@@ -225,6 +225,9 @@ export function useVoteStore() {
     }
 
     setGroups((prev) => [optimistic, ...prev])
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("vote-changed"))
+    }
 
     if (!isSupabaseConfigured || !supabase) return { success: true }
 
@@ -245,13 +248,22 @@ export function useVoteStore() {
 
       if (error) {
         setGroups((prev) => prev.filter((g) => g.id !== tempId))
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("vote-changed"))
+        }
         return { success: false, error: error.message }
       }
 
       setGroups((prev) => prev.map((g) => (g.id === tempId ? { ...g, id: data.id, expiresAt: data.expires_at } : g)))
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("vote-changed"))
+      }
       return { success: true }
     } catch (err) {
       setGroups((prev) => prev.filter((g) => g.id !== tempId))
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("vote-changed"))
+      }
       return { success: false, error: err instanceof Error ? err.message : "Gagal membuat group." }
     }
   }
@@ -267,15 +279,27 @@ export function useVoteStore() {
     }
 
     setGroups((prev) => prev.filter((g) => g.id !== groupId))
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("vote-changed"))
+    }
 
     if (!isSupabaseConfigured || !supabase) return { success: true }
 
     try {
       const { error } = await supabase.from("vote_groups").delete().eq("id", groupId)
-      if (error) { await fetchData(); return { success: false, error: error.message } }
+      if (error) {
+        await fetchData()
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("vote-changed"))
+        }
+        return { success: false, error: error.message }
+      }
       return { success: true }
     } catch (err) {
       await fetchData()
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("vote-changed"))
+      }
       return { success: false, error: err instanceof Error ? err.message : "Gagal menghapus group." }
     }
   }
@@ -292,6 +316,9 @@ export function useVoteStore() {
     setGroups((prev) =>
       prev.map((g) => (g.id === groupId ? { ...g, isClosed, expiresAt: newExpiresAt } : g))
     )
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("vote-changed"))
+    }
 
     if (!isSupabaseConfigured || !supabase) return { success: true }
 
@@ -301,10 +328,19 @@ export function useVoteStore() {
         payload.expires_at = newExpiresAt
       }
       const { error } = await supabase.from("vote_groups").update(payload).eq("id", groupId)
-      if (error) { await fetchData(); return { success: false, error: error.message } }
+      if (error) {
+        await fetchData()
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("vote-changed"))
+        }
+        return { success: false, error: error.message }
+      }
       return { success: true }
     } catch (err) {
       await fetchData()
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("vote-changed"))
+      }
       return { success: false, error: err instanceof Error ? err.message : "Gagal mengubah status group." }
     }
   }

@@ -204,6 +204,9 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
 
   const bringToFront = React.useCallback(
     (id: AppId) => {
+      if (id === "chat" && typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("chat-focused"))
+      }
       setTopZIndex((prev) => {
         const nextZ = prev + 1
         setWindows((curr) => {
