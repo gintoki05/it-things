@@ -18,7 +18,7 @@ export const APP_CHANGELOG: VersionRelease[] = [
     changes: [
       "Fitur notifikasi in-app retro (balon pop-up Windows 98 di pojok taskbar).",
       "Efek suara retro chime ding sintetis via Web Audio API tanpa aset eksternal.",
-      "Integrasi Browser Web Notification saat tab aplikasi berada di background.",
+      "Integrasi Browser & Windows OS Notification (Action Center) dengan permintaan izin otomatis saat unlock.",
       "Kontrol mute/bisu di System Tray Taskbar dan header Chat.exe.",
       "Indikator unread badge & animasi kedip pada tombol taskbar Chat.exe.",
     ],

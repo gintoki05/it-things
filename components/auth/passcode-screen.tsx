@@ -20,6 +20,9 @@ export function PasscodeScreen() {
       if (isValid) {
         setError(null)
         setIsSuccess(true)
+        if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
+          Notification.requestPermission().catch(() => {})
+        }
       } else {
         setError("PASSCODE SALAH — AKSES DITOLAK")
         setIsShaking(true)

@@ -113,7 +113,13 @@ export function ChatApp() {
     fetchOlderMessages,
     refetch,
   } = useChatStore()
-  const { isMuted, toggleMute, clearUnreadChat } = useNotification()
+  const {
+    isMuted,
+    toggleMute,
+    clearUnreadChat,
+    browserPermission,
+    requestNotificationPermission,
+  } = useNotification()
 
   React.useEffect(() => {
     clearUnreadChat()
@@ -526,6 +532,23 @@ export function ChatApp() {
           </button>
         </div>
       </div>
+
+      {/* Browser Notification Permission Banner */}
+      {browserPermission === "default" && (
+        <div className="bg-[#FFF8E7] border-b border-[#E0C48C] px-2.5 py-1.5 flex items-center justify-between text-[11px] text-[#7A5210] shrink-0">
+          <div className="flex items-center gap-1.5 truncate">
+            <Bell className="size-3.5 text-[#B8860B] shrink-0" />
+            <span className="truncate">Aktifkan notifikasi Windows agar tidak ketinggalan pesan obrolan tim.</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => requestNotificationPermission()}
+            className="ml-2 px-2 py-0.5 bg-[#CBD5E1] hover:bg-white text-[#14253D] border border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] rounded-[2px] font-mono font-bold text-[10px] shrink-0 active:translate-y-px cursor-pointer"
+          >
+            Izinkan
+          </button>
+        </div>
+      )}
 
       {/* Table missing error banner */}
       {tableMissing && (

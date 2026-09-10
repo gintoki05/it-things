@@ -96,6 +96,29 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [])
 
+  // Otomatis minta izin notifikasi saat interaksi pertama jika permission masih 'default'
+  React.useEffect(() => {
+    if (typeof window === "undefined" || !("Notification" in window)) return
+    if (Notification.permission !== "default") return
+
+    const handleFirstInteraction = async () => {
+      await requestNotificationPermission()
+      window.removeEventListener("click", handleFirstInteraction)
+      window.removeEventListener("keydown", handleFirstInteraction)
+      window.removeEventListener("touchstart", handleFirstInteraction)
+    }
+
+    window.addEventListener("click", handleFirstInteraction, { once: true })
+    window.addEventListener("keydown", handleFirstInteraction, { once: true })
+    window.addEventListener("touchstart", handleFirstInteraction, { once: true })
+
+    return () => {
+      window.removeEventListener("click", handleFirstInteraction)
+      window.removeEventListener("keydown", handleFirstInteraction)
+      window.removeEventListener("touchstart", handleFirstInteraction)
+    }
+  }, [requestNotificationPermission])
+
   // Helper to trigger notification
   const handleIncomingChatMessage = React.useCallback(
     (msg: {
@@ -147,12 +170,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       // 3. Increment unread counter
       setUnreadChatCount((prev) => prev + 1)
 
-      // 4. Browser Notification if tab is hidden or minimized
+      // 4. Windows OS / Browser Notification (muncul di Action Center Windows)
       if (
         typeof window !== "undefined" &&
         "Notification" in window &&
-        Notification.permission === "granted" &&
-        document.hidden
+        Notification.permission === "granted"
       ) {
         try {
           const title = isMention
@@ -162,7 +184,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           const notif = new Notification(title, {
             body: msg.message,
             icon: "/IT-THINGS-icon-pack/it-things-icon-pack/png-128/chat.png",
-            tag: "it-things-chat",
+            tag: `it-things-${msg.id}`,
           })
 
           notif.onclick = () => {
@@ -170,8 +192,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             window.dispatchEvent(new CustomEvent("open-app", { detail: { appId: "chat" } }))
             notif.close()
           }
-        } catch {
-          // Ignore notification error
+        } catch (e) {
+          console.warn("Browser notification error:", e)
         }
       }
     },
