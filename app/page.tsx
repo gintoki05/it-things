@@ -9,6 +9,8 @@ import { Taskbar } from "@/components/desktop/taskbar"
 import { GoogleLoginModal } from "@/components/auth/google-login-modal"
 import { PasscodeScreen } from "@/components/auth/passcode-screen"
 import { ComingSoonDialog } from "@/components/desktop/coming-soon-dialog"
+import { AboutDialog } from "@/components/desktop/about-dialog"
+import { APP_VERSION } from "@/lib/version"
 
 // Apps
 import { VoteApp } from "@/components/apps/vote-app"
@@ -20,7 +22,7 @@ import { ChatApp } from "@/components/apps/chat-app"
 
 function DesktopWorkspace() {
   const { isPasscodeVerified, isPasscodeLoading, isGuest, isAdmin } = useAuth()
-  const { comingSoonApp, closeComingSoonDialog } = useDesktop()
+  const { comingSoonApp, closeComingSoonDialog, isAboutOpen, closeAboutDialog } = useDesktop()
   const [showLoginModal, setShowLoginModal] = React.useState(false)
 
   // Saat pertama kali memuat / reload, tunggu pengecekan storage selesai
@@ -79,7 +81,7 @@ function DesktopWorkspace() {
           IT-THINGS
         </div>
         <div className="font-mono text-xs text-blue-200 tracking-wider">
-          {isGuest ? "GUEST MODE // READ-ONLY ACCESS" : "INTERNAL TEAM SUITE 98 // v2.0.0"}
+          {isGuest ? "GUEST MODE // READ-ONLY ACCESS" : `INTERNAL TEAM SUITE 98 // ${APP_VERSION}`}
         </div>
       </div>
 
@@ -125,6 +127,12 @@ function DesktopWorkspace() {
       <ComingSoonDialog
         app={comingSoonApp}
         onClose={closeComingSoonDialog}
+      />
+
+      {/* Retro About / winver.exe Dialog */}
+      <AboutDialog
+        isOpen={isAboutOpen}
+        onClose={closeAboutDialog}
       />
 
       {/* Google Login / Access Gate Modal */}

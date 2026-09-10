@@ -11,8 +11,11 @@ import {
   ReceiptText, 
   LogOut, 
   UserCheck, 
-  Cpu
+  Cpu,
+  Edit3
 } from "lucide-react"
+import { EditProfileModal } from "@/components/auth/edit-profile-modal"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 export type NavigationTab = "home" | "pantry" | "members" | "splitbill" | "settings"
 
@@ -25,6 +28,8 @@ interface ToolbarProps {
 export function Toolbar({ activeTab, onTabChange, isUsingSupabase }: ToolbarProps) {
   const { user, signOut } = useAuth()
   const [time, setTime] = React.useState<string>("")
+  const [isProfileOpen, setIsProfileOpen] = React.useState(false)
+  const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false)
 
   React.useEffect(() => {
     const updateTime = () => {
@@ -67,13 +72,19 @@ export function Toolbar({ activeTab, onTabChange, isUsingSupabase }: ToolbarProp
 
           {user && (
             <div className="flex items-center gap-1.5 pl-2 border-l border-[var(--border)]">
-              <div className="flex items-center gap-1 text-[11px] font-semibold text-[var(--primary)]">
-                <UserCheck className="size-3.5" />
-                <span>{user.name}</span>
-              </div>
               <button
                 type="button"
-                onClick={() => signOut()}
+                onClick={() => setIsProfileOpen(true)}
+                title="Edit Profil & Nama"
+                className="flex items-center gap-1 text-[11px] font-semibold text-[var(--primary)] hover:underline cursor-pointer"
+              >
+                <UserCheck className="size-3.5" />
+                <span>{user.name}</span>
+                <Edit3 className="size-2.5 opacity-60" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(true)}
                 title="Keluar / Ganti Akun"
                 className="p-1 hover:text-[var(--danger)] transition-colors"
               >
@@ -137,6 +148,29 @@ export function Toolbar({ activeTab, onTabChange, isUsingSupabase }: ToolbarProp
           </span>
         </div>
       </div>
+
+      <EditProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+      />
+
+      {/* Log Off Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={async () => {
+          await signOut()
+          setShowLogoutConfirm(false)
+        }}
+        title="LOG_OFF.EXE"
+        titleIcon={<LogOut className="size-3.5 text-[#14253D]" />}
+        message={`Apakah kamu yakin ingin keluar (log off) dari akun ${user?.name || "kamu"}?`}
+        icon={<LogOut className="size-5 text-amber-600" />}
+        confirmText="Log Off"
+        confirmIcon={<LogOut className="size-3" />}
+        cancelText="Batal"
+        variant="warning"
+      />
     </header>
   )
 }

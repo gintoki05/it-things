@@ -8,9 +8,11 @@ export interface ConfirmDialogProps {
   onClose: () => void
   onConfirm: () => void | Promise<void>
   title?: string
+  titleIcon?: React.ReactNode
   message: React.ReactNode
   icon?: React.ReactNode
   confirmText?: string
+  confirmIcon?: React.ReactNode
   cancelText?: string
   variant?: "destructive" | "warning" | "default"
   isLoading?: boolean
@@ -21,9 +23,11 @@ export function ConfirmDialog({
   onClose,
   onConfirm,
   title = "KONFIRMASI_HAPUS.EXE",
+  titleIcon,
   message,
   icon,
   confirmText = "Hapus",
+  confirmIcon,
   cancelText = "Batal",
   variant = "destructive",
   isLoading = false,
@@ -62,11 +66,11 @@ export function ConfirmDialog({
           }`}
         >
           <div className="flex items-center gap-1.5">
-            {isDestructive ? (
+            {titleIcon ?? (isDestructive ? (
               <Trash2 className="size-3.5 text-red-200" />
             ) : (
               <AlertTriangle className="size-3.5 text-amber-500" />
-            )}
+            ))}
             <span>{title}</span>
           </div>
           <button
@@ -124,7 +128,7 @@ export function ConfirmDialog({
                   : "bg-[#1E4E8C] hover:bg-[#153A6B] border border-[#102A45]"
               }`}
             >
-              {isDestructive && <Trash2 className="size-3" />}
+              {confirmIcon ?? (isDestructive && <Trash2 className="size-3" />)}
               {isLoading ? "Memproses..." : confirmText}
             </button>
           </div>

@@ -19,18 +19,25 @@ import {
   User,
   Lock,
   Eye,
-  ShieldAlert
+  ShieldAlert,
+  Edit3,
+  Info
 } from "lucide-react"
+import { EditProfileModal } from "@/components/auth/edit-profile-modal"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { APP_VERSION, APP_BUILD } from "@/lib/version"
 
 interface TaskbarProps {
   onOpenLoginModal?: () => void
 }
 
 export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
-  const { windows, activeWindowId, openWindow, toggleWindow } = useDesktop()
+  const { windows, activeWindowId, openWindow, toggleWindow, openAboutDialog } = useDesktop()
   const { user, isAdmin, isTreasurer, isGuest, isSupabaseConnected, signOut, setDemoUserRole, lockApp } = useAuth()
 
   const [isStartOpen, setIsStartOpen] = React.useState(false)
+  const [isProfileModalOpen, setIsProfileModalOpen] = React.useState(false)
+  const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false)
   const [time, setTime] = React.useState("12:00")
   const startMenuRef = React.useRef<HTMLDivElement>(null)
   const startBtnRef = React.useRef<HTMLButtonElement>(null)
@@ -102,33 +109,46 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
           {/* Start Menu Content */}
           <div className="flex-1 flex flex-col p-1.5 text-xs text-[#14253D] space-y-1">
             {/* User Profile Header */}
-            <div className="p-2 bg-white/60 rounded border border-[#A4B5C6] flex items-center gap-2">
-              <UserAvatar
-                src={user?.avatarUrl}
-                name={user?.name || "IT"}
-                size="size-8"
-                textClass="text-xs"
-              />
-              <div className="min-w-0 flex-1">
-                <div className="font-bold text-[11px] truncate">{user?.name || "Tamu Internal IT"}</div>
-                <div className="flex items-center gap-1 text-[10px] text-gray-600">
-                  {isGuest ? (
-                    <span className="text-amber-800 font-bold flex items-center gap-1 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">
-                      <Eye className="size-3" /> Mode Tamu (Read-Only)
-                    </span>
-                  ) : isAdmin ? (
-                    <span className="text-purple-700 font-semibold flex items-center gap-0.5">
-                      <ShieldCheck className="size-3" /> Administrator
-                    </span>
-                  ) : isTreasurer ? (
-                    <span className="text-amber-700 font-semibold flex items-center gap-0.5">
-                      <ShieldCheck className="size-3" /> Bendahara
-                    </span>
-                  ) : (
-                    <span>Anggota Tim</span>
-                  )}
+            <div className="p-2 bg-white/60 rounded border border-[#A4B5C6] flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <UserAvatar
+                  src={user?.avatarUrl}
+                  name={user?.name || "IT"}
+                  size="size-8"
+                  textClass="text-xs"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="font-bold text-[11px] truncate">{user?.name || "Tamu Internal IT"}</div>
+                  <div className="flex items-center gap-1 text-[10px] text-gray-600">
+                    {isGuest ? (
+                      <span className="text-amber-800 font-bold flex items-center gap-1 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">
+                        <Eye className="size-3" /> Mode Tamu (Read-Only)
+                      </span>
+                    ) : isAdmin ? (
+                      <span className="text-purple-700 font-semibold flex items-center gap-0.5">
+                        <ShieldCheck className="size-3" /> Administrator
+                      </span>
+                    ) : isTreasurer ? (
+                      <span className="text-amber-700 font-semibold flex items-center gap-0.5">
+                        <ShieldCheck className="size-3" /> Bendahara
+                      </span>
+                    ) : (
+                      <span>Anggota Tim</span>
+                    )}
+                  </div>
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsStartOpen(false)
+                  setIsProfileModalOpen(true)
+                }}
+                title="Edit Profil & Nama"
+                className="p-1 hover:bg-[#A4B5C6]/40 rounded text-gray-600 hover:text-[#1E4E8C] transition-colors shrink-0"
+              >
+                <Edit3 className="size-3.5" />
+              </button>
             </div>
 
             {/* Apps List */}
@@ -249,12 +269,36 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                 type="button"
                 onClick={() => {
                   setIsStartOpen(false)
+                  openAboutDialog()
+                }}
+                className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[#A4B5C6]/30 text-[#14253D] rounded-[2px] transition-colors text-left font-semibold text-[11px]"
+              >
+                <Info className="size-3.5 text-[#1E4E8C]" />
+                <span>Tentang IT-Things ({APP_VERSION})...</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsStartOpen(false)
                   lockApp()
                 }}
                 className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[#A4B5C6]/30 text-[#14253D] rounded-[2px] transition-colors text-left font-semibold text-[11px]"
               >
                 <Lock className="size-3.5 text-[#1E4E8C]" />
                 <span>Kunci Layar (Lock PIN)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsStartOpen(false)
+                  setIsProfileModalOpen(true)
+                }}
+                className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[#A4B5C6]/30 text-[#14253D] rounded-[2px] transition-colors text-left font-semibold text-[11px]"
+              >
+                <Edit3 className="size-3.5 text-[#1E4E8C]" />
+                <span>Edit Profil & Nama...</span>
               </button>
 
               {isGuest ? (
@@ -273,8 +317,8 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                   <button
                     type="button"
                     onClick={() => {
-                      signOut()
                       setIsStartOpen(false)
+                      setShowLogoutConfirm(true)
                     }}
                     className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[#C53030] hover:text-white rounded-[2px] transition-colors text-left font-semibold text-[11px]"
                   >
@@ -286,8 +330,8 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                 <button
                   type="button"
                   onClick={() => {
-                    signOut()
                     setIsStartOpen(false)
+                    setShowLogoutConfirm(true)
                   }}
                   className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[#C53030] hover:text-white rounded-[2px] transition-colors text-left font-semibold text-[11px]"
                 >
@@ -388,10 +432,48 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
             </span>
           </div>
 
+          {/* Version Badge */}
+          <button
+            type="button"
+            onClick={openAboutDialog}
+            title={`IT-THINGS ${APP_VERSION} (Build ${APP_BUILD}) - Klik untuk lihat changelog`}
+            className="px-1.5 py-0.5 rounded-[2px] bg-[#BDCCD9] hover:bg-[#A8BCCC] active:translate-y-px border border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white text-[10px] font-mono font-bold text-[#14253D] cursor-pointer transition-colors shadow-none"
+          >
+            {APP_VERSION}
+          </button>
+
           {/* Clock */}
           <div className="font-bold text-[11px] tracking-wider text-slate-800">{time}</div>
         </div>
       </footer>
+
+      {/* Edit Profile Modal */}
+      <EditProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
+
+      {/* Log Off Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={async () => {
+          await signOut()
+          setShowLogoutConfirm(false)
+        }}
+        title="LOG_OFF.EXE"
+        titleIcon={<LogOut className="size-3.5 text-[#14253D]" />}
+        message={
+          isGuest
+            ? "Apakah kamu yakin ingin keluar dari Mode Tamu?"
+            : `Apakah kamu yakin ingin keluar (log off) dari akun ${user?.name || "kamu"}?`
+        }
+        icon={<LogOut className="size-5 text-amber-600" />}
+        confirmText={isGuest ? "Keluar" : "Log Off"}
+        confirmIcon={<LogOut className="size-3" />}
+        cancelText="Batal"
+        variant="warning"
+      />
     </>
   )
 }

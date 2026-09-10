@@ -35,6 +35,9 @@ interface DesktopContextType {
   updatePosition: (id: AppId, pos: { x: number; y: number }) => void
   openComingSoonDialog: (app: WindowState) => void
   closeComingSoonDialog: () => void
+  isAboutOpen: boolean
+  openAboutDialog: () => void
+  closeAboutDialog: () => void
 }
 
 const DesktopContext = React.createContext<DesktopContextType | undefined>(undefined)
@@ -136,6 +139,7 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
   const [activeWindowId, setActiveWindowId] = React.useState<AppId | null>("vote")
   const [topZIndex, setTopZIndex] = React.useState(20)
   const [comingSoonApp, setComingSoonApp] = React.useState<WindowState | null>(null)
+  const [isAboutOpen, setIsAboutOpen] = React.useState(false)
 
   // Tempatkan Chat.exe secara responsif di panel kanan desktop pada layar lebar
   React.useEffect(() => {
@@ -226,6 +230,14 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
 
   const closeComingSoonDialog = React.useCallback(() => {
     setComingSoonApp(null)
+  }, [])
+
+  const openAboutDialog = React.useCallback(() => {
+    setIsAboutOpen(true)
+  }, [])
+
+  const closeAboutDialog = React.useCallback(() => {
+    setIsAboutOpen(false)
   }, [])
 
   const openWindow = React.useCallback(
@@ -373,6 +385,9 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
         updatePosition,
         openComingSoonDialog,
         closeComingSoonDialog,
+        isAboutOpen,
+        openAboutDialog,
+        closeAboutDialog,
       }}
     >
       {children}

@@ -129,6 +129,14 @@ export function useTeamStore() {
 
   React.useEffect(() => {
     loadMembers()
+
+    const handleProfileUpdated = () => {
+      loadMembers()
+    }
+    if (typeof window !== "undefined") {
+      window.addEventListener("profile-updated", handleProfileUpdated)
+      return () => window.removeEventListener("profile-updated", handleProfileUpdated)
+    }
   }, [loadMembers])
 
   // Save changes to localStorage helper

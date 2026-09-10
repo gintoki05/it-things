@@ -309,6 +309,13 @@ export function useChatStore() {
   React.useEffect(() => {
     fetchMessages()
 
+    const handleProfileUpdated = () => {
+      fetchMessages()
+    }
+    if (typeof window !== "undefined") {
+      window.addEventListener("profile-updated", handleProfileUpdated)
+    }
+
     if (isSupabaseConfigured && supabase) {
       const channel = supabase
         .channel("chat-realtime")
@@ -391,6 +398,15 @@ export function useChatStore() {
         if (supabase) {
           supabase.removeChannel(channel)
         }
+        if (typeof window !== "undefined") {
+          window.removeEventListener("profile-updated", handleProfileUpdated)
+        }
+      }
+    }
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("profile-updated", handleProfileUpdated)
       }
     }
   }, [fetchMessages])

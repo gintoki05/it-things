@@ -164,6 +164,13 @@ export function useVoteStore() {
   React.useEffect(() => {
     fetchData()
 
+    const handleProfileUpdated = () => {
+      fetchData()
+    }
+    if (typeof window !== "undefined") {
+      window.addEventListener("profile-updated", handleProfileUpdated)
+    }
+
     if (isSupabaseConfigured && supabase) {
       const channel = supabase
         .channel("vote-realtime")
@@ -172,7 +179,18 @@ export function useVoteStore() {
         .on("postgres_changes", { event: "*", schema: "public", table: "vote_records" }, () => fetchData())
         .subscribe()
 
-      return () => { if (supabase) supabase.removeChannel(channel) }
+      return () => {
+        if (supabase) supabase.removeChannel(channel)
+        if (typeof window !== "undefined") {
+          window.removeEventListener("profile-updated", handleProfileUpdated)
+        }
+      }
+    }
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("profile-updated", handleProfileUpdated)
+      }
     }
   }, [fetchData])
 
@@ -240,6 +258,14 @@ export function useVoteStore() {
 
   // ─── Delete Group ────────────────────────────────────────
   const deleteGroup = async (groupId: string): Promise<{ success: boolean; error?: string }> => {
+    const targetGroup = groups.find((g) => g.id === groupId)
+    if (targetGroup && !isGroupArchived(targetGroup)) {
+      return {
+        success: false,
+        error: "Vote group harus diarsipkan terlebih dahulu sebelum dapat dihapus permanen.",
+      }
+    }
+
     setGroups((prev) => prev.filter((g) => g.id !== groupId))
 
     if (!isSupabaseConfigured || !supabase) return { success: true }
@@ -254,14 +280,27 @@ export function useVoteStore() {
     }
   }
 
-  // ─── Toggle Close Group ──────────────────────────────────
+  // ─── Toggle Close / Archive Group ────────────────────────
   const toggleCloseGroup = async (groupId: string, isClosed: boolean): Promise<{ success: boolean; error?: string }> => {
-    setGroups((prev) => prev.map((g) => (g.id === groupId ? { ...g, isClosed } : g)))
+    const targetGroup = groups.find((g) => g.id === groupId)
+    // If reopening an expired group, extend expiresAt by 21 days so it becomes active again
+    const shouldExtendExpiry = !isClosed && targetGroup && new Date(targetGroup.expiresAt) <= new Date()
+    const newExpiresAt = shouldExtendExpiry
+      ? new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString()
+      : targetGroup?.expiresAt || new Date().toISOString()
+
+    setGroups((prev) =>
+      prev.map((g) => (g.id === groupId ? { ...g, isClosed, expiresAt: newExpiresAt } : g))
+    )
 
     if (!isSupabaseConfigured || !supabase) return { success: true }
 
     try {
-      const { error } = await supabase.from("vote_groups").update({ is_closed: isClosed }).eq("id", groupId)
+      const payload: { is_closed: boolean; expires_at?: string } = { is_closed: isClosed }
+      if (shouldExtendExpiry) {
+        payload.expires_at = newExpiresAt
+      }
+      const { error } = await supabase.from("vote_groups").update(payload).eq("id", groupId)
       if (error) { await fetchData(); return { success: false, error: error.message } }
       return { success: true }
     } catch (err) {

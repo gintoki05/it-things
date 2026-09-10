@@ -527,6 +527,13 @@ export type Database = {
     Functions: {
       is_admin: { Args: never; Returns: boolean }
       is_treasurer: { Args: never; Returns: boolean }
+      sync_user_profile_name: {
+        Args: {
+          new_name: string
+          new_avatar?: string | null
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

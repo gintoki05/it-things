@@ -224,6 +224,95 @@ $$;
 GRANT EXECUTE ON FUNCTION public.is_treasurer() TO authenticated, anon;
 
 -- ============================================================
+-- HELPER FUNCTION: sync_user_profile_name
+-- Sinkronisasi nama dan avatar pengguna ke seluruh aktivitas/data terkait
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.sync_user_profile_name(new_name TEXT, new_avatar TEXT DEFAULT NULL)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_uid TEXT := auth.uid()::text;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+
+  -- 1. team_members
+  UPDATE public.team_members
+  SET name = new_name,
+      avatar_url = COALESCE(new_avatar, avatar_url)
+  WHERE user_id = v_uid;
+
+  -- 2. vote_groups (created_by)
+  UPDATE public.vote_groups
+  SET created_by_name = new_name,
+      created_by_avatar = COALESCE(new_avatar, created_by_avatar)
+  WHERE created_by_id = v_uid;
+
+  -- 3. vote_options (proposed_by)
+  UPDATE public.vote_options
+  SET proposed_by_name = new_name,
+      proposed_by_avatar = COALESCE(new_avatar, proposed_by_avatar)
+  WHERE proposed_by_id = v_uid;
+
+  -- 4. vote_records
+  UPDATE public.vote_records
+  SET user_name = new_name,
+      user_avatar = COALESCE(new_avatar, user_avatar)
+  WHERE user_id = v_uid;
+
+  -- 5. wheel_places
+  UPDATE public.wheel_places
+  SET proposed_by_name = new_name
+  WHERE proposed_by_id = v_uid;
+
+  -- 6. wheel_spins
+  UPDATE public.wheel_spins
+  SET spun_by_name = new_name
+  WHERE spun_by_id = v_uid;
+
+  -- 7. split_bills
+  UPDATE public.split_bills
+  SET created_by_name = new_name,
+      created_by_avatar = COALESCE(new_avatar, created_by_avatar)
+  WHERE created_by_id = v_uid;
+
+  -- 8. split_bill_participants
+  UPDATE public.split_bill_participants
+  SET user_name = new_name,
+      user_avatar = COALESCE(new_avatar, user_avatar)
+  WHERE user_id = v_uid;
+
+  -- 9. kas_transactions
+  UPDATE public.kas_transactions
+  SET created_by_name = new_name
+  WHERE created_by_id = v_uid;
+
+  -- 10. kas_dues
+  UPDATE public.kas_dues
+  SET user_name = new_name,
+      user_avatar = COALESCE(new_avatar, user_avatar)
+  WHERE user_id = v_uid;
+
+  -- 11. chat_messages
+  UPDATE public.chat_messages
+  SET user_name = new_name,
+      user_avatar = COALESCE(new_avatar, user_avatar)
+  WHERE user_id = v_uid;
+
+  -- 12. chat_reactions
+  UPDATE public.chat_reactions
+  SET user_name = new_name
+  WHERE user_id = v_uid;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.sync_user_profile_name(TEXT, TEXT) TO authenticated, anon;
+
+-- ============================================================
 -- 1. TEAM MEMBERS POLICIES
 -- ============================================================
 CREATE POLICY "team_members_select" ON public.team_members
@@ -267,6 +356,7 @@ CREATE POLICY "vote_groups_delete" ON public.vote_groups
   FOR DELETE USING (
     auth.uid() IS NOT NULL
     AND (created_by_id = auth.uid()::text OR public.is_admin())
+    AND (is_closed = true OR expires_at <= timezone('utc'::text, now()))
   );
 
 -- ============================================================

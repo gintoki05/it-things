@@ -625,27 +625,55 @@ function GroupDetail({
                 >
                   <Pencil className="size-3.5" />
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setShowToggleCloseDialog(true)}
-                  title={archived ? "Buka kembali voting" : "Tutup voting"}
-                  className="p-1.5 hover:bg-[#EEF2F6] rounded text-[#526374] hover:text-[#14253D] transition-colors cursor-pointer"
-                >
-                  {archived ? <Unlock className="size-3.5 text-emerald-600" /> : <Lock className="size-3.5 text-amber-600" />}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowDeleteGroupDialog(true)}
-                  title="Hapus group"
-                  className="p-1.5 hover:bg-red-50 rounded text-gray-400 hover:text-red-600 transition-colors cursor-pointer"
-                >
-                  <Trash2 className="size-3.5" />
-                </button>
+                {archived ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setShowToggleCloseDialog(true)}
+                      title="Buka kembali voting"
+                      className="p-1.5 hover:bg-[#EEF2F6] rounded text-[#526374] hover:text-[#14253D] transition-colors cursor-pointer"
+                    >
+                      <Unlock className="size-3.5 text-emerald-600" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowDeleteGroupDialog(true)}
+                      title="Hapus permanen group"
+                      className="p-1.5 hover:bg-red-50 rounded text-red-500 hover:text-red-700 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowToggleCloseDialog(true)}
+                    title="Arsipkan voting"
+                    className="p-1.5 hover:bg-[#EEF2F6] rounded text-[#526374] hover:text-[#14253D] transition-colors cursor-pointer"
+                  >
+                    <Archive className="size-3.5 text-amber-600" />
+                  </button>
+                )}
               </>
             )}
           </div>
         </div>
       </div>
+
+      {/* Archive Notice Banner */}
+      {archived && (
+        <div className="bg-[#FAFBFD] border border-[#CBD5E1] rounded-[3px] p-2.5 flex items-center justify-between gap-2 text-xs font-mono">
+          <div className="flex items-center gap-2 text-gray-600">
+            <Archive className="size-3.5 text-amber-600 shrink-0" />
+            <span>Voting ini berada di Arsip. Pemungutan suara telah ditutup.</span>
+          </div>
+          {canManage && (
+            <span className="text-[10px] text-gray-400 hidden sm:inline">
+              Opsi: Buka Kembali atau Hapus Permanen
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Top 3 Leaderboard Card */}
       {top3.length > 0 && (
@@ -873,16 +901,16 @@ function GroupDetail({
           setIsDeleting(false)
           setShowDeleteGroupDialog(false)
         }}
-        title="HAPUS_VOTE_GROUP.EXE"
+        title="HAPUS_PERMANEN.EXE"
         message={
           <>
-            Apakah Anda yakin ingin menghapus vote group{" "}
+            Apakah Anda yakin ingin menghapus <span className="font-bold text-red-600">PERMANEN</span> vote group{" "}
             <span className="font-bold text-[#14253D]">"{group.title}"</span>?
             <br />
-            Semua data voting dan opsi di dalamnya akan dihapus secara permanen.
+            Semua data voting dan opsi di dalamnya akan dihapus selamanya dari database dan tidak dapat dipulihkan.
           </>
         }
-        confirmText="Ya, Hapus Group"
+        confirmText="Ya, Hapus Permanen"
         cancelText="Batal"
         variant="destructive"
       />
@@ -925,26 +953,26 @@ function GroupDetail({
           setIsTogglingClose(false)
           setShowToggleCloseDialog(false)
         }}
-        title={archived ? "BUKA_VOTING.EXE" : "TUTUP_VOTING.EXE"}
-        icon={archived ? <Unlock className="size-5 text-emerald-600" /> : <Lock className="size-5 text-amber-600" />}
+        title={archived ? "BUKA_VOTING.EXE" : "ARSIPKAN_VOTING.EXE"}
+        icon={archived ? <Unlock className="size-5 text-emerald-600" /> : <Archive className="size-5 text-amber-600" />}
         message={
           archived ? (
             <>
               Buka kembali sesi voting untuk group{" "}
               <span className="font-bold text-[#14253D]">"{group.title}"</span>?
               <br />
-              Peserta akan dapat kembali memberikan suara dan mengusulkan opsi.
+              Voting akan dikembalikan ke tab aktif dan peserta dapat kembali memberikan suara.
             </>
           ) : (
             <>
-              Apakah Anda yakin ingin menutup sesi voting untuk group{" "}
+              Apakah Anda yakin ingin mengarsipkan sesi voting untuk group{" "}
               <span className="font-bold text-[#14253D]">"{group.title}"</span>?
               <br />
-              Setelah ditutup, voting akan masuk ke tab arsip dan peserta tidak dapat memberikan suara lagi.
+              Setelah diarsipkan, voting akan masuk ke tab arsip dan peserta tidak dapat memberikan suara lagi.
             </>
           )
         }
-        confirmText={archived ? "Buka Kembali" : "Ya, Tutup Voting"}
+        confirmText={archived ? "Buka Kembali" : "Ya, Arsipkan"}
         cancelText="Batal"
         variant={archived ? "default" : "warning"}
       />
@@ -1092,13 +1120,13 @@ export function VoteApp() {
           onToggleClose={() => {
             const archived = isGroupArchived(selectedGroup)
             toggleCloseGroup(selectedGroup.id, !selectedGroup.isClosed)
-            if (archived) showToast("success", "Voting dibuka kembali.")
-            else showToast("success", "Voting ditutup.")
+            if (archived) showToast("success", `Group "${selectedGroup.title}" dibuka kembali.`)
+            else showToast("success", `Group "${selectedGroup.title}" berhasil diarsipkan.`)
           }}
           onDeleteGroup={() => {
             deleteGroup(selectedGroup.id)
             setSelectedGroupId(null)
-            showToast("success", `Group "${selectedGroup.title}" dihapus.`)
+            showToast("success", `Group "${selectedGroup.title}" berhasil dihapus permanen.`)
           }}
           onUpdateGroup={async (updates) => {
             const res = await updateGroup(selectedGroup.id, updates)

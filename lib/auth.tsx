@@ -27,9 +27,21 @@ interface AuthContextType {
   verifyPasscode: (pin: string) => boolean
   lockApp: () => void
   signInWithGoogle: () => Promise<void>
+  signInWithPassword: (email: string, password: string) => Promise<void>
+  signUpWithPassword: (email: string, password: string, name: string) => Promise<{ needsEmailConfirmation?: boolean }>
   signInAsGuest: () => void
   signOut: () => Promise<void>
   setDemoUserRole?: (role: UserRole) => void
+  updateProfile: (updates: { name: string; avatarUrl?: string }) => Promise<{ success: boolean; error?: string }>
+}
+
+const getSavedGuestName = () => {
+  if (typeof window === "undefined") return "Tamu (Read-Only)"
+  try {
+    return localStorage.getItem("it_things_guest_name") || "Tamu (Read-Only)"
+  } catch {
+    return "Tamu (Read-Only)"
+  }
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined)
@@ -39,6 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = React.useState(true)
   const [isPasscodeVerified, setIsPasscodeVerified] = React.useState<boolean>(false)
   const [isPasscodeLoading, setIsPasscodeLoading] = React.useState<boolean>(true)
+  const isUpdatingProfileRef = React.useRef(false)
 
   React.useEffect(() => {
     const checkPasscodeStorage = () => {
@@ -147,6 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data } = supabase.auth.onAuthStateChange(
           async (_event, session) => {
             if (!isMounted) return
+            if (isUpdatingProfileRef.current) return
             if (session?.user) {
               if (typeof window !== "undefined") {
                 try {
@@ -164,7 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               if (isGuestSaved) {
                 setUser({
                   id: "guest-user",
-                  name: "Tamu (Read-Only)",
+                  name: getSavedGuestName(),
                   email: "tamu@it-internal.local",
                   role: "guest",
                   isGuest: true,
@@ -204,7 +218,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (isGuestSaved === "true" && isMounted) {
               setUser({
                 id: "guest-user",
-                name: "Tamu (Read-Only)",
+                name: getSavedGuestName(),
                 email: "tamu@it-internal.local",
                 role: "guest",
                 isGuest: true,
@@ -229,7 +243,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (isGuestSaved === "true" && isMounted) {
               setUser({
                 id: "guest-user",
-                name: "Tamu (Read-Only)",
+                name: getSavedGuestName(),
                 email: "tamu@it-internal.local",
                 role: "guest",
                 isGuest: true,
@@ -261,38 +275,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const mapAndSetSupabaseUser = async (sbUser: User) => {
     const meta = sbUser.user_metadata || {}
     let role: UserRole = "member"
+    let displayName = meta.full_name || meta.name || sbUser.email?.split("@")[0] || "Anggota Tim"
+    let avatarUrl = meta.avatar_url || meta.picture
 
-    // Check team_members table for role
+    // Check team_members table for role & custom profile name
     try {
       if (supabase) {
         const { data } = await supabase
           .from("team_members")
-          .select("role")
+          .select("role, name, avatar_url")
           .eq("user_id", sbUser.id)
           .maybeSingle()
 
-        if (data?.role) {
-          role = data.role as UserRole
+        if (data) {
+          if (data.role) role = data.role as UserRole
+          if (data.name) displayName = data.name
+          if (data.avatar_url) avatarUrl = data.avatar_url
         } else {
           // If first time, insert as member
           await supabase.from("team_members").upsert({
             user_id: sbUser.id,
             email: sbUser.email || "",
-            name: meta.full_name || meta.name || sbUser.email?.split("@")[0] || "Anggota Tim",
-            avatar_url: meta.avatar_url || meta.picture || "",
+            name: displayName,
+            avatar_url: avatarUrl || "",
             role: "member",
           })
         }
       }
     } catch (e) {
-      console.warn("Could not sync team_member role:", e)
+      console.warn("Could not sync team_member data:", e)
     }
 
     const authUser: AuthUser = {
       id: sbUser.id,
       email: sbUser.email || "",
-      name: meta.full_name || meta.name || sbUser.email?.split("@")[0] || "Anggota Tim",
-      avatarUrl: meta.avatar_url || meta.picture,
+      name: displayName,
+      avatarUrl,
       role,
       isGuest: false,
     }
@@ -350,6 +368,82 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const signInWithPassword = async (email: string, password: string) => {
+    if (!isSupabaseConfigured || !supabase) {
+      throw new Error("Supabase belum dikonfigurasi. Periksa NEXT_PUBLIC_SUPABASE_URL dan key di .env.local.")
+    }
+
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("it_things_guest_session")
+      } catch (e) {
+        console.warn("Storage remove error:", e)
+      }
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    })
+
+    if (error) {
+      console.error("Supabase Password Login Error:", error.message)
+      throw error
+    }
+
+    if (data?.user) {
+      await mapAndSetSupabaseUser(data.user)
+    }
+  }
+
+  const signUpWithPassword = async (
+    email: string,
+    password: string,
+    name: string
+  ): Promise<{ needsEmailConfirmation?: boolean }> => {
+    if (!isSupabaseConfigured || !supabase) {
+      throw new Error("Supabase belum dikonfigurasi. Periksa NEXT_PUBLIC_SUPABASE_URL dan key di .env.local.")
+    }
+
+    const trimmedEmail = email.trim()
+    const trimmedName = name.trim() || trimmedEmail.split("@")[0] || "Anggota Tim"
+
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("it_things_guest_session")
+      } catch (e) {
+        console.warn("Storage remove error:", e)
+      }
+    }
+
+    const { data, error } = await supabase.auth.signUp({
+      email: trimmedEmail,
+      password,
+      options: {
+        data: {
+          name: trimmedName,
+          full_name: trimmedName,
+        },
+      },
+    })
+
+    if (error) {
+      console.error("Supabase Password Register Error:", error.message)
+      throw error
+    }
+
+    // Jika user dibuat tapi belum ada session (butuh konfirmasi email)
+    if (data?.user && !data.session) {
+      return { needsEmailConfirmation: true }
+    }
+
+    if (data?.user) {
+      await mapAndSetSupabaseUser(data.user)
+    }
+
+    return { needsEmailConfirmation: false }
+  }
+
   const signInAsGuest = () => {
     if (typeof window !== "undefined") {
       try {
@@ -360,11 +454,116 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setUser({
       id: "guest-user",
-      name: "Tamu (Read-Only)",
+      name: getSavedGuestName(),
       email: "tamu@it-internal.local",
       role: "guest",
       isGuest: true,
     })
+  }
+
+  const updateProfile = async (updates: {
+    name: string
+    avatarUrl?: string
+  }): Promise<{ success: boolean; error?: string }> => {
+    const trimmedName = updates.name.trim()
+    if (!trimmedName) {
+      return { success: false, error: "Nama tidak boleh kosong." }
+    }
+    if (trimmedName.length < 2) {
+      return { success: false, error: "Nama minimal 2 karakter." }
+    }
+
+    const prevUser = user
+    const updatedUser: AuthUser | null = prevUser
+      ? {
+          ...prevUser,
+          name: trimmedName,
+          ...(updates.avatarUrl !== undefined ? { avatarUrl: updates.avatarUrl } : {}),
+        }
+      : null
+
+    isUpdatingProfileRef.current = true
+    setUser(updatedUser)
+
+    // Jika mode Tamu / Guest
+    if (isGuest || user?.id === "guest-user") {
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("it_things_guest_name", trimmedName)
+          window.dispatchEvent(new CustomEvent("profile-updated", { detail: { name: trimmedName } }))
+        } catch (e) {
+          console.warn("Error saving guest name:", e)
+        }
+      }
+      isUpdatingProfileRef.current = false
+      return { success: true }
+    }
+
+    // Jika user Google / Email & Supabase terhubung
+    if (isSupabaseConfigured && supabase && user) {
+      try {
+        // 1. Eksekusi cascading sync ke database dulu (team_members, vote, chat, dll)
+        const { error: rpcError } = await supabase.rpc("sync_user_profile_name", {
+          new_name: trimmedName,
+          new_avatar: updates.avatarUrl || null,
+        })
+
+        if (rpcError) {
+          console.warn("RPC sync_user_profile_name failed, fallback to direct update:", rpcError.message)
+          const updatePayload: { name: string; avatar_url?: string } = {
+            name: trimmedName,
+          }
+          if (updates.avatarUrl !== undefined) {
+            updatePayload.avatar_url = updates.avatarUrl
+          }
+
+          const { error: memberError } = await supabase
+            .from("team_members")
+            .update(updatePayload)
+            .eq("user_id", user.id)
+
+          if (memberError) {
+            await supabase.from("team_members").upsert({
+              user_id: user.id,
+              email: user.email || "",
+              name: trimmedName,
+              avatar_url: updates.avatarUrl || user.avatarUrl || "",
+              role: user.role || "member",
+            })
+          }
+        }
+
+        // 2. Update metadata di Supabase Auth
+        const { error: authError } = await supabase.auth.updateUser({
+          data: {
+            full_name: trimmedName,
+            name: trimmedName,
+            ...(updates.avatarUrl !== undefined ? { avatar_url: updates.avatarUrl } : {}),
+          },
+        })
+        if (authError) {
+          console.warn("Auth updateUser error:", authError.message)
+        }
+
+        // 3. Pastikan state lokal konsisten & broadcast event ke fitur lain
+        setUser(updatedUser)
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("profile-updated", { detail: { name: trimmedName } }))
+        }
+
+        return { success: true }
+      } catch (err: unknown) {
+        console.error("Gagal update profil:", err)
+        setUser(prevUser)
+        const message = err instanceof Error ? err.message : "Gagal menyimpan perubahan profil."
+        return { success: false, error: message }
+      } finally {
+        isUpdatingProfileRef.current = false
+      }
+    }
+
+    isUpdatingProfileRef.current = false
+    return { success: true }
   }
 
   const signOut = async () => {
@@ -431,9 +630,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         verifyPasscode,
         lockApp,
         signInWithGoogle,
+        signInWithPassword,
+        signUpWithPassword,
         signInAsGuest,
         signOut,
         setDemoUserRole,
+        updateProfile,
       }}
     >
       {children}
