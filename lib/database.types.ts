@@ -7,11 +7,96 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
+      chat_messages: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
+          edited_at: string | null
+          id: string
+          is_deleted: boolean
+          is_edited: boolean
+          mentions: string[] | null
+          message: string
+          user_avatar: string | null
+          user_id: string
+          user_name: string
+          user_role: string | null
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          edited_at?: string | null
+          id?: string
+          is_deleted?: boolean
+          is_edited?: boolean
+          mentions?: string[] | null
+          message: string
+          user_avatar?: string | null
+          user_id: string
+          user_name: string
+          user_role?: string | null
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          edited_at?: string | null
+          id?: string
+          is_deleted?: boolean
+          is_edited?: boolean
+          mentions?: string[] | null
+          message?: string
+          user_avatar?: string | null
+          user_id?: string
+          user_name?: string
+          user_role?: string | null
+        }
+        Relationships: []
+      }
+      chat_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          message_id: string
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          message_id: string
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          message_id?: string
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kas_dues: {
         Row: {
           amount: number
@@ -90,135 +175,6 @@ export type Database = {
         }
         Relationships: []
       }
-      vote_groups: {
-        Row: {
-          created_at: string
-          created_by_avatar: string | null
-          created_by_id: string
-          created_by_name: string
-          description: string | null
-          emoji: string | null
-          expires_at: string
-          id: string
-          is_closed: boolean
-          title: string
-          vote_type: string
-        }
-        Insert: {
-          created_at?: string
-          created_by_avatar?: string | null
-          created_by_id: string
-          created_by_name: string
-          description?: string | null
-          emoji?: string | null
-          expires_at?: string
-          id?: string
-          is_closed?: boolean
-          title: string
-          vote_type?: string
-        }
-        Update: {
-          created_at?: string
-          created_by_avatar?: string | null
-          created_by_id?: string
-          created_by_name?: string
-          description?: string | null
-          emoji?: string | null
-          expires_at?: string
-          id?: string
-          is_closed?: boolean
-          title?: string
-          vote_type?: string
-        }
-        Relationships: []
-      }
-      vote_options: {
-        Row: {
-          created_at: string
-          emoji: string | null
-          group_id: string
-          id: string
-          name: string
-          proposed_by_avatar: string | null
-          proposed_by_id: string
-          proposed_by_name: string
-        }
-        Insert: {
-          created_at?: string
-          emoji?: string | null
-          group_id: string
-          id?: string
-          name: string
-          proposed_by_avatar?: string | null
-          proposed_by_id: string
-          proposed_by_name: string
-        }
-        Update: {
-          created_at?: string
-          emoji?: string | null
-          group_id?: string
-          id?: string
-          name?: string
-          proposed_by_avatar?: string | null
-          proposed_by_id?: string
-          proposed_by_name?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "vote_options_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "vote_groups"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      vote_records: {
-        Row: {
-          created_at: string
-          group_id: string
-          id: string
-          option_id: string
-          user_avatar: string | null
-          user_id: string
-          user_name: string
-        }
-        Insert: {
-          created_at?: string
-          group_id: string
-          id?: string
-          option_id: string
-          user_avatar?: string | null
-          user_id: string
-          user_name: string
-        }
-        Update: {
-          created_at?: string
-          group_id?: string
-          id?: string
-          option_id?: string
-          user_avatar?: string | null
-          user_id?: string
-          user_name?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "vote_records_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "vote_groups"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "vote_records_option_id_fkey"
-            columns: ["option_id"]
-            isOneToOne: false
-            referencedRelation: "vote_options"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-
       split_bill_participants: {
         Row: {
           amount_due: number
@@ -359,6 +315,134 @@ export type Database = {
         }
         Relationships: []
       }
+      vote_groups: {
+        Row: {
+          created_at: string
+          created_by_avatar: string | null
+          created_by_id: string
+          created_by_name: string
+          description: string | null
+          emoji: string | null
+          expires_at: string
+          id: string
+          is_closed: boolean
+          title: string
+          vote_type: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_avatar?: string | null
+          created_by_id: string
+          created_by_name: string
+          description?: string | null
+          emoji?: string | null
+          expires_at?: string
+          id?: string
+          is_closed?: boolean
+          title: string
+          vote_type?: string
+        }
+        Update: {
+          created_at?: string
+          created_by_avatar?: string | null
+          created_by_id?: string
+          created_by_name?: string
+          description?: string | null
+          emoji?: string | null
+          expires_at?: string
+          id?: string
+          is_closed?: boolean
+          title?: string
+          vote_type?: string
+        }
+        Relationships: []
+      }
+      vote_options: {
+        Row: {
+          created_at: string
+          emoji: string | null
+          group_id: string
+          id: string
+          name: string
+          proposed_by_avatar: string | null
+          proposed_by_id: string
+          proposed_by_name: string
+        }
+        Insert: {
+          created_at?: string
+          emoji?: string | null
+          group_id: string
+          id?: string
+          name: string
+          proposed_by_avatar?: string | null
+          proposed_by_id: string
+          proposed_by_name: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string | null
+          group_id?: string
+          id?: string
+          name?: string
+          proposed_by_avatar?: string | null
+          proposed_by_id?: string
+          proposed_by_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vote_options_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "vote_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vote_records: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          option_id: string
+          user_avatar: string | null
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          option_id: string
+          user_avatar?: string | null
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          option_id?: string
+          user_avatar?: string | null
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vote_records_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "vote_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vote_records_option_id_fkey"
+            columns: ["option_id"]
+            isOneToOne: false
+            referencedRelation: "vote_options"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wheel_places: {
         Row: {
           budget_level: string | null
@@ -441,7 +525,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: { Args: never; Returns: boolean }
+      is_treasurer: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
@@ -451,3 +536,126 @@ export type Database = {
     }
   }
 }
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never) = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never) = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const

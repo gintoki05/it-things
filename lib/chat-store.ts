@@ -1,0 +1,693 @@
+"use client"
+
+import * as React from "react"
+import { supabase, isSupabaseConfigured } from "@/lib/supabase"
+import { AuthUser } from "@/lib/auth"
+
+export interface ChatMessage {
+  id: string
+  message: string
+  mentions: string[]
+  userId: string
+  userName: string
+  userAvatar?: string | null
+  userRole: string
+  isEdited: boolean
+  editedAt?: string | null
+  isDeleted: boolean
+  deletedBy?: "creator" | "admin" | null
+  deletedAt?: string | null
+  createdAt: string
+}
+
+export interface ChatReaction {
+  id: string
+  messageId: string
+  emoji: string
+  userId: string
+  userName: string
+  createdAt: string
+}
+
+interface DbChatMessage {
+  id: string
+  message: string
+  mentions?: string[] | null
+  user_id: string
+  user_name: string
+  user_avatar?: string | null
+  user_role?: string | null
+  is_edited?: boolean | null
+  edited_at?: string | null
+  is_deleted?: boolean | null
+  deleted_by?: string | null
+  deleted_at?: string | null
+  created_at: string
+}
+
+interface DbChatReaction {
+  id: string
+  message_id: string
+  emoji: string
+  user_id: string
+  user_name: string
+  created_at: string
+}
+
+function mapDbReaction(db: DbChatReaction): ChatReaction {
+  return {
+    id: db.id,
+    messageId: db.message_id,
+    emoji: db.emoji,
+    userId: db.user_id,
+    userName: db.user_name,
+    createdAt: db.created_at,
+  }
+}
+
+function mapDbMessage(db: DbChatMessage): ChatMessage {
+  return {
+    id: db.id,
+    message: db.message,
+    mentions: Array.isArray(db.mentions) ? db.mentions : [],
+    userId: db.user_id,
+    userName: db.user_name,
+    userAvatar: db.user_avatar,
+    userRole: db.user_role || "member",
+    isEdited: Boolean(db.is_edited),
+    editedAt: db.edited_at,
+    isDeleted: Boolean(db.is_deleted),
+    deletedBy: (db.deleted_by as "creator" | "admin") || null,
+    deletedAt: db.deleted_at,
+    createdAt: db.created_at,
+  }
+}
+
+export function isMessageDeletable(
+  msg: ChatMessage,
+  currentUserId?: string | null,
+  isAdmin?: boolean
+): boolean {
+  if (!currentUserId || msg.isDeleted) return false
+  if (isAdmin) return true
+  if (msg.userId !== currentUserId) return false
+
+  const messageAgeMs = Date.now() - new Date(msg.createdAt).getTime()
+  return messageAgeMs <= 15 * 60 * 1000 // 15 menit
+}
+
+export function isMessageEditable(
+  msg: ChatMessage,
+  currentUserId?: string | null
+): boolean {
+  if (!currentUserId || msg.isDeleted) return false
+  if (msg.userId !== currentUserId) return false
+
+  const messageAgeMs = Date.now() - new Date(msg.createdAt).getTime()
+  return messageAgeMs <= 15 * 60 * 1000 // 15 menit
+}
+
+export function getRemainingDeleteMinutes(msg: ChatMessage): number {
+  const messageAgeMs = Date.now() - new Date(msg.createdAt).getTime()
+  const remainingMs = 15 * 60 * 1000 - messageAgeMs
+  return Math.max(0, Math.ceil(remainingMs / (60 * 1000)))
+}
+
+export function isSameDay(dateIso1: string, dateIso2: string): boolean {
+  try {
+    const d1 = new Date(dateIso1)
+    const d2 = new Date(dateIso2)
+    return (
+      d1.getFullYear() === d2.getFullYear() &&
+      d1.getMonth() === d2.getMonth() &&
+      d1.getDate() === d2.getDate()
+    )
+  } catch {
+    return false
+  }
+}
+
+export function getDateSeparatorLabel(dateIso: string): string {
+  try {
+    const target = new Date(dateIso)
+    const now = new Date()
+
+    const targetDateOnly = new Date(target.getFullYear(), target.getMonth(), target.getDate())
+    const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+    const diffDays = Math.round(
+      (nowDateOnly.getTime() - targetDateOnly.getTime()) / (1000 * 60 * 60 * 24)
+    )
+
+    if (diffDays === 0) return "Hari ini"
+    if (diffDays === 1) return "Kemarin"
+
+    if (target.getFullYear() === now.getFullYear()) {
+      return target.toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "long",
+      })
+    }
+
+    return target.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    })
+  } catch {
+    return ""
+  }
+}
+
+const PAGE_SIZE = 50
+
+export function useChatStore() {
+  const [messages, setMessages] = React.useState<ChatMessage[]>([])
+  const [reactions, setReactions] = React.useState<Record<string, ChatReaction[]>>({})
+  const [isLoading, setIsLoading] = React.useState(true)
+  const [isLoadingMore, setIsLoadingMore] = React.useState(false)
+  const [hasMore, setHasMore] = React.useState(false)
+  const [tableMissing, setTableMissing] = React.useState(false)
+  const [isSending, setIsSending] = React.useState(false)
+
+  const isTableMissingError = (err: { code?: string; message?: string }) =>
+    err?.code === "PGRST205" ||
+    err?.code === "PGRST204" ||
+    err?.code === "42P01" ||
+    err?.message?.includes("schema cache") ||
+    err?.message?.includes("does not exist")
+
+  // Helper untuk fetch reactions berdasarkan daftar message ID
+  const fetchReactionsForMessages = React.useCallback(async (messageIds: string[]) => {
+    if (!isSupabaseConfigured || !supabase || messageIds.length === 0) return
+    try {
+      const { data, error } = await supabase
+        .from("chat_reactions")
+        .select("*")
+        .in("message_id", messageIds)
+
+      if (error) {
+        if (isTableMissingError(error)) return
+        console.warn("fetch reactions error:", error)
+        return
+      }
+
+      if (data && data.length > 0) {
+        const mapped = data.map((r) => mapDbReaction(r as DbChatReaction))
+        setReactions((prev) => {
+          const next = { ...prev }
+          mapped.forEach((rx) => {
+            if (!next[rx.messageId]) {
+              next[rx.messageId] = []
+            }
+            if (!next[rx.messageId].some((r) => r.id === rx.id)) {
+              next[rx.messageId] = [...next[rx.messageId], rx]
+            }
+          })
+          return next
+        })
+      }
+    } catch (err) {
+      console.warn("fetch reactions error:", err)
+    }
+  }, [])
+
+  // ─── Initial Fetch (50 pesan terbaru) ───────────────────────
+  const fetchMessages = React.useCallback(async () => {
+    if (!isSupabaseConfigured || !supabase) {
+      setMessages([])
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("chat_messages")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(PAGE_SIZE)
+
+      if (error) {
+        if (isTableMissingError(error)) {
+          setTableMissing(true)
+          setIsLoading(false)
+          return
+        }
+        throw error
+      }
+
+      setTableMissing(false)
+      const raw = data || []
+      setHasMore(raw.length === PAGE_SIZE)
+      const mapped = raw.map((m) => mapDbMessage(m as DbChatMessage)).reverse()
+      setMessages(mapped)
+
+      const ids = raw.map((m) => m.id)
+      if (ids.length > 0) {
+        fetchReactionsForMessages(ids)
+      }
+    } catch (err) {
+      if (isTableMissingError(err as { code?: string; message?: string })) {
+        setTableMissing(true)
+      } else {
+        console.warn("chat-store fetchMessages error:", err)
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }, [fetchReactionsForMessages])
+
+  // ─── Fetch Older Messages (Reverse Pagination) ──────────────
+  const fetchOlderMessages = React.useCallback(async (): Promise<number> => {
+    if (!isSupabaseConfigured || !supabase || isLoadingMore || !hasMore) return 0
+    if (messages.length === 0) return 0
+
+    const oldestMsg = messages[0]
+    if (!oldestMsg) return 0
+
+    setIsLoadingMore(true)
+    try {
+      const { data, error } = await supabase
+        .from("chat_messages")
+        .select("*")
+        .lt("created_at", oldestMsg.createdAt)
+        .order("created_at", { ascending: false })
+        .limit(PAGE_SIZE)
+
+      if (error) throw error
+
+      const raw = data || []
+      if (raw.length < PAGE_SIZE) {
+        setHasMore(false)
+      }
+
+      if (raw.length > 0) {
+        const olderMapped = raw.map((m) => mapDbMessage(m as DbChatMessage)).reverse()
+        setMessages((prev) => {
+          const existingIds = new Set(prev.map((m) => m.id))
+          const filteredNew = olderMapped.filter((m) => !existingIds.has(m.id))
+          return [...filteredNew, ...prev]
+        })
+
+        const olderIds = raw.map((m) => m.id)
+        if (olderIds.length > 0) {
+          fetchReactionsForMessages(olderIds)
+        }
+
+        return raw.length
+      }
+      return 0
+    } catch (err) {
+      console.warn("fetchOlderMessages error:", err)
+      return 0
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }, [hasMore, isLoadingMore, messages, fetchReactionsForMessages])
+
+  // ─── Realtime Subscription ─────────────────────────────────
+  React.useEffect(() => {
+    fetchMessages()
+
+    if (isSupabaseConfigured && supabase) {
+      const channel = supabase
+        .channel("chat-realtime")
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "chat_messages" },
+          (payload) => {
+            const newMsg = mapDbMessage(payload.new as DbChatMessage)
+            setMessages((prev) => {
+              if (prev.some((m) => m.id === newMsg.id)) return prev
+              return [...prev, newMsg]
+            })
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "chat_messages" },
+          (payload) => {
+            const updatedMsg = mapDbMessage(payload.new as DbChatMessage)
+            setMessages((prev) =>
+              prev.map((m) => (m.id === updatedMsg.id ? updatedMsg : m))
+            )
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "DELETE", schema: "public", table: "chat_messages" },
+          (payload) => {
+            const deletedId = (payload.old as { id?: string })?.id
+            if (deletedId) {
+              setMessages((prev) => prev.filter((m) => m.id !== deletedId))
+            }
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "chat_reactions" },
+          (payload) => {
+            const newRx = mapDbReaction(payload.new as DbChatReaction)
+            setReactions((prev) => {
+              const list = prev[newRx.messageId] || []
+              if (
+                list.some(
+                  (r) =>
+                    r.id === newRx.id ||
+                    (r.userId === newRx.userId && r.emoji === newRx.emoji)
+                )
+              ) {
+                return prev
+              }
+              return {
+                ...prev,
+                [newRx.messageId]: [...list, newRx],
+              }
+            })
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "DELETE", schema: "public", table: "chat_reactions" },
+          (payload) => {
+            const oldRx = payload.old as { id?: string }
+            if (oldRx?.id) {
+              setReactions((prev) => {
+                let changed = false
+                const next: Record<string, ChatReaction[]> = {}
+                for (const [mId, list] of Object.entries(prev)) {
+                  const filtered = list.filter((r) => r.id !== oldRx.id)
+                  if (filtered.length !== list.length) changed = true
+                  next[mId] = filtered
+                }
+                return changed ? next : prev
+              })
+            }
+          }
+        )
+        .subscribe()
+
+      return () => {
+        if (supabase) {
+          supabase.removeChannel(channel)
+        }
+      }
+    }
+  }, [fetchMessages])
+
+  // ─── Send Message ──────────────────────────────────────────
+  const sendMessage = async (
+    text: string,
+    mentions: string[],
+    currentUser: AuthUser
+  ): Promise<{ success: boolean; error?: string }> => {
+    const trimmed = text.trim()
+    if (!trimmed) return { success: false, error: "Pesan tidak boleh kosong" }
+    if (currentUser.isGuest || currentUser.id === "guest-user") {
+      return {
+        success: false,
+        error: "Mode Tamu tidak dapat mengirim pesan. Silakan masuk dengan akun Google.",
+      }
+    }
+
+    if (!isSupabaseConfigured || !supabase) {
+      return { success: false, error: "Supabase belum terkonfigurasi." }
+    }
+
+    const tempId = crypto.randomUUID()
+    const nowIso = new Date().toISOString()
+
+    const optimisticMsg: ChatMessage = {
+      id: tempId,
+      message: trimmed,
+      mentions: mentions || [],
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userAvatar: currentUser.avatarUrl || null,
+      userRole: currentUser.role || "member",
+      isEdited: false,
+      isDeleted: false,
+      createdAt: nowIso,
+    }
+
+    setMessages((prev) => [...prev, optimisticMsg])
+    setIsSending(true)
+
+    try {
+      const { error } = await supabase.from("chat_messages").insert({
+        id: tempId,
+        message: trimmed,
+        mentions: mentions || [],
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        user_avatar: currentUser.avatarUrl || null,
+        user_role: currentUser.role || "member",
+        is_edited: false,
+        is_deleted: false,
+        created_at: nowIso,
+      })
+
+      if (error) {
+        setMessages((prev) => prev.filter((m) => m.id !== tempId))
+        return { success: false, error: error.message }
+      }
+
+      return { success: true }
+    } catch (err: unknown) {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId))
+      const msg = err instanceof Error ? err.message : "Gagal mengirim pesan"
+      return { success: false, error: msg }
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  // ─── Edit Message ──────────────────────────────────────────
+  const editMessage = async (
+    messageId: string,
+    newText: string,
+    currentUser: AuthUser
+  ): Promise<{ success: boolean; error?: string }> => {
+    const target = messages.find((m) => m.id === messageId)
+    if (!target) return { success: false, error: "Pesan tidak ditemukan" }
+
+    if (!isMessageEditable(target, currentUser.id)) {
+      return {
+        success: false,
+        error: "Batas waktu 15 menit untuk mengedit pesan telah habis.",
+      }
+    }
+
+    const trimmed = newText.trim()
+    if (!trimmed) return { success: false, error: "Pesan tidak boleh kosong" }
+
+    if (!isSupabaseConfigured || !supabase) {
+      return { success: false, error: "Supabase belum terkonfigurasi." }
+    }
+
+    const nowIso = new Date().toISOString()
+    const previousMessages = [...messages]
+
+    // Optimistic update
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === messageId
+          ? {
+              ...m,
+              message: trimmed,
+              isEdited: true,
+              editedAt: nowIso,
+            }
+          : m
+      )
+    )
+
+    try {
+      const { error } = await supabase
+        .from("chat_messages")
+        .update({
+          message: trimmed,
+          is_edited: true,
+          edited_at: nowIso,
+        })
+        .eq("id", messageId)
+
+      if (error) {
+        setMessages(previousMessages)
+        return { success: false, error: error.message }
+      }
+
+      return { success: true }
+    } catch (err: unknown) {
+      setMessages(previousMessages)
+      const msg = err instanceof Error ? err.message : "Gagal mengedit pesan"
+      return { success: false, error: msg }
+    }
+  }
+
+  // ─── Soft Delete Message ───────────────────────────────────
+  const deleteMessage = async (
+    messageId: string,
+    currentUser: AuthUser,
+    isAdmin: boolean
+  ): Promise<{ success: boolean; error?: string }> => {
+    const target = messages.find((m) => m.id === messageId)
+    if (!target) return { success: false, error: "Pesan tidak ditemukan" }
+
+    if (!isMessageDeletable(target, currentUser.id, isAdmin)) {
+      return {
+        success: false,
+        error: "Batas waktu 15 menit untuk menghapus pesan telah habis.",
+      }
+    }
+
+    if (!isSupabaseConfigured || !supabase) {
+      return { success: false, error: "Supabase belum terkonfigurasi." }
+    }
+
+    const isDeletedByAdmin = isAdmin && target.userId !== currentUser.id
+    const deletedBy: "creator" | "admin" = isDeletedByAdmin ? "admin" : "creator"
+    const nowIso = new Date().toISOString()
+    const previousMessages = [...messages]
+
+    // Optimistic soft delete: pertahankan balon tapi tandai isDeleted
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === messageId
+          ? {
+              ...m,
+              isDeleted: true,
+              deletedBy,
+              deletedAt: nowIso,
+            }
+          : m
+      )
+    )
+
+    try {
+      const { error } = await supabase
+        .from("chat_messages")
+        .update({
+          is_deleted: true,
+          deleted_by: deletedBy,
+          deleted_at: nowIso,
+        })
+        .eq("id", messageId)
+
+      if (error) {
+        setMessages(previousMessages)
+        return { success: false, error: error.message }
+      }
+
+      return { success: true }
+    } catch (err: unknown) {
+      setMessages(previousMessages)
+      const msg = err instanceof Error ? err.message : "Gagal menghapus pesan"
+      return { success: false, error: msg }
+    }
+  }
+
+  // ─── Toggle Reaction ───────────────────────────────────────
+  const toggleReaction = async (
+    messageId: string,
+    emoji: string,
+    currentUser: AuthUser
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (currentUser.isGuest || currentUser.id === "guest-user") {
+      return {
+        success: false,
+        error: "Mode Tamu tidak dapat memberi reaksi. Silakan masuk dengan akun Google.",
+      }
+    }
+
+    if (!isSupabaseConfigured || !supabase) {
+      return { success: false, error: "Supabase belum terkonfigurasi." }
+    }
+
+    const currentList = reactions[messageId] || []
+    const existingRx = currentList.find(
+      (r) => r.userId === currentUser.id && r.emoji === emoji
+    )
+
+    const previousReactions = { ...reactions }
+
+    if (existingRx) {
+      // Optimistic delete
+      setReactions((prev) => ({
+        ...prev,
+        [messageId]: (prev[messageId] || []).filter((r) => r.id !== existingRx.id),
+      }))
+
+      try {
+        const { error } = await supabase
+          .from("chat_reactions")
+          .delete()
+          .eq("id", existingRx.id)
+
+        if (error) {
+          setReactions(previousReactions)
+          return { success: false, error: error.message }
+        }
+        return { success: true }
+      } catch (err) {
+        setReactions(previousReactions)
+        const msg = err instanceof Error ? err.message : "Gagal menghapus reaksi"
+        return { success: false, error: msg }
+      }
+    } else {
+      // Optimistic insert
+      const tempId = crypto.randomUUID()
+      const nowIso = new Date().toISOString()
+      const newRx: ChatReaction = {
+        id: tempId,
+        messageId,
+        emoji,
+        userId: currentUser.id,
+        userName: currentUser.name,
+        createdAt: nowIso,
+      }
+
+      setReactions((prev) => ({
+        ...prev,
+        [messageId]: [...(prev[messageId] || []), newRx],
+      }))
+
+      try {
+        const { error } = await supabase.from("chat_reactions").insert({
+          id: tempId,
+          message_id: messageId,
+          emoji,
+          user_id: currentUser.id,
+          user_name: currentUser.name,
+          created_at: nowIso,
+        })
+
+        if (error) {
+          setReactions(previousReactions)
+          return { success: false, error: error.message }
+        }
+        return { success: true }
+      } catch (err) {
+        setReactions(previousReactions)
+        const msg = err instanceof Error ? err.message : "Gagal menambahkan reaksi"
+        return { success: false, error: msg }
+      }
+    }
+  }
+
+  return {
+    messages,
+    reactions,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    isSending,
+    tableMissing,
+    sendMessage,
+    editMessage,
+    deleteMessage,
+    toggleReaction,
+    fetchOlderMessages,
+    refetch: fetchMessages,
+  }
+}

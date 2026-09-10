@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
 
-export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team"
+export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat"
 
 export interface WindowState {
   id: AppId
@@ -114,6 +114,20 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     defaultPos: { x: 230, y: 104 },
     adminOnly: true,
   },
+  chat: {
+    id: "chat",
+    title: "Chat.exe - Live Team Messenger",
+    icon: "chat",
+    filename: "chat.exe",
+    isOpen: true,
+    isMinimized: false,
+    isMaximized: false,
+    zIndex: 12,
+    position: { x: 880, y: 10 },
+    size: { width: 440, height: 720 },
+    defaultSize: { width: 440, height: 720 },
+    defaultPos: { x: 880, y: 10 },
+  },
 }
 
 export function DesktopProvider({ children }: { children: React.ReactNode }) {
@@ -122,6 +136,48 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
   const [activeWindowId, setActiveWindowId] = React.useState<AppId | null>("vote")
   const [topZIndex, setTopZIndex] = React.useState(20)
   const [comingSoonApp, setComingSoonApp] = React.useState<WindowState | null>(null)
+
+  // Tempatkan Chat.exe secara responsif di panel kanan desktop pada layar lebar
+  React.useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const isLargeScreen = window.innerWidth >= 1024
+    const isMobile = window.innerWidth < 768
+
+    setWindows((curr) => {
+      const chatWin = curr.chat
+      if (!chatWin) return curr
+
+      if (isMobile) {
+        // Pada mobile, jangan auto-open agar tidak langsung menumpuk full-screen
+        return {
+          ...curr,
+          chat: {
+            ...chatWin,
+            isOpen: false,
+          },
+        }
+      }
+
+      if (isLargeScreen) {
+        const targetX = Math.max(720, window.innerWidth - 460)
+        const targetHeight = Math.max(620, window.innerHeight - 56)
+        return {
+          ...curr,
+          chat: {
+            ...chatWin,
+            isOpen: true,
+            position: { x: targetX, y: 10 },
+            size: { width: 440, height: targetHeight },
+            defaultPos: { x: targetX, y: 10 },
+            defaultSize: { width: 440, height: targetHeight },
+          },
+        }
+      }
+
+      return curr
+    })
+  }, [])
 
   // Otomatis tutup jendela team jika user kehilangan status admin
   React.useEffect(() => {

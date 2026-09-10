@@ -16,6 +16,7 @@ import { WheelApp } from "@/components/apps/wheel-app"
 import { SplitBillApp } from "@/components/apps/split-bill-app"
 import { KasApp } from "@/components/apps/kas-app"
 import { TeamApp } from "@/components/apps/team-app"
+import { ChatApp } from "@/components/apps/chat-app"
 
 function DesktopWorkspace() {
   const { isPasscodeVerified, isPasscodeLoading, isGuest, isAdmin } = useAuth()
@@ -111,6 +112,11 @@ function DesktopWorkspace() {
           <TeamApp />
         </DesktopWindow>
       )}
+
+      {/* Retro Window: Chat.exe */}
+      <DesktopWindow id="chat">
+        <ChatApp />
+      </DesktopWindow>
 
       {/* Bottom Retro Taskbar */}
       <Taskbar onOpenLoginModal={() => setShowLoginModal(true)} />

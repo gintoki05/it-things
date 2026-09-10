@@ -144,6 +144,34 @@ CREATE TABLE IF NOT EXISTS public.kas_dues (
     UNIQUE(month_period, user_id)
 );
 
+-- 10. Table: chat_messages (Pesan instan tim / Live Chat)
+CREATE TABLE IF NOT EXISTS public.chat_messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    message TEXT NOT NULL,
+    mentions TEXT[] DEFAULT '{}',
+    user_id TEXT NOT NULL,
+    user_name TEXT NOT NULL,
+    user_avatar TEXT,
+    user_role TEXT DEFAULT 'member', -- 'member' | 'treasurer' | 'admin'
+    is_edited BOOLEAN NOT NULL DEFAULT false,
+    edited_at TIMESTAMPTZ,
+    is_deleted BOOLEAN NOT NULL DEFAULT false,
+    deleted_by TEXT, -- 'creator' | 'admin'
+    deleted_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 11. Table: chat_reactions (Reaksi emoji pada pesan chat)
+CREATE TABLE IF NOT EXISTS public.chat_reactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    message_id UUID NOT NULL REFERENCES public.chat_messages(id) ON DELETE CASCADE,
+    emoji TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    user_name TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    UNIQUE(message_id, emoji, user_id)
+);
+
 -- ============================================================
 -- ROW LEVEL SECURITY (RLS) & POLICIES
 -- ============================================================
@@ -157,6 +185,8 @@ ALTER TABLE public.split_bills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.split_bill_participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kas_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kas_dues ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chat_reactions ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
 -- HELPER FUNCTIONS: is_admin() & is_treasurer()
@@ -444,6 +474,70 @@ CREATE POLICY "kas_dues_delete" ON public.kas_dues
   );
 
 -- ============================================================
+-- 10. CHAT MESSAGES POLICIES
+-- ============================================================
+-- Hanya user login yang bisa membaca (Tamu ditolak)
+CREATE POLICY "chat_messages_select" ON public.chat_messages
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+-- Hanya user login yang bisa kirim pesan dengan user_id miliknya
+CREATE POLICY "chat_messages_insert" ON public.chat_messages
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL 
+    AND user_id = auth.uid()::text
+  );
+
+-- Pengirim hanya bisa hapus dalam 15 menit, Admin bisa hapus kapan saja
+CREATE POLICY "chat_messages_delete" ON public.chat_messages
+  FOR DELETE USING (
+    auth.uid() IS NOT NULL
+    AND (
+      public.is_admin()
+      OR (
+        user_id = auth.uid()::text
+        AND created_at >= (timezone('utc'::text, now()) - interval '15 minutes')
+      )
+    )
+  );
+
+-- Edit pesan (oleh pengirim <= 15 menit) atau Soft Delete (oleh pengirim <= 15 menit atau Admin kapan saja)
+CREATE POLICY "chat_messages_update" ON public.chat_messages
+  FOR UPDATE USING (
+    auth.uid() IS NOT NULL
+    AND (
+      public.is_admin()
+      OR (
+        user_id = auth.uid()::text
+        AND created_at >= (timezone('utc'::text, now()) - interval '15 minutes')
+      )
+    )
+  ) WITH CHECK (
+    auth.uid() IS NOT NULL
+    AND (
+      public.is_admin()
+      OR user_id = auth.uid()::text
+    )
+  );
+
+-- ============================================================
+-- 11. CHAT REACTIONS POLICIES
+-- ============================================================
+CREATE POLICY "chat_reactions_select" ON public.chat_reactions
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "chat_reactions_insert" ON public.chat_reactions
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL
+    AND user_id = auth.uid()::text
+  );
+
+CREATE POLICY "chat_reactions_delete" ON public.chat_reactions
+  FOR DELETE USING (
+    auth.uid() IS NOT NULL
+    AND user_id = auth.uid()::text
+  );
+
+-- ============================================================
 -- INDEXES FOR SPEED
 -- ============================================================
 CREATE INDEX IF NOT EXISTS idx_vote_groups_created ON public.vote_groups(created_at DESC);
@@ -457,6 +551,8 @@ CREATE INDEX IF NOT EXISTS idx_split_bills_created ON public.split_bills(created
 CREATE INDEX IF NOT EXISTS idx_split_bill_participants_bill ON public.split_bill_participants(bill_id);
 CREATE INDEX IF NOT EXISTS idx_kas_transactions_created ON public.kas_transactions(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_kas_dues_period ON public.kas_dues(month_period);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_created ON public.chat_messages(created_at ASC);
+CREATE INDEX IF NOT EXISTS idx_chat_reactions_message ON public.chat_reactions(message_id);
 
 -- ============================================================
 -- REALTIME PUBLICATION
@@ -471,6 +567,8 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.split_bills;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.split_bill_participants;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.kas_transactions;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.kas_dues;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_messages;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_reactions;
 
 -- ============================================================
 -- GRANTS FOR CLIENT ACCESS (ANON, AUTHENTICATED)
