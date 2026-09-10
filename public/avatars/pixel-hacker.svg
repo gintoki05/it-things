@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" shape-rendering="crispEdges">
+  <!-- Background Circle -->
+  <rect width="64" height="64" rx="32" fill="#111B24" />
+  <!-- Hoodie Hood Outer -->
+  <rect x="14" y="10" width="36" height="42" fill="#1C2F42" rx="4" />
+  <!-- Face Opening inside Hoodie -->
+  <rect x="18" y="16" width="28" height="30" fill="#2A1B14" />
+  <!-- Face Skin -->
+  <rect x="20" y="20" width="24" height="24" fill="#F8C08E" />
+  <!-- Cool Black Pixel Sunglasses -->
+  <rect x="18" y="24" width="28" height="8" fill="#0A0E14" />
+  <!-- Glasses Glare / Shine -->
+  <rect x="21" y="25" width="4" height="2" fill="#00FFCC" />
+  <rect x="35" y="25" width="4" height="2" fill="#00FFCC" />
+  <!-- Smirk Mouth -->
+  <rect x="28" y="38" width="6" height="2" fill="#8C4A2F" />
+  <rect x="34" y="36" width="2" height="2" fill="#8C4A2F" />
+  <!-- Hoodie Shoulder Area -->
+  <rect x="8" y="50" width="48" height="14" fill="#10202F" />
+  <!-- Terminal Matrix Code Droplets in Background -->
+  <rect x="8" y="16" width="2" height="4" fill="#00FF66" opacity="0.6" />
+  <rect x="54" y="20" width="2" height="6" fill="#00FF66" opacity="0.6" />
+  <rect x="10" y="32" width="2" height="4" fill="#00FF66" opacity="0.4" />
+  <rect x="52" y="38" width="2" height="4" fill="#00FF66" opacity="0.4" />
+</svg>

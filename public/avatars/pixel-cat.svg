@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" shape-rendering="crispEdges">
+  <!-- Background Circle -->
+  <rect width="64" height="64" rx="32" fill="#2E483B" />
+  <!-- Ears -->
+  <rect x="18" y="14" width="6" height="8" fill="#F39C12" />
+  <rect x="20" y="16" width="2" height="4" fill="#FADBD8" />
+  <rect x="40" y="14" width="6" height="8" fill="#F39C12" />
+  <rect x="42" y="16" width="2" height="4" fill="#FADBD8" />
+  <!-- Cat Head -->
+  <rect x="16" y="20" width="32" height="26" fill="#F39C12" rx="2" />
+  <!-- Forehead Stripes -->
+  <rect x="30" y="22" width="4" height="6" fill="#D35400" />
+  <rect x="24" y="22" width="2" height="4" fill="#D35400" />
+  <rect x="38" y="22" width="2" height="4" fill="#D35400" />
+  <!-- Cheeks / Muzzle -->
+  <rect x="22" y="34" width="20" height="10" fill="#FCF3CF" />
+  <!-- Big Pixel Eyes -->
+  <rect x="22" y="26" width="6" height="6" fill="#1C2833" />
+  <rect x="36" y="26" width="6" height="6" fill="#1C2833" />
+  <rect x="24" y="27" width="2" height="2" fill="#FFFFFF" />
+  <rect x="38" y="27" width="2" height="2" fill="#FFFFFF" />
+  <!-- Pink Nose -->
+  <rect x="30" y="36" width="4" height="2" fill="#E74C3C" />
+  <!-- Whiskers -->
+  <rect x="12" y="36" width="8" height="2" fill="#2C3E50" />
+  <rect x="14" y="40" width="6" height="2" fill="#2C3E50" />
+  <rect x="44" y="36" width="8" height="2" fill="#2C3E50" />
+  <rect x="44" y="40" width="6" height="2" fill="#2C3E50" />
+</svg>

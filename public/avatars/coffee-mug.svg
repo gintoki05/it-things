@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" shape-rendering="crispEdges">
+  <!-- Background Circle -->
+  <rect width="64" height="64" rx="32" fill="#5D4037" />
+  <!-- Steam (Animated-look pixel smoke) -->
+  <rect x="22" y="10" width="2" height="4" fill="#D7CCC8" />
+  <rect x="24" y="14" width="2" height="4" fill="#D7CCC8" />
+  <rect x="30" y="8" width="2" height="4" fill="#D7CCC8" />
+  <rect x="32" y="12" width="2" height="4" fill="#D7CCC8" />
+  <rect x="38" y="10" width="2" height="4" fill="#D7CCC8" />
+  <rect x="40" y="14" width="2" height="4" fill="#D7CCC8" />
+  <!-- Coffee Mug Outer Body -->
+  <rect x="16" y="20" width="28" height="28" fill="#ECEFF1" rx="2" />
+  <rect x="16" y="20" width="28" height="2" fill="#FFFFFF" />
+  <rect x="16" y="20" width="2" height="28" fill="#FFFFFF" />
+  <rect x="42" y="22" width="2" height="26" fill="#B0BEC5" />
+  <rect x="18" y="46" width="26" height="2" fill="#B0BEC5" />
+  <!-- Handle -->
+  <rect x="44" y="24" width="8" height="18" fill="#ECEFF1" rx="2" />
+  <rect x="44" y="28" width="4" height="10" fill="#5D4037" />
+  <!-- Pixel Coffee Surface -->
+  <rect x="20" y="22" width="20" height="4" fill="#4E342E" />
+  <!-- Mug Graphic: Cute Pixel Heart / Code symbol -->
+  <rect x="26" y="32" width="2" height="2" fill="#E53935" />
+  <rect x="32" y="32" width="2" height="2" fill="#E53935" />
+  <rect x="24" y="34" width="12" height="4" fill="#E53935" />
+  <rect x="26" y="38" width="8" height="2" fill="#E53935" />
+  <rect x="28" y="40" width="4" height="2" fill="#E53935" />
+  <!-- Coaster / Saucer -->
+  <rect x="12" y="48" width="36" height="4" fill="#CFD8DC" rx="1" />
+</svg>

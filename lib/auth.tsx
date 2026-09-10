@@ -11,6 +11,7 @@ export interface AuthUser {
   email: string
   name: string
   avatarUrl?: string
+  googleAvatarUrl?: string
   role?: UserRole
   isGuest?: boolean
 }
@@ -46,6 +47,15 @@ const getSavedGuestName = () => {
     return localStorage.getItem("it_things_guest_name") || "Tamu (Read-Only)"
   } catch {
     return "Tamu (Read-Only)"
+  }
+}
+
+const getSavedGuestAvatar = () => {
+  if (typeof window === "undefined") return undefined
+  try {
+    return localStorage.getItem("it_things_guest_avatar") || undefined
+  } catch {
+    return undefined
   }
 }
 
@@ -235,6 +245,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setUser({
                 id: "guest-user",
                 name: getSavedGuestName(),
+                avatarUrl: getSavedGuestAvatar(),
                 email: "tamu@it-internal.local",
                 role: "guest",
                 isGuest: true,
@@ -260,6 +271,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setUser({
                 id: "guest-user",
                 name: getSavedGuestName(),
+                avatarUrl: getSavedGuestAvatar(),
                 email: "tamu@it-internal.local",
                 role: "guest",
                 isGuest: true,
@@ -295,7 +307,22 @@ const ROOT_ADMIN_EMAILS = ["ajieprastyo@gmail.com"]
     const isRootAdmin = !!(sbUser.email && ROOT_ADMIN_EMAILS.includes(sbUser.email.toLowerCase()))
     let role: UserRole = isRootAdmin ? "admin" : "member"
     let displayName = meta.full_name || meta.name || sbUser.email?.split("@")[0] || "Anggota Tim"
-    let avatarUrl = meta.avatar_url || meta.picture
+
+    // Foto Google asli selalu tersimpan di meta.picture atau identity_data
+    const googleIdentity = sbUser.identities?.find(
+      (i) => i.provider === "google" || i.provider === "google.com"
+    )
+    const rawGoogleAvatar =
+      meta.picture ||
+      googleIdentity?.identity_data?.picture ||
+      googleIdentity?.identity_data?.avatar_url ||
+      (meta.avatar_url && typeof meta.avatar_url === "string" && meta.avatar_url.startsWith("http") ? meta.avatar_url : undefined)
+
+    const googleAvatarUrl = typeof rawGoogleAvatar === "string" && rawGoogleAvatar.startsWith("http")
+      ? rawGoogleAvatar
+      : undefined
+
+    let avatarUrl = googleAvatarUrl
 
     // Check team_members table for role & custom profile name
     try {
@@ -316,7 +343,9 @@ const ROOT_ADMIN_EMAILS = ["ajieprastyo@gmail.com"]
             role = data.role as UserRole
           }
           if (data.name) displayName = data.name
-          if (data.avatar_url) avatarUrl = data.avatar_url
+          if (data.avatar_url !== undefined && data.avatar_url !== null) {
+            avatarUrl = data.avatar_url
+          }
         } else {
           // If first time, insert as admin if root admin, else member
           const initialRole: UserRole = isRootAdmin ? "admin" : "member"
@@ -339,6 +368,7 @@ const ROOT_ADMIN_EMAILS = ["ajieprastyo@gmail.com"]
       email: sbUser.email || "",
       name: displayName,
       avatarUrl,
+      googleAvatarUrl,
       role,
       isGuest: false,
     }
@@ -566,6 +596,7 @@ const ROOT_ADMIN_EMAILS = ["ajieprastyo@gmail.com"]
     setUser({
       id: "guest-user",
       name: getSavedGuestName(),
+      avatarUrl: getSavedGuestAvatar(),
       email: "tamu@it-internal.local",
       role: "guest",
       isGuest: true,
@@ -601,9 +632,20 @@ const ROOT_ADMIN_EMAILS = ["ajieprastyo@gmail.com"]
       if (typeof window !== "undefined") {
         try {
           localStorage.setItem("it_things_guest_name", trimmedName)
-          window.dispatchEvent(new CustomEvent("profile-updated", { detail: { name: trimmedName } }))
+          if (updates.avatarUrl !== undefined) {
+            if (updates.avatarUrl) {
+              localStorage.setItem("it_things_guest_avatar", updates.avatarUrl)
+            } else {
+              localStorage.removeItem("it_things_guest_avatar")
+            }
+          }
+          window.dispatchEvent(
+            new CustomEvent("profile-updated", {
+              detail: { name: trimmedName, avatarUrl: updates.avatarUrl },
+            })
+          )
         } catch (e) {
-          console.warn("Error saving guest name:", e)
+          console.warn("Error saving guest profile:", e)
         }
       }
       isUpdatingProfileRef.current = false
@@ -613,10 +655,12 @@ const ROOT_ADMIN_EMAILS = ["ajieprastyo@gmail.com"]
     // Jika user Google / Email & Supabase terhubung
     if (isSupabaseConfigured && supabase && user) {
       try {
+        const newAvatarParam = updates.avatarUrl !== undefined ? updates.avatarUrl : null
+
         // 1. Eksekusi cascading sync ke database dulu (team_members, vote, chat, dll)
         const { error: rpcError } = await supabase.rpc("sync_user_profile_name", {
           new_name: trimmedName,
-          new_avatar: updates.avatarUrl || null,
+          new_avatar: newAvatarParam,
         })
 
         if (rpcError) {
@@ -638,7 +682,7 @@ const ROOT_ADMIN_EMAILS = ["ajieprastyo@gmail.com"]
               user_id: user.id,
               email: user.email || "",
               name: trimmedName,
-              avatar_url: updates.avatarUrl || user.avatarUrl || "",
+              avatar_url: updates.avatarUrl !== undefined ? updates.avatarUrl : user.avatarUrl || "",
               role: user.role || "member",
             })
           }
@@ -659,7 +703,11 @@ const ROOT_ADMIN_EMAILS = ["ajieprastyo@gmail.com"]
         // 3. Pastikan state lokal konsisten & broadcast event ke fitur lain
         setUser(updatedUser)
         if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("profile-updated", { detail: { name: trimmedName } }))
+          window.dispatchEvent(
+            new CustomEvent("profile-updated", {
+              detail: { name: trimmedName, avatarUrl: updates.avatarUrl },
+            })
+          )
         }
 
         return { success: true }
@@ -681,6 +729,8 @@ const ROOT_ADMIN_EMAILS = ["ajieprastyo@gmail.com"]
     if (typeof window !== "undefined") {
       try {
         localStorage.removeItem("it_things_guest_session")
+        localStorage.removeItem("it_things_guest_name")
+        localStorage.removeItem("it_things_guest_avatar")
         localStorage.removeItem("it_things_passcode_verified")
         sessionStorage.removeItem("it_things_passcode_verified")
         window.history.pushState({ locked: true, loggedOut: true }, "", window.location.href)

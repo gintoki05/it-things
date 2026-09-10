@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" shape-rendering="crispEdges">
+  <!-- Background Circle -->
+  <rect width="64" height="64" rx="32" fill="#1E4E8C" />
+  <!-- CRT Monitor Outer Casing -->
+  <rect x="12" y="12" width="40" height="32" fill="#D4DDE6" rx="2" />
+  <rect x="10" y="10" width="44" height="2" fill="#FFFFFF" />
+  <rect x="10" y="10" width="2" height="34" fill="#FFFFFF" />
+  <rect x="52" y="12" width="2" height="34" fill="#5E7287" />
+  <rect x="12" y="44" width="42" height="2" fill="#5E7287" />
+  <!-- CRT Bezel -->
+  <rect x="16" y="16" width="32" height="24" fill="#0C1B2A" />
+  <!-- CRT Screen (Green phosphor) -->
+  <rect x="18" y="18" width="28" height="20" fill="#0D2E1C" />
+  <!-- Pixel Smile & Eyes -->
+  <rect x="23" y="23" width="4" height="4" fill="#00FF66" />
+  <rect x="37" y="23" width="4" height="4" fill="#00FF66" />
+  <rect x="25" y="31" width="2" height="2" fill="#00FF66" />
+  <rect x="37" y="31" width="2" height="2" fill="#00FF66" />
+  <rect x="27" y="33" width="10" height="2" fill="#00FF66" />
+  <!-- Monitor Stand -->
+  <rect x="28" y="46" width="8" height="4" fill="#A4B5C6" />
+  <rect x="22" y="50" width="20" height="4" fill="#D4DDE6" />
+  <rect x="22" y="54" width="20" height="2" fill="#5E7287" />
+  <!-- Power LED -->
+  <rect x="44" y="41" width="2" height="2" fill="#00FF66" />
+</svg>

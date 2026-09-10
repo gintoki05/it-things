@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" shape-rendering="crispEdges">
+  <!-- Background Circle -->
+  <rect width="64" height="64" rx="32" fill="#0F3854" />
+  <!-- Floppy Plastic Body (Classic 3.5") -->
+  <rect x="12" y="12" width="40" height="40" fill="#1C538C" rx="2" />
+  <!-- Bevels -->
+  <rect x="12" y="12" width="38" height="2" fill="#4B88D0" />
+  <rect x="12" y="12" width="2" height="38" fill="#4B88D0" />
+  <rect x="14" y="50" width="38" height="2" fill="#0C2540" />
+  <rect x="50" y="14" width="2" height="38" fill="#0C2540" />
+  <!-- Metal Shutter (Top slider) -->
+  <rect x="20" y="12" width="24" height="18" fill="#C5D3E0" />
+  <rect x="22" y="14" width="6" height="12" fill="#0C2540" />
+  <!-- Paper Label -->
+  <rect x="18" y="32" width="28" height="18" fill="#F4F4F0" />
+  <!-- Label Header Line (Retro red/blue stripe) -->
+  <rect x="18" y="32" width="28" height="3" fill="#D32F2F" />
+  <!-- Text lines on label -->
+  <rect x="22" y="38" width="20" height="2" fill="#8FA4B8" />
+  <rect x="22" y="42" width="14" height="2" fill="#8FA4B8" />
+  <!-- Write Protect Notch -->
+  <rect x="14" y="46" width="3" height="4" fill="#0F3854" />
+</svg>

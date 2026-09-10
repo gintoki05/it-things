@@ -54,7 +54,8 @@ interface ReactionGroup {
 
 function getGroupedReactions(
   reactionsList: ChatReaction[] = [],
-  currentUserId?: string
+  currentUserId?: string,
+  membersMap?: Map<string, TeamMember>
 ): ReactionGroup[] {
   const map = new Map<string, { count: number; hasReacted: boolean; userNames: string[] }>()
   for (const r of reactionsList) {
@@ -67,7 +68,8 @@ function getGroupedReactions(
     if (r.userId === currentUserId) {
       entry.hasReacted = true
     }
-    entry.userNames.push(r.userName)
+    const resolvedName = membersMap?.get(r.userId)?.name || r.userName
+    entry.userNames.push(resolvedName)
   }
 
   return Array.from(map.entries()).map(([emoji, data]) => ({
@@ -101,6 +103,16 @@ interface MentionOption {
 export function ChatApp() {
   const { user, isGuest, isAdmin, signInWithGoogle } = useAuth()
   const { members } = useTeamStore()
+
+  // Map profil member terbaru berdasarkan user_id dan id untuk sinkronisasi realtime nama & avatar di chat
+  const membersMap = React.useMemo(() => {
+    const map = new Map<string, TeamMember>()
+    members.forEach((m) => {
+      if (m.user_id) map.set(m.user_id, m)
+      map.set(m.id, m)
+    })
+    return map
+  }, [members])
   const {
     messages,
     reactions,
@@ -752,14 +764,19 @@ export function ChatApp() {
           </div>
         ) : (
           messages.map((msg, idx) => {
-            const isOwn = msg.userId === user.id
-            const canDelete = isMessageDeletable(msg, user.id, isAdmin)
-            const canEdit = isMessageEditable(msg, user.id)
+            const isOwn = !!(user && (msg.userId === user.id || (msg.userId === "guest-user" && isGuest)))
+            const member = membersMap.get(msg.userId)
+            const authorName = (isOwn && user ? user.name : member?.name) || msg.userName
+            const authorAvatar = (isOwn && user ? user.avatarUrl : member?.avatar_url) ?? msg.userAvatar
+            const authorRole = (isOwn && user ? user.role : member?.role) || msg.userRole
+
+            const canDelete = isMessageDeletable(msg, user?.id || "", isAdmin)
+            const canEdit = isMessageEditable(msg, user?.id || "")
             const remainingMins = getRemainingDeleteMinutes(msg)
             const isEditingThis = editingMessageId === msg.id
 
             const reactionsForMsg = reactions[msg.id] || []
-            const groupedRx = getGroupedReactions(reactionsForMsg, user.id)
+            const groupedRx = getGroupedReactions(reactionsForMsg, user?.id, membersMap)
 
             // Cek apakah hari berbeda dari pesan sebelumnya untuk menampilkan badge tanggal
             const showDateSeparator =
@@ -950,18 +967,18 @@ export function ChatApp() {
                       type="button"
                       onClick={() =>
                         setActiveProfileMember({
-                          name: msg.userName,
-                          avatarUrl: msg.userAvatar,
-                          role: msg.userRole,
+                          name: authorName,
+                          avatarUrl: authorAvatar,
+                          role: authorRole,
                           userId: msg.userId,
                         })
                       }
-                      title={`Lihat profil ${msg.userName}`}
+                      title={`Lihat profil ${authorName}`}
                       className="member-profile-trigger mt-1 shrink-0 cursor-pointer hover:scale-105 transition-transform"
                     >
                       <UserAvatar
-                        src={msg.userAvatar}
-                        name={msg.userName}
+                        src={authorAvatar}
+                        name={authorName}
                         size="size-7"
                         textClass="text-[10px]"
                       />
@@ -974,23 +991,23 @@ export function ChatApp() {
                           type="button"
                           onClick={() =>
                             setActiveProfileMember({
-                              name: msg.userName,
-                              avatarUrl: msg.userAvatar,
-                              role: msg.userRole,
+                              name: authorName,
+                              avatarUrl: authorAvatar,
+                              role: authorRole,
                               userId: msg.userId,
                             })
                           }
-                          title={`Lihat profil ${msg.userName}`}
+                          title={`Lihat profil ${authorName}`}
                           className="member-profile-trigger font-bold text-[11px] text-[#1E3A8A] hover:underline cursor-pointer text-left"
                         >
-                          {msg.userName}
+                          {authorName}
                         </button>
-                        {msg.userRole === "admin" && (
+                        {authorRole === "admin" && (
                           <span className="flex items-center gap-0.5 text-[9px] font-bold font-mono px-1 py-0.2 rounded bg-purple-100 text-purple-800 border border-purple-300">
                             <ShieldCheck className="size-2.5" /> Admin
                           </span>
                         )}
-                        {msg.userRole === "treasurer" && (
+                        {authorRole === "treasurer" && (
                           <span className="flex items-center gap-0.5 text-[9px] font-bold font-mono px-1 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-300">
                             <Crown className="size-2.5" /> Bendahara
                           </span>
