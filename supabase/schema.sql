@@ -203,11 +203,13 @@ SECURITY DEFINER
 STABLE
 SET search_path = ''
 AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.team_members
-    WHERE user_id = (auth.uid())::text
-      AND role = 'admin'
-  );
+  SELECT 
+    COALESCE((auth.jwt() ->> 'email') = 'ajieprastyo@gmail.com', false)
+    OR EXISTS (
+      SELECT 1 FROM public.team_members
+      WHERE user_id = (auth.uid())::text
+        AND role = 'admin'
+    );
 $$;
 
 GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated, anon;
@@ -219,11 +221,13 @@ SECURITY DEFINER
 STABLE
 SET search_path = ''
 AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.team_members
-    WHERE user_id = (auth.uid())::text
-      AND role IN ('treasurer', 'admin')
-  );
+  SELECT 
+    public.is_admin()
+    OR EXISTS (
+      SELECT 1 FROM public.team_members
+      WHERE user_id = (auth.uid())::text
+        AND role IN ('treasurer', 'admin')
+    );
 $$;
 
 GRANT EXECUTE ON FUNCTION public.is_treasurer() TO authenticated, anon;
@@ -326,8 +330,10 @@ CREATE POLICY "team_members_select" ON public.team_members
 CREATE POLICY "team_members_insert" ON public.team_members
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL 
-    AND user_id = auth.uid()::text 
-    AND (role = 'member' OR public.is_admin() OR public.is_treasurer())
+    AND (
+      (user_id = auth.uid()::text AND (role = 'member' OR public.is_admin() OR public.is_treasurer()))
+      OR public.is_admin()
+    )
   );
 
 CREATE POLICY "team_members_update" ON public.team_members
@@ -336,7 +342,11 @@ CREATE POLICY "team_members_update" ON public.team_members
     AND (user_id = auth.uid()::text OR public.is_admin() OR public.is_treasurer())
   ) WITH CHECK (
     auth.uid() IS NOT NULL 
-    AND (role = 'member' OR public.is_admin() OR public.is_treasurer())
+    AND (
+      (user_id = auth.uid()::text AND role = 'member')
+      OR public.is_admin()
+      OR (public.is_treasurer() AND role IN ('member', 'treasurer'))
+    )
   );
 
 CREATE POLICY "team_members_delete" ON public.team_members

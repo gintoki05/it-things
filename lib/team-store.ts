@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import type { RealtimeChannel } from "@supabase/supabase-js"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { useAuth, UserRole } from "@/lib/auth"
 
@@ -133,9 +134,37 @@ export function useTeamStore() {
     const handleProfileUpdated = () => {
       loadMembers()
     }
+
+    let channel: RealtimeChannel | null = null
+    if (isSupabaseConfigured && supabase) {
+      const channelName = `team-members-realtime-${Math.random().toString(36).substring(2, 8)}`
+      channel = supabase
+        .channel(channelName)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "team_members",
+          },
+          () => {
+            loadMembers()
+          }
+        )
+        .subscribe()
+    }
+
     if (typeof window !== "undefined") {
       window.addEventListener("profile-updated", handleProfileUpdated)
-      return () => window.removeEventListener("profile-updated", handleProfileUpdated)
+    }
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("profile-updated", handleProfileUpdated)
+      }
+      if (channel && supabase) {
+        supabase.removeChannel(channel)
+      }
     }
   }, [loadMembers])
 
@@ -172,13 +201,34 @@ export function useTeamStore() {
 
     if (isSupabaseConfigured && supabase && !isGuest && user && user.id !== "guest-user") {
       try {
-        await supabase.from("team_members").insert({
-          user_id: newMember.user_id!,
-          name: newMember.name,
-          email: newMember.email,
-          role: newMember.role,
-          avatar_url: newMember.avatar_url,
-        })
+        const { data, error } = await supabase
+          .from("team_members")
+          .insert({
+            user_id: newMember.user_id!,
+            name: newMember.name,
+            email: newMember.email,
+            role: newMember.role,
+            avatar_url: newMember.avatar_url,
+          })
+          .select()
+          .maybeSingle()
+
+        if (error) {
+          console.error("Gagal menambah team member di Supabase:", error.message)
+        } else if (data) {
+          const inserted: TeamMember = {
+            id: data.id,
+            user_id: data.user_id,
+            name: data.name,
+            email: data.email || "",
+            role: (data.role as UserRole) || "member",
+            avatar_url: data.avatar_url || defaultAvatar,
+            created_at: data.created_at,
+          }
+          const updatedWithRealId = updated.map((m) => (m.id === newId ? inserted : m))
+          saveLocal(updatedWithRealId)
+          return inserted
+        }
       } catch (e) {
         console.warn("Could not insert team member to Supabase:", e)
       }
@@ -197,10 +247,16 @@ export function useTeamStore() {
 
     if (isSupabaseConfigured && supabase && !isGuest && user && user.id !== "guest-user") {
       try {
-        await supabase
+        const { error } = await supabase
           .from("team_members")
           .update(updates)
           .eq("id", id)
+
+        if (error) {
+          console.error("Gagal update team member di Supabase:", error.message)
+          // Rollback ke state sebelumnya jika update gagal
+          loadMembers()
+        }
       } catch (e) {
         console.warn("Could not update team member in Supabase:", e)
       }

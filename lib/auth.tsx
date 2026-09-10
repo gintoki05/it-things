@@ -350,10 +350,15 @@ const ROOT_ADMIN_EMAILS = ["ajieprastyo@gmail.com"]
     setUser((prev) => (prev ? { ...prev, role } : prev))
     if (isSupabaseConfigured && supabase && user && user.id !== "guest-user") {
       try {
-        await supabase
+        const { error } = await supabase
           .from("team_members")
           .update({ role })
           .eq("user_id", user.id)
+        if (error) {
+          console.error("Could not update role in Supabase:", error.message)
+        } else if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("profile-updated"))
+        }
       } catch (e) {
         console.warn("Could not update role in Supabase:", e)
       }
@@ -361,9 +366,8 @@ const ROOT_ADMIN_EMAILS = ["ajieprastyo@gmail.com"]
   }
 
   const isGuest = !!user?.isGuest || user?.id === "guest-user" || user?.role === "guest"
-  const isAdmin =
-    !isGuest &&
-    (user?.role === "admin" || (!!user?.email && ROOT_ADMIN_EMAILS.includes(user.email.toLowerCase())))
+  const isRootAdmin = !!(user?.email && ROOT_ADMIN_EMAILS.includes(user.email.toLowerCase()))
+  const isAdmin = !isGuest && (user?.role === "admin" || (!user?.role && isRootAdmin))
   const isTreasurer = !isGuest && (user?.role === "treasurer" || isAdmin)
 
   const signInWithGoogle = async () => {
