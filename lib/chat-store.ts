@@ -83,7 +83,7 @@ function mapDbMessage(db: DbChatMessage): ChatMessage {
   }
 }
 
-export const MAX_MESSAGE_LENGTH = 2000
+export const MAX_MESSAGE_LENGTH = 1000
 
 /**
  * Sanitasi & normalisasi pesan chat untuk mencegah pesan kosong, spasi enter,

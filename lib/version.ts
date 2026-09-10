@@ -17,7 +17,8 @@ export const APP_CHANGELOG: VersionRelease[] = [
     codename: "LiveChat Security & Input Sanitization",
     changes: [
       "Sanitasi ketat input teks chat untuk mencegah pesan kosong, spasi/enter saja, dan Unicode zero-width/invisible chars.",
-      "Database CHECK constraint pada tabel chat_messages & chat_reactions di Supabase (max 2000 char, no empty space).",
+      "Database CHECK constraint pada tabel chat_messages & chat_reactions di Supabase (max 1000 char, no empty space).",
+      "Penghitung karakter real-time di textarea dengan batas tegas maksimal 1000 karakter.",
       "Proteksi anti-flood cooldown pada pengiriman pesan obrolan.",
       "Validasi keamanan URL avatar (hanya protokol aman) & pencegahan ReDoS pada regex mention.",
     ],

@@ -380,8 +380,8 @@ function GroupDetail({
 
   const archived = isGroupArchived(group)
   const days = daysRemaining(group)
-  const isCreator = currentUserId === group.createdById
-  const canManage = isCreator || isAdmin
+  const isCreator = Boolean(currentUserId && currentUserId === group.createdById)
+  const canManage = Boolean(isCreator || isAdmin)
 
   const maxVotes = Math.max(...group.options.map((o) => o.voters.length), 0)
   const totalVotes = group.options.reduce((acc, o) => acc + o.voters.length, 0)
@@ -1118,18 +1118,37 @@ export function VoteApp() {
             deleteOption(selectedGroup.id, optionId)
           }}
           onToggleClose={() => {
+            const isCreator = Boolean(user?.id && user.id === selectedGroup.createdById)
+            const canManage = Boolean(isCreator || isAdmin)
+            if (!canManage) {
+              showToast("error", "Akses ditolak: Hanya pembuat vote atau admin yang dapat mengarsipkan group ini.")
+              return
+            }
             const archived = isGroupArchived(selectedGroup)
-            toggleCloseGroup(selectedGroup.id, !selectedGroup.isClosed)
+            toggleCloseGroup(selectedGroup.id, !selectedGroup.isClosed, user, isAdmin)
             if (archived) showToast("success", `Group "${selectedGroup.title}" dibuka kembali.`)
             else showToast("success", `Group "${selectedGroup.title}" berhasil diarsipkan.`)
           }}
           onDeleteGroup={() => {
-            deleteGroup(selectedGroup.id)
+            const isCreator = Boolean(user?.id && user.id === selectedGroup.createdById)
+            const canManage = Boolean(isCreator || isAdmin)
+            if (!canManage) {
+              showToast("error", "Akses ditolak: Hanya pembuat vote atau admin yang dapat menghapus group ini.")
+              return
+            }
+            deleteGroup(selectedGroup.id, user, isAdmin)
             setSelectedGroupId(null)
             showToast("success", `Group "${selectedGroup.title}" berhasil dihapus permanen.`)
           }}
           onUpdateGroup={async (updates) => {
-            const res = await updateGroup(selectedGroup.id, updates)
+            const isCreator = Boolean(user?.id && user.id === selectedGroup.createdById)
+            const canManage = Boolean(isCreator || isAdmin)
+            if (!canManage) {
+              const errMsg = "Akses ditolak: Hanya pembuat vote atau admin yang dapat mengubah group ini."
+              showToast("error", errMsg)
+              return { success: false, error: errMsg }
+            }
+            const res = await updateGroup(selectedGroup.id, updates, user, isAdmin)
             if (res.success) showToast("success", "Judul vote group berhasil diperbarui.")
             else showToast("error", res.error || "Gagal memperbarui group.")
             return res

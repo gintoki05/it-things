@@ -1120,38 +1120,43 @@ export function ChatApp() {
 
         {/* Input Textarea & Send / Save Button */}
         <div className="flex items-end gap-2">
-          <textarea
-            ref={textareaRef}
-            rows={2}
-            placeholder={
-              editingMessageId
-                ? "Edit pesan... (Tekan Enter untuk simpan, Esc untuk batal)"
-                : "Tulis pesan... (@ untuk mention)"
-            }
-            maxLength={MAX_MESSAGE_LENGTH + 50}
-            value={inputVal}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            className={cn(
-              "flex-1 p-2 bg-white text-xs font-sans rounded-[2px] border-2 border-t-[#5E7287] border-l-[#5E7287] border-r-white border-b-white shadow-inner focus:outline-none focus:ring-1 resize-none",
-              editingMessageId
-                ? "focus:ring-emerald-600 border-emerald-500/50 bg-emerald-50/20"
-                : "focus:ring-[#1E4E8C]"
-            )}
-          />
-
-          {inputVal.length > 1500 && (
-            <div
+          <div className="relative flex-1 flex flex-col">
+            <textarea
+              ref={textareaRef}
+              rows={2}
+              maxLength={MAX_MESSAGE_LENGTH}
+              placeholder={
+                editingMessageId
+                  ? "Edit pesan... (Tekan Enter untuk simpan, Esc untuk batal)"
+                  : "Tulis pesan... (@ untuk mention)"
+              }
+              value={inputVal}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
               className={cn(
-                "absolute right-18 bottom-3 text-[9px] font-mono pointer-events-none px-1 py-0.5 rounded shadow-xs z-10",
-                inputVal.length > MAX_MESSAGE_LENGTH
-                  ? "bg-red-100 text-red-700 font-bold border border-red-300"
-                  : "bg-white/90 text-gray-600 border border-gray-300"
+                "w-full p-2 pb-5 bg-white text-xs font-sans rounded-[2px] border-2 border-t-[#5E7287] border-l-[#5E7287] border-r-white border-b-white shadow-inner focus:outline-none focus:ring-1 resize-none",
+                editingMessageId
+                  ? "focus:ring-emerald-600 border-emerald-500/50 bg-emerald-50/20"
+                  : "focus:ring-[#1E4E8C]"
               )}
-            >
-              {inputVal.length}/{MAX_MESSAGE_LENGTH}
+            />
+
+            {/* Character counter (selalu tampak agar pengguna tahu sisa karakter) */}
+            <div className="absolute right-2 bottom-1.5 pointer-events-none select-none text-[9px] font-mono leading-none">
+              <span
+                className={cn(
+                  "px-1 py-0.2 rounded transition-colors",
+                  inputVal.length >= MAX_MESSAGE_LENGTH
+                    ? "bg-red-100 text-red-700 font-bold border border-red-300"
+                    : inputVal.length >= MAX_MESSAGE_LENGTH * 0.8
+                    ? "bg-amber-100 text-amber-800 font-semibold border border-amber-300"
+                    : "text-gray-400 bg-white/70"
+                )}
+              >
+                {inputVal.length}/{MAX_MESSAGE_LENGTH}
+              </span>
             </div>
-          )}
+          </div>
 
           <button
             type="button"

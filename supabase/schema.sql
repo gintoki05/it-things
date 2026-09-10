@@ -161,7 +161,7 @@ CREATE TABLE IF NOT EXISTS public.chat_messages (
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
     CONSTRAINT chat_messages_message_content_check CHECK (
       char_length(trim(regexp_replace(message, '[\u200B-\u200F\u2028-\u202F\u2060-\u206F\uFEFF\u180E\u2800]', '', 'g'))) > 0
-      AND char_length(message) <= 2000
+      AND char_length(message) <= 1000
     )
 );
 
@@ -207,10 +207,6 @@ AS $$
     SELECT 1 FROM public.team_members
     WHERE user_id = (auth.uid())::text
       AND role = 'admin'
-  ) OR EXISTS (
-    SELECT 1 FROM auth.users
-    WHERE id = auth.uid()
-      AND lower(email) = 'ajieprastyo@gmail.com'
   );
 $$;
 

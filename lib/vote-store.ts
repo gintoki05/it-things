@@ -269,8 +269,18 @@ export function useVoteStore() {
   }
 
   // ─── Delete Group ────────────────────────────────────────
-  const deleteGroup = async (groupId: string): Promise<{ success: boolean; error?: string }> => {
+  const deleteGroup = async (
+    groupId: string,
+    caller?: { id?: string } | null,
+    isAdmin?: boolean
+  ): Promise<{ success: boolean; error?: string }> => {
     const targetGroup = groups.find((g) => g.id === groupId)
+    if (caller && !isAdmin && targetGroup && targetGroup.createdById !== caller.id) {
+      return {
+        success: false,
+        error: "Akses ditolak: Hanya pembuat vote atau admin yang dapat menghapus group ini.",
+      }
+    }
     if (targetGroup && !isGroupArchived(targetGroup)) {
       return {
         success: false,
@@ -305,8 +315,19 @@ export function useVoteStore() {
   }
 
   // ─── Toggle Close / Archive Group ────────────────────────
-  const toggleCloseGroup = async (groupId: string, isClosed: boolean): Promise<{ success: boolean; error?: string }> => {
+  const toggleCloseGroup = async (
+    groupId: string,
+    isClosed: boolean,
+    caller?: { id?: string } | null,
+    isAdmin?: boolean
+  ): Promise<{ success: boolean; error?: string }> => {
     const targetGroup = groups.find((g) => g.id === groupId)
+    if (caller && !isAdmin && targetGroup && targetGroup.createdById !== caller.id) {
+      return {
+        success: false,
+        error: "Akses ditolak: Hanya pembuat vote atau admin yang dapat mengarsipkan group ini.",
+      }
+    }
     // If reopening an expired group, extend expiresAt by 21 days so it becomes active again
     const shouldExtendExpiry = !isClosed && targetGroup && new Date(targetGroup.expiresAt) <= new Date()
     const newExpiresAt = shouldExtendExpiry
@@ -348,8 +369,18 @@ export function useVoteStore() {
   // ─── Update Group (Title, Description, Emoji) ─────────────
   const updateGroup = async (
     groupId: string,
-    updates: { title?: string; description?: string; emoji?: string }
+    updates: { title?: string; description?: string; emoji?: string },
+    caller?: { id?: string } | null,
+    isAdmin?: boolean
   ): Promise<{ success: boolean; error?: string }> => {
+    const targetGroup = groups.find((g) => g.id === groupId)
+    if (caller && !isAdmin && targetGroup && targetGroup.createdById !== caller.id) {
+      return {
+        success: false,
+        error: "Akses ditolak: Hanya pembuat vote atau admin yang dapat mengubah group ini.",
+      }
+    }
+
     // Optimistic update
     setGroups((prev) =>
       prev.map((g) => (g.id === groupId ? { ...g, ...updates } : g))
