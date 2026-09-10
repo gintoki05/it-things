@@ -5,12 +5,23 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.2.3"
+export const APP_VERSION = "v2.2.4"
 export const APP_BUILD = "2026.09.10"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.2.4",
+    date: "10 Sep 2026",
+    codename: "Onboarding & README System Guide",
+    changes: [
+      "Penambahan aplikasi Notepad retro (README.txt) di desktop dengan panduan lengkap pengenalan IT-THINGS.",
+      "Panel interaktif ringkasan fungsi web ('Web ini untuk apa?') di layar Passcode sebelum login.",
+      "Badge status INFO pada ikon README.txt dan penataan ulang grid ikon desktop.",
+      "Penyempurnaan branding & tagline portal di wallpaper desktop dan layar security gate.",
+    ],
+  },
   {
     version: "v2.2.3",
     date: "10 Sep 2026",

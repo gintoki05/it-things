@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
 
-export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat"
+export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme"
 
 export interface WindowState {
   id: AppId
@@ -43,6 +43,20 @@ interface DesktopContextType {
 const DesktopContext = React.createContext<DesktopContextType | undefined>(undefined)
 
 const INITIAL_WINDOWS: Record<AppId, WindowState> = {
+  readme: {
+    id: "readme",
+    title: "Notepad - README.txt",
+    icon: "task",
+    filename: "README.txt",
+    isOpen: true,
+    isMinimized: false,
+    isMaximized: false,
+    zIndex: 15,
+    position: { x: 200, y: 35 },
+    size: { width: 580, height: 490 },
+    defaultSize: { width: 580, height: 490 },
+    defaultPos: { x: 200, y: 35 },
+  },
   vote: {
     id: "vote",
     title: "Vote.exe - Poll & Vote Groups",
@@ -135,7 +149,7 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
 export function DesktopProvider({ children }: { children: React.ReactNode }) {
   const { isAdmin } = useAuth()
   const [windows, setWindows] = React.useState<Record<AppId, WindowState>>(INITIAL_WINDOWS)
-  const [activeWindowId, setActiveWindowId] = React.useState<AppId | null>("vote")
+  const [activeWindowId, setActiveWindowId] = React.useState<AppId | null>("readme")
   const [topZIndex, setTopZIndex] = React.useState(20)
   const [comingSoonApp, setComingSoonApp] = React.useState<WindowState | null>(null)
   const [isAboutOpen, setIsAboutOpen] = React.useState(false)
@@ -146,39 +160,51 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
 
     const isLargeScreen = window.innerWidth >= 1024
     const isMobile = window.innerWidth < 768
+    const hasSeenReadme = localStorage.getItem("it_things_readme_seen") === "true"
+
+    if (hasSeenReadme) {
+      setActiveWindowId("vote")
+    }
 
     setWindows((curr) => {
       const chatWin = curr.chat
+      const readmeWin = curr.readme
       if (!chatWin) return curr
 
-      if (isMobile) {
-        // Pada mobile, jangan auto-open agar tidak langsung menumpuk full-screen
-        return {
-          ...curr,
-          chat: {
-            ...chatWin,
-            isOpen: false,
-          },
+      let nextChat = chatWin
+      let nextReadme = readmeWin
+
+      if (hasSeenReadme && readmeWin) {
+        nextReadme = {
+          ...readmeWin,
+          isOpen: false,
         }
       }
 
-      if (isLargeScreen) {
+      if (isMobile) {
+        // Pada mobile, jangan auto-open chat agar tidak langsung menumpuk full-screen
+        nextChat = {
+          ...chatWin,
+          isOpen: false,
+        }
+      } else if (isLargeScreen) {
         const targetX = Math.max(720, window.innerWidth - 460)
         const targetHeight = Math.max(620, window.innerHeight - 56)
-        return {
-          ...curr,
-          chat: {
-            ...chatWin,
-            isOpen: true,
-            position: { x: targetX, y: 10 },
-            size: { width: 440, height: targetHeight },
-            defaultPos: { x: targetX, y: 10 },
-            defaultSize: { width: 440, height: targetHeight },
-          },
+        nextChat = {
+          ...chatWin,
+          isOpen: true,
+          position: { x: targetX, y: 10 },
+          size: { width: 440, height: targetHeight },
+          defaultPos: { x: targetX, y: 10 },
+          defaultSize: { width: 440, height: targetHeight },
         }
       }
 
-      return curr
+      return {
+        ...curr,
+        chat: nextChat,
+        readme: nextReadme || curr.readme,
+      }
     })
   }, [])
 

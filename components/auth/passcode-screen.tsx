@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
-import { Lock, ShieldAlert, KeyRound, Check, Delete, RotateCcw } from "lucide-react"
+import { Lock, ShieldAlert, KeyRound, Check, Delete, RotateCcw, HelpCircle } from "lucide-react"
 
 export function PasscodeScreen() {
   const { verifyPasscode } = useAuth()
@@ -10,6 +10,7 @@ export function PasscodeScreen() {
   const [error, setError] = React.useState<string | null>(null)
   const [isSuccess, setIsSuccess] = React.useState<boolean>(false)
   const [isShaking, setIsShaking] = React.useState<boolean>(false)
+  const [showAbout, setShowAbout] = React.useState<boolean>(false)
 
   // Handle pin submit
   const handleCheckPin = React.useCallback(
@@ -95,7 +96,7 @@ export function PasscodeScreen() {
   }, [pin, isSuccess, handleCheckPin])
 
   return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-[#1A365D] p-4 select-none">
+    <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-[#1A365D] p-4 select-none overflow-y-auto">
       {/* Retro Wallpaper Texture */}
       <div
         className="absolute inset-0 opacity-25 pointer-events-none"
@@ -104,6 +105,19 @@ export function PasscodeScreen() {
           backgroundSize: "20px 20px",
         }}
       />
+
+      {/* Retro Brand Header (Sebelum Login) */}
+      <div className="relative z-10 text-center mb-3 sm:mb-4">
+        <div className="font-mono text-2xl sm:text-3xl font-black text-white tracking-widest flex items-center justify-center gap-2 drop-shadow">
+          <span>IT-THINGS</span>
+          <span className="text-yellow-400 text-xs font-bold bg-[#102D52] px-1.5 py-0.5 rounded border border-blue-400/40 tracking-wider">
+            98
+          </span>
+        </div>
+        <p className="font-mono text-[11px] text-blue-200 mt-1 max-w-xs sm:max-w-sm mx-auto">
+          Portal Santai & Daily Utilities Internal Tim IT
+        </p>
+      </div>
 
       {/* Main Window */}
       <div
@@ -125,20 +139,64 @@ export function PasscodeScreen() {
         </div>
 
         {/* Inner Content */}
-        <div className="p-4 sm:p-5 flex flex-col gap-4 font-mono">
+        <div className="p-4 sm:p-5 flex flex-col gap-3 font-mono">
           {/* Header Badge */}
           <div className="flex items-center gap-3 p-2.5 bg-[#EEF2F6] border border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px]">
             <div className="size-10 bg-[#1E4E8C] text-white flex items-center justify-center rounded-[2px] shadow-inner text-xl shrink-0">
               🔐
             </div>
-            <div>
-              <div className="text-xs font-bold text-[#14253D] tracking-wide">
-                AUTHENTICATION REQUIRED
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-bold text-[#14253D] tracking-wide uppercase">
+                Verifikasi Akses Tim
               </div>
               <div className="text-[11px] text-[#4A5D73]">
-                Masukkan 4-digit Passcode Tim TI
+                Masukkan 4-digit Passcode internal
               </div>
             </div>
+          </div>
+
+          {/* Quick Explainer: Web Ini Buat Apa? */}
+          <div className="bg-[#F8FAFC] border border-[#BAC7D5] rounded-[2px] p-2 text-[11px] text-gray-700">
+            <div className="flex items-center justify-between font-bold text-[#102A45]">
+              <span className="flex items-center gap-1">
+                <HelpCircle className="size-3.5 text-[#1E4E8C]" />
+                <span>Web ini untuk apa?</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowAbout((prev) => !prev)}
+                className="text-[10px] text-[#1E4E8C] hover:underline cursor-pointer font-semibold"
+              >
+                {showAbout ? "Tutup ▲" : "Lihat Info ▼"}
+              </button>
+            </div>
+            <p className="text-[10.5px] leading-snug text-gray-600 mt-0.5">
+              Portal serbaguna tim IT: polling makan siang, live chat, & utilitas harian.
+            </p>
+
+            {showAbout && (
+              <div className="mt-2 pt-2 border-t border-gray-200 space-y-1.5 text-[10px] leading-tight text-gray-700">
+                <div className="flex items-start gap-1.5">
+                  <span className="text-blue-700 font-bold shrink-0">• Vote.exe:</span>
+                  <span>Polling tempat makan siang & keputusan bersama (realtime).</span>
+                </div>
+                <div className="flex items-start gap-1.5">
+                  <span className="text-emerald-700 font-bold shrink-0">• Chat.exe:</span>
+                  <span>Obrolan santai & koordinasi tim (mention, reaksi emoji).</span>
+                </div>
+                <div className="flex items-start gap-1.5">
+                  <span className="text-purple-700 font-bold shrink-0">• Team.exe:</span>
+                  <span>Direktori profil & role anggota tim.</span>
+                </div>
+                <div className="flex items-start gap-1.5">
+                  <span className="text-amber-700 font-bold shrink-0">• Segera:</span>
+                  <span>Rolet penentu makan, split bill patungan, & kas tim.</span>
+                </div>
+                <div className="text-[9.5px] text-gray-500 pt-1 border-t border-dashed border-gray-200">
+                  💡 <em>PIN passcode bisa ditanyakan ke rekan tim / admin internal IT.</em>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 4-Digit Display Boxes */}

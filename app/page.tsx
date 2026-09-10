@@ -21,7 +21,9 @@ import { SplitBillApp } from "@/components/apps/split-bill-app"
 import { KasApp } from "@/components/apps/kas-app"
 import { TeamApp } from "@/components/apps/team-app"
 import { ChatApp } from "@/components/apps/chat-app"
+import { ReadmeApp } from "@/components/apps/readme-app"
 
+const MemoizedReadmeApp = React.memo(ReadmeApp)
 const MemoizedVoteApp = React.memo(VoteApp)
 const MemoizedWheelApp = React.memo(WheelApp)
 const MemoizedSplitBillApp = React.memo(SplitBillApp)
@@ -92,12 +94,20 @@ function DesktopWorkspace() {
           IT-THINGS
         </div>
         <div className="font-mono text-xs text-blue-200 tracking-wider">
-          {isGuest ? "GUEST MODE // READ-ONLY ACCESS" : `INTERNAL TEAM SUITE 98 // ${APP_VERSION}`}
+          {isGuest ? "GUEST MODE // READ-ONLY ACCESS" : `INTERNAL TEAM SUITE 98 • DAILY UTILITIES // ${APP_VERSION}`}
+        </div>
+        <div className="font-mono text-[10px] text-blue-300 tracking-wide mt-0.5">
+          Portal Santai & Utilitas Harian Tim IT
         </div>
       </div>
 
       {/* Desktop Icons on Wallpaper */}
       <MemoizedDesktopIcons />
+
+      {/* Retro Window: README.txt (Panduan Web) */}
+      <DesktopWindow id="readme">
+        <MemoizedReadmeApp />
+      </DesktopWindow>
 
       {/* Retro Window: Vote.exe */}
       <DesktopWindow id="vote">

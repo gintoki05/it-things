@@ -8,12 +8,13 @@ import { cn } from "@/lib/utils"
 import { RetroIcon } from "@/components/ui/retro-icon"
 
 const ITEM_GRID_POSITIONS: Record<AppId, string> = {
-  vote: "col-start-1 row-start-1",
-  wheel: "col-start-1 row-start-2",
-  splitbill: "col-start-1 row-start-3",
-  kas: "col-start-1 row-start-4",
-  team: "col-start-1 row-start-5",
-  chat: "col-start-2 row-start-1",
+  readme: "col-start-1 row-start-1",
+  vote: "col-start-1 row-start-2",
+  chat: "col-start-1 row-start-3",
+  team: "col-start-1 row-start-4",
+  wheel: "col-start-2 row-start-1",
+  splitbill: "col-start-2 row-start-2",
+  kas: "col-start-2 row-start-3",
 }
 
 export function DesktopIcons() {
@@ -75,6 +76,14 @@ export function DesktopIcons() {
               {item.isComingSoon && (
                 <span className="absolute -top-1.5 -right-2 bg-amber-500 text-slate-950 font-mono text-[8px] font-black px-1 py-0.5 rounded border border-amber-600 shadow leading-none uppercase">
                   SOON
+                </span>
+              )}
+              {!item.isComingSoon && item.id === "readme" && (
+                <span
+                  title="Panduan & Info Web"
+                  className="absolute -top-1.5 -right-2 bg-blue-500 text-white font-mono text-[8px] font-black px-1 py-0.5 rounded border border-blue-400 shadow leading-none uppercase"
+                >
+                  INFO
                 </span>
               )}
               {!item.isComingSoon && item.id === "vote" && activeVoteCount > 0 && (
