@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.1.1"
+export const APP_VERSION = "v2.2.0"
 export const APP_BUILD = "2026.09.10"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.2.0",
+    date: "10 Sep 2026",
+    codename: "Retro Notification Suite",
+    changes: [
+      "Fitur notifikasi in-app retro (balon pop-up Windows 98 di pojok taskbar).",
+      "Efek suara retro chime ding sintetis via Web Audio API tanpa aset eksternal.",
+      "Integrasi Browser Web Notification saat tab aplikasi berada di background.",
+      "Kontrol mute/bisu di System Tray Taskbar dan header Chat.exe.",
+      "Indikator unread badge & animasi kedip pada tombol taskbar Chat.exe.",
+    ],
+  },
   {
     version: "v2.1.1",
     date: "10 Sep 2026",

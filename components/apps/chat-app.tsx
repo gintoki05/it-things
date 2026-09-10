@@ -33,7 +33,10 @@ import {
   X,
   ShieldAlert,
   SmilePlus,
+  Bell,
+  BellOff,
 } from "lucide-react"
+import { useNotification } from "@/lib/notification-store"
 import { cn } from "@/lib/utils"
 
 const QUICK_EMOJIS = ["👍", "☕", "🚀", "😂", "❤️", "🔥", "🙏"]
@@ -110,6 +113,11 @@ export function ChatApp() {
     fetchOlderMessages,
     refetch,
   } = useChatStore()
+  const { isMuted, toggleMute, clearUnreadChat } = useNotification()
+
+  React.useEffect(() => {
+    clearUnreadChat()
+  }, [clearUnreadChat])
 
   const [inputVal, setInputVal] = React.useState("")
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
@@ -489,6 +497,25 @@ export function ChatApp() {
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={toggleMute}
+            title={
+              isMuted
+                ? "Notifikasi Suara: DIBISUKAN (Klik untuk mengaktifkan)"
+                : "Notifikasi Suara: AKTIF (Klik untuk membisukan)"
+            }
+            className={cn(
+              "px-1.5 py-0.5 border border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] shadow-sm active:translate-y-px cursor-pointer rounded-[2px] flex items-center gap-1 text-[10px] font-mono",
+              isMuted
+                ? "bg-red-100 text-red-700 hover:bg-red-200"
+                : "bg-[#CBD5E1] hover:bg-white text-[#102A45]"
+            )}
+          >
+            {isMuted ? <BellOff className="size-3" /> : <Bell className="size-3" />}
+            <span className="hidden sm:inline">{isMuted ? "Bisu" : "Suara"}</span>
+          </button>
+
           <button
             type="button"
             onClick={() => refetch()}

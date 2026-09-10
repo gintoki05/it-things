@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { AuthProvider, useAuth } from "@/lib/auth"
+import { NotificationProvider } from "@/lib/notification-store"
 import { DesktopProvider, useDesktop } from "@/components/desktop/desktop-context"
 import { DesktopIcons } from "@/components/desktop/desktop-icons"
 import { DesktopWindow } from "@/components/desktop/desktop-window"
@@ -147,9 +148,11 @@ function DesktopWorkspace() {
 export default function Page() {
   return (
     <AuthProvider>
-      <DesktopProvider>
-        <DesktopWorkspace />
-      </DesktopProvider>
+      <NotificationProvider>
+        <DesktopProvider>
+          <DesktopWorkspace />
+        </DesktopProvider>
+      </NotificationProvider>
     </AuthProvider>
   )
 }

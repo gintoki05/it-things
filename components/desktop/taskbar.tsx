@@ -21,11 +21,15 @@ import {
   Eye,
   ShieldAlert,
   Edit3,
-  Info
+  Info,
+  Volume2,
+  VolumeX
 } from "lucide-react"
 import { EditProfileModal } from "@/components/auth/edit-profile-modal"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { APP_VERSION, APP_BUILD } from "@/lib/version"
+import { useNotification } from "@/lib/notification-store"
+import { RetroNotificationToast } from "@/components/desktop/retro-notification-toast"
 
 interface TaskbarProps {
   onOpenLoginModal?: () => void
@@ -34,6 +38,15 @@ interface TaskbarProps {
 export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
   const { windows, activeWindowId, openWindow, toggleWindow, openAboutDialog } = useDesktop()
   const { user, isAdmin, isTreasurer, isGuest, isSupabaseConnected, signOut, setDemoUserRole, lockApp } = useAuth()
+  const {
+    isMuted,
+    unreadChatCount,
+    toggleMute,
+    clearUnreadChat,
+    requestNotificationPermission,
+    hasBrowserNotificationSupport,
+    browserPermission,
+  } = useNotification()
 
   const [isStartOpen, setIsStartOpen] = React.useState(false)
   const [isProfileModalOpen, setIsProfileModalOpen] = React.useState(false)
@@ -382,28 +395,62 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
         <div className="flex-1 flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
           {openWindows.map((win) => {
             const isActive = activeWindowId === win.id && !win.isMinimized
+            const isUnreadChat = win.id === "chat" && unreadChatCount > 0 && !isActive
 
             return (
               <button
                 key={win.id}
                 type="button"
-                onClick={() => toggleWindow(win.id)}
+                onClick={() => {
+                  if (win.id === "chat") clearUnreadChat()
+                  toggleWindow(win.id)
+                }}
                 className={cn(
-                  "h-7 max-w-[170px] px-2 flex items-center gap-1.5 rounded-[2px] text-xs font-mono font-medium truncate transition-all border",
+                  "h-7 max-w-[170px] px-2 flex items-center gap-1.5 rounded-[2px] text-xs font-mono font-medium truncate transition-all border relative",
                   isActive
                     ? "bg-[#BDCCD9] border-t-[#5E7287] border-l-[#5E7287] border-r-white border-b-white text-[#14253D] font-bold shadow-inner"
-                    : "bg-[#D4DDE6] border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] text-gray-700 hover:bg-[#DEE6EE]"
+                    : "bg-[#D4DDE6] border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] text-gray-700 hover:bg-[#DEE6EE]",
+                  isUnreadChat && "animate-pulse border-amber-500 bg-amber-100 text-[#1E4E8C] font-bold shadow-xs"
                 )}
               >
                 <RetroIcon name={win.icon || win.id} iconSize={32} className="size-4 shrink-0 object-contain" />
                 <span className="truncate text-[11px] font-sans">{win.filename}</span>
+                {isUnreadChat && (
+                  <span className="ml-auto px-1 rounded-full bg-red-600 text-white font-mono font-black text-[9px] leading-tight shadow-xs shrink-0">
+                    {unreadChatCount > 99 ? "99+" : unreadChatCount}
+                  </span>
+                )}
               </button>
             )
           })}
         </div>
 
         {/* System Tray */}
-        <div className="h-7 px-2.5 bg-[#CBD5E1] border border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] flex items-center gap-2 shrink-0 text-xs font-mono text-[#14253D]">
+        <div className="h-7 px-2 bg-[#CBD5E1] border border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] flex items-center gap-1.5 shrink-0 text-xs font-mono text-[#14253D]">
+          {/* Notification Mute / Sound Toggle in Tray */}
+          <button
+            type="button"
+            onClick={async () => {
+              toggleMute()
+              if (hasBrowserNotificationSupport && browserPermission === "default") {
+                await requestNotificationPermission()
+              }
+            }}
+            title={
+              isMuted
+                ? "Notifikasi Suara: DIBISUKAN (Klik untuk mengaktifkan suara)"
+                : "Notifikasi Suara: AKTIF (Klik untuk membisukan)"
+            }
+            className={cn(
+              "size-5.5 rounded-[2px] border transition-colors cursor-pointer flex items-center justify-center active:translate-y-px",
+              isMuted
+                ? "bg-red-100 border-red-400 text-red-700 hover:bg-red-200"
+                : "bg-[#BDCCD9] border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white text-[#14253D] hover:bg-[#A8BCCC]"
+            )}
+          >
+            {isMuted ? <VolumeX className="size-3" /> : <Volume2 className="size-3" />}
+          </button>
+
           {/* Guest Badge in Tray */}
           {isGuest && (
             <div
@@ -446,6 +493,9 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
           <div className="font-bold text-[11px] tracking-wider text-slate-800">{time}</div>
         </div>
       </footer>
+
+      {/* Retro In-App Notification Toast */}
+      <RetroNotificationToast />
 
       {/* Edit Profile Modal */}
       <EditProfileModal

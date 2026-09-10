@@ -370,6 +370,19 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
     })
   }, [])
 
+  React.useEffect(() => {
+    const handleOpenApp = (e: Event) => {
+      const customEvent = e as CustomEvent<{ appId: AppId }>
+      const targetId = customEvent.detail?.appId
+      if (targetId) {
+        openWindow(targetId)
+        bringToFront(targetId)
+      }
+    }
+    window.addEventListener("open-app", handleOpenApp)
+    return () => window.removeEventListener("open-app", handleOpenApp)
+  }, [openWindow, bringToFront])
+
   return (
     <DesktopContext.Provider
       value={{
