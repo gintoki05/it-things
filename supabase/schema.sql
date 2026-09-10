@@ -173,7 +173,7 @@ CREATE TABLE IF NOT EXISTS public.chat_reactions (
     user_id TEXT NOT NULL,
     user_name TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
-    UNIQUE(message_id, emoji, user_id),
+    UNIQUE(message_id, user_id),
     CONSTRAINT chat_reactions_emoji_length_check CHECK (char_length(emoji) > 0 AND char_length(emoji) <= 16)
 );
 
@@ -644,6 +644,16 @@ CREATE POLICY "chat_reactions_insert" ON public.chat_reactions
 
 CREATE POLICY "chat_reactions_delete" ON public.chat_reactions
   FOR DELETE USING (
+    auth.uid() IS NOT NULL
+    AND user_id = auth.uid()::text
+  );
+
+CREATE POLICY "chat_reactions_update" ON public.chat_reactions
+  FOR UPDATE USING (
+    auth.uid() IS NOT NULL
+    AND user_id = auth.uid()::text
+  )
+  WITH CHECK (
     auth.uid() IS NOT NULL
     AND user_id = auth.uid()::text
   );

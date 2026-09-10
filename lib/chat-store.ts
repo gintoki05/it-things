@@ -220,8 +220,13 @@ export function useChatStore() {
             if (!next[rx.messageId]) {
               next[rx.messageId] = []
             }
-            if (!next[rx.messageId].some((r) => r.id === rx.id)) {
-              next[rx.messageId] = [...next[rx.messageId], rx]
+            const existingIdx = next[rx.messageId].findIndex(
+              (r) => r.id === rx.id || r.userId === rx.userId
+            )
+            if (existingIdx >= 0) {
+              next[rx.messageId][existingIdx] = rx
+            } else {
+              next[rx.messageId].push(rx)
             }
           })
           return next
@@ -377,18 +382,45 @@ export function useChatStore() {
             const newRx = mapDbReaction(payload.new as DbChatReaction)
             setReactions((prev) => {
               const list = prev[newRx.messageId] || []
-              if (
-                list.some(
-                  (r) =>
-                    r.id === newRx.id ||
-                    (r.userId === newRx.userId && r.emoji === newRx.emoji)
-                )
-              ) {
-                return prev
+              const existingIdx = list.findIndex(
+                (r) => r.id === newRx.id || r.userId === newRx.userId
+              )
+              if (existingIdx >= 0) {
+                const nextList = [...list]
+                nextList[existingIdx] = newRx
+                return {
+                  ...prev,
+                  [newRx.messageId]: nextList,
+                }
               }
               return {
                 ...prev,
                 [newRx.messageId]: [...list, newRx],
+              }
+            })
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "chat_reactions" },
+          (payload) => {
+            const updatedRx = mapDbReaction(payload.new as DbChatReaction)
+            setReactions((prev) => {
+              const list = prev[updatedRx.messageId] || []
+              const existingIdx = list.findIndex(
+                (r) => r.id === updatedRx.id || r.userId === updatedRx.userId
+              )
+              if (existingIdx >= 0) {
+                const nextList = [...list]
+                nextList[existingIdx] = updatedRx
+                return {
+                  ...prev,
+                  [updatedRx.messageId]: nextList,
+                }
+              }
+              return {
+                ...prev,
+                [updatedRx.messageId]: [...list, updatedRx],
               }
             })
           }
@@ -667,37 +699,74 @@ export function useChatStore() {
     }
 
     const currentList = reactions[messageId] || []
-    const existingRx = currentList.find(
-      (r) => r.userId === currentUser.id && r.emoji === cleanEmoji
-    )
+    const existingRx = currentList.find((r) => r.userId === currentUser.id)
 
     const previousReactions = { ...reactions }
 
     if (existingRx) {
-      // Optimistic delete
-      setReactions((prev) => ({
-        ...prev,
-        [messageId]: (prev[messageId] || []).filter((r) => r.id !== existingRx.id),
-      }))
+      if (existingRx.emoji === cleanEmoji) {
+        // Toggle OFF: user mengklik emoji yang sama -> hapus reaksi
+        setReactions((prev) => ({
+          ...prev,
+          [messageId]: (prev[messageId] || []).filter((r) => r.id !== existingRx.id),
+        }))
 
-      try {
-        const { error } = await supabase
-          .from("chat_reactions")
-          .delete()
-          .eq("id", existingRx.id)
+        try {
+          const { error } = await supabase
+            .from("chat_reactions")
+            .delete()
+            .eq("id", existingRx.id)
 
-        if (error) {
+          if (error) {
+            setReactions(previousReactions)
+            return { success: false, error: error.message }
+          }
+          return { success: true }
+        } catch (err) {
           setReactions(previousReactions)
-          return { success: false, error: error.message }
+          const msg = err instanceof Error ? err.message : "Gagal menghapus reaksi"
+          return { success: false, error: msg }
         }
-        return { success: true }
-      } catch (err) {
-        setReactions(previousReactions)
-        const msg = err instanceof Error ? err.message : "Gagal menghapus reaksi"
-        return { success: false, error: msg }
+      } else {
+        // Ganti reaksi: user mengklik emoji berbeda -> update reaksi sebelumnya
+        const nowIso = new Date().toISOString()
+        const updatedRx: ChatReaction = {
+          ...existingRx,
+          emoji: cleanEmoji,
+          userName: currentUser.name,
+          createdAt: nowIso,
+        }
+
+        setReactions((prev) => ({
+          ...prev,
+          [messageId]: (prev[messageId] || []).map((r) =>
+            r.id === existingRx.id ? updatedRx : r
+          ),
+        }))
+
+        try {
+          const { error } = await supabase
+            .from("chat_reactions")
+            .update({
+              emoji: cleanEmoji,
+              user_name: currentUser.name,
+              created_at: nowIso,
+            })
+            .eq("id", existingRx.id)
+
+          if (error) {
+            setReactions(previousReactions)
+            return { success: false, error: error.message }
+          }
+          return { success: true }
+        } catch (err) {
+          setReactions(previousReactions)
+          const msg = err instanceof Error ? err.message : "Gagal mengganti reaksi"
+          return { success: false, error: msg }
+        }
       }
     } else {
-      // Optimistic insert
+      // Optimistic insert: user belum memberi reaksi
       const tempId = crypto.randomUUID()
       const nowIso = new Date().toISOString()
       const newRx: ChatReaction = {

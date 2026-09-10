@@ -5,12 +5,23 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.2.4"
+export const APP_VERSION = "v2.2.5"
 export const APP_BUILD = "2026.09.10"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.2.5",
+    date: "10 Sep 2026",
+    codename: "Single Reaction Enforcer",
+    changes: [
+      "Pembatasan reaksi pesan obrolan maksimal satu emoji per pengguna (enforced via database unique constraint).",
+      "Otomatis mengganti (replace) emoji sebelumnya saat pengguna memilih emoji berbeda.",
+      "Mendukung toggle off / menghapus reaksi jika mengklik emoji yang sama.",
+      "Penambahan listener realtime UPDATE dan policy Row-Level Security pada chat_reactions.",
+    ],
+  },
   {
     version: "v2.2.4",
     date: "10 Sep 2026",
