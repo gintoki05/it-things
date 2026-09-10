@@ -5,12 +5,22 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.2.0"
+export const APP_VERSION = "v2.2.1"
 export const APP_BUILD = "2026.09.10"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.2.1",
+    date: "10 Sep 2026",
+    codename: "Windows OS Notifications & Auto-Permission",
+    changes: [
+      "Permintaan izin notifikasi browser otomatis saat unlock passcode dan interaksi pertama.",
+      "Banner pemicu perizinan notifikasi di header Chat.exe untuk kemudahan aktivasi manual.",
+      "Notifikasi native Windows OS (Action Center) aktif saat obrolan baru masuk.",
+    ],
+  },
   {
     version: "v2.2.0",
     date: "10 Sep 2026",
@@ -18,7 +28,6 @@ export const APP_CHANGELOG: VersionRelease[] = [
     changes: [
       "Fitur notifikasi in-app retro (balon pop-up Windows 98 di pojok taskbar).",
       "Efek suara retro chime ding sintetis via Web Audio API tanpa aset eksternal.",
-      "Integrasi Browser & Windows OS Notification (Action Center) dengan permintaan izin otomatis saat unlock.",
       "Kontrol mute/bisu di System Tray Taskbar dan header Chat.exe.",
       "Indikator unread badge & animasi kedip pada tombol taskbar Chat.exe.",
     ],
