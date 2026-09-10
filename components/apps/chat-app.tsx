@@ -12,6 +12,8 @@ import {
   getRemainingDeleteMinutes,
   isSameDay,
   getDateSeparatorLabel,
+  sanitizeChatMessage,
+  MAX_MESSAGE_LENGTH,
 } from "@/lib/chat-store"
 import { UserAvatar } from "@/components/retro/user-avatar"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -139,6 +141,7 @@ export function ChatApp() {
   const textareaRef = React.useRef<HTMLTextAreaElement>(null)
   const messagesEndRef = React.useRef<HTMLDivElement>(null)
   const scrollContainerRef = React.useRef<HTMLDivElement>(null)
+  const lastSentAtRef = React.useRef<number>(0)
 
   // Confirm delete dialog state
   const [deleteTargetId, setDeleteTargetId] = React.useState<string | null>(null)
@@ -163,10 +166,10 @@ export function ChatApp() {
         setActiveMessageId(null)
       }
     }
-    window.addEventListener("mousedown", handleOutsideClick)
+    window.addEventListener("click", handleOutsideClick)
     window.addEventListener("touchstart", handleOutsideClick)
     return () => {
-      window.removeEventListener("mousedown", handleOutsideClick)
+      window.removeEventListener("click", handleOutsideClick)
       window.removeEventListener("touchstart", handleOutsideClick)
     }
   }, [])
@@ -196,14 +199,22 @@ export function ChatApp() {
 
   const handleSaveEdit = async () => {
     if (!editingMessageId || !user) return
-    const trimmed = inputVal.trim()
-    if (!trimmed) return
+    const sanitized = sanitizeChatMessage(inputVal)
+    if (!sanitized) {
+      setErrorMessage("Pesan tidak boleh kosong.")
+      return
+    }
+    if (sanitized.length > MAX_MESSAGE_LENGTH) {
+      setErrorMessage(`Pesan terlalu panjang (maksimal ${MAX_MESSAGE_LENGTH} karakter).`)
+      return
+    }
     setIsSavingEdit(true)
-    const res = await editMessage(editingMessageId, trimmed, user)
+    const res = await editMessage(editingMessageId, sanitized, user)
     setIsSavingEdit(false)
     if (res.success) {
       setEditingMessageId(null)
       setInputVal("")
+      setErrorMessage(null)
     } else if (res.error) {
       setErrorMessage(res.error)
     }
@@ -355,6 +366,11 @@ export function ChatApp() {
     // Submit on Enter (without Shift)
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
+      const cleaned = sanitizeChatMessage(inputVal)
+      if (!cleaned) {
+        setInputVal("")
+        return
+      }
       handleSendMessage()
     }
   }
@@ -382,14 +398,31 @@ export function ChatApp() {
     }
 
     if (!user || isGuest) return
-    const trimmed = inputVal.trim()
-    if (!trimmed || isSending) return
+    const sanitized = sanitizeChatMessage(inputVal)
+    if (!sanitized) {
+      setInputVal("")
+      return
+    }
+    if (isSending) return
 
-    const mentions = extractMentions(trimmed)
+    // Cooldown 600ms pencegahan spamming / flooding
+    const now = Date.now()
+    if (now - lastSentAtRef.current < 600) {
+      return
+    }
+
+    if (sanitized.length > MAX_MESSAGE_LENGTH) {
+      setErrorMessage(`Pesan terlalu panjang (maksimal ${MAX_MESSAGE_LENGTH} karakter).`)
+      return
+    }
+
+    lastSentAtRef.current = now
+    const mentions = extractMentions(sanitized)
     setInputVal("")
     setMentionQuery(null)
+    setErrorMessage(null)
 
-    const res = await sendMessage(trimmed, mentions, user)
+    const res = await sendMessage(sanitized, mentions, user)
     if (!res.success && res.error) {
       setErrorMessage(res.error)
     }
@@ -420,7 +453,9 @@ export function ChatApp() {
       new Set([
         "all",
         "semua",
-        ...members.map((m) => m.name.trim()).filter(Boolean),
+        ...members
+          .map((m) => m.name.trim())
+          .filter((name) => Boolean(name) && name.length <= 40),
       ])
     ).sort((a, b) => b.length - a.length)
 
@@ -1093,6 +1128,7 @@ export function ChatApp() {
                 ? "Edit pesan... (Tekan Enter untuk simpan, Esc untuk batal)"
                 : "Tulis pesan... (@ untuk mention)"
             }
+            maxLength={MAX_MESSAGE_LENGTH + 50}
             value={inputVal}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
@@ -1104,13 +1140,26 @@ export function ChatApp() {
             )}
           />
 
+          {inputVal.length > 1500 && (
+            <div
+              className={cn(
+                "absolute right-18 bottom-3 text-[9px] font-mono pointer-events-none px-1 py-0.5 rounded shadow-xs z-10",
+                inputVal.length > MAX_MESSAGE_LENGTH
+                  ? "bg-red-100 text-red-700 font-bold border border-red-300"
+                  : "bg-white/90 text-gray-600 border border-gray-300"
+              )}
+            >
+              {inputVal.length}/{MAX_MESSAGE_LENGTH}
+            </div>
+          )}
+
           <button
             type="button"
             onClick={handleSendMessage}
-            disabled={!inputVal.trim() || isSending || isSavingEdit}
+            disabled={!sanitizeChatMessage(inputVal) || isSending || isSavingEdit}
             className={cn(
-              "h-12 px-4 flex items-center justify-center gap-1.5 font-mono font-bold text-xs rounded-[2px] transition-all cursor-pointer select-none",
-              !inputVal.trim() || isSending || isSavingEdit
+              "h-12 px-4 flex items-center justify-center gap-1.5 font-mono font-bold text-xs rounded-[2px] transition-all cursor-pointer select-none shrink-0",
+              !sanitizeChatMessage(inputVal) || isSending || isSavingEdit
                 ? "bg-gray-300 text-gray-500 border-2 border-gray-400 cursor-not-allowed opacity-60"
                 : editingMessageId
                   ? "bg-emerald-700 text-white hover:bg-emerald-800 border-2 border-t-emerald-400 border-l-emerald-400 border-r-emerald-950 border-b-emerald-950 shadow-[2px_2px_0px_#064e3b] active:translate-y-px"

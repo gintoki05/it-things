@@ -5,12 +5,23 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.2.2"
+export const APP_VERSION = "v2.2.3"
 export const APP_BUILD = "2026.09.10"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.2.3",
+    date: "10 Sep 2026",
+    codename: "LiveChat Security & Input Sanitization",
+    changes: [
+      "Sanitasi ketat input teks chat untuk mencegah pesan kosong, spasi/enter saja, dan Unicode zero-width/invisible chars.",
+      "Database CHECK constraint pada tabel chat_messages & chat_reactions di Supabase (max 2000 char, no empty space).",
+      "Proteksi anti-flood cooldown pada pengiriman pesan obrolan.",
+      "Validasi keamanan URL avatar (hanya protokol aman) & pencegahan ReDoS pada regex mention.",
+    ],
+  },
   {
     version: "v2.2.2",
     date: "10 Sep 2026",

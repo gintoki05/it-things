@@ -20,7 +20,21 @@ export function UserAvatar({
 }: UserAvatarProps) {
   const [hasError, setHasError] = React.useState(false)
 
-  if (src && !hasError) {
+  const isSafeSrc = React.useMemo(() => {
+    if (!src) return false
+    const s = src.trim().toLowerCase()
+    return (
+      s.startsWith("https://") ||
+      s.startsWith("http://") ||
+      s.startsWith("/") ||
+      s.startsWith("data:image/jpeg;") ||
+      s.startsWith("data:image/png;") ||
+      s.startsWith("data:image/webp;") ||
+      s.startsWith("data:image/gif;")
+    )
+  }, [src])
+
+  if (src && isSafeSrc && !hasError) {
     return (
       <img
         src={src}

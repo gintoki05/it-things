@@ -83,6 +83,26 @@ function mapDbMessage(db: DbChatMessage): ChatMessage {
   }
 }
 
+export const MAX_MESSAGE_LENGTH = 2000
+
+/**
+ * Sanitasi & normalisasi pesan chat untuk mencegah pesan kosong, spasi enter,
+ * Unicode zero-width / invisible flood, dan pembengkakan teks.
+ */
+export function sanitizeChatMessage(raw: string): string {
+  if (!raw) return ""
+  // 1. Bersihkan karakter non-printable, zero-width spaces, LRM/RLM, dan invisible formatting
+  let cleaned = raw.replace(
+    /[\u200B-\u200F\u2028-\u202F\u205F-\u206F\uFEFF\u180E\u2800\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g,
+    ""
+  )
+  // 2. Normalisasi baris kosong berlebihan: maksimal 2 enter berturut-turut (1 baris kosong pemisah)
+  cleaned = cleaned.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
+  cleaned = cleaned.replace(/\n{3,}/g, "\n\n")
+  // 3. Trim spasi luar
+  return cleaned.trim()
+}
+
 export function isMessageDeletable(
   msg: ChatMessage,
   currentUserId?: string | null,
@@ -417,8 +437,15 @@ export function useChatStore() {
     mentions: string[],
     currentUser: AuthUser
   ): Promise<{ success: boolean; error?: string }> => {
-    const trimmed = text.trim()
-    if (!trimmed) return { success: false, error: "Pesan tidak boleh kosong" }
+    const sanitized = sanitizeChatMessage(text)
+    if (!sanitized) return { success: false, error: "Pesan tidak boleh kosong." }
+    if (sanitized.length > MAX_MESSAGE_LENGTH) {
+      return {
+        success: false,
+        error: `Pesan terlalu panjang (maksimal ${MAX_MESSAGE_LENGTH} karakter).`,
+      }
+    }
+
     if (currentUser.isGuest || currentUser.id === "guest-user") {
       return {
         success: false,
@@ -430,13 +457,21 @@ export function useChatStore() {
       return { success: false, error: "Supabase belum terkonfigurasi." }
     }
 
+    // Sanitize mentions (max 20 entries, alphanumeric/uuid/all)
+    const cleanMentions = Array.isArray(mentions)
+      ? mentions
+          .map((m) => String(m).trim().slice(0, 64))
+          .filter(Boolean)
+          .slice(0, 20)
+      : []
+
     const tempId = crypto.randomUUID()
     const nowIso = new Date().toISOString()
 
     const optimisticMsg: ChatMessage = {
       id: tempId,
-      message: trimmed,
-      mentions: mentions || [],
+      message: sanitized,
+      mentions: cleanMentions,
       userId: currentUser.id,
       userName: currentUser.name,
       userAvatar: currentUser.avatarUrl || null,
@@ -452,8 +487,8 @@ export function useChatStore() {
     try {
       const { error } = await supabase.from("chat_messages").insert({
         id: tempId,
-        message: trimmed,
-        mentions: mentions || [],
+        message: sanitized,
+        mentions: cleanMentions,
         user_id: currentUser.id,
         user_name: currentUser.name,
         user_avatar: currentUser.avatarUrl || null,
@@ -494,8 +529,14 @@ export function useChatStore() {
       }
     }
 
-    const trimmed = newText.trim()
-    if (!trimmed) return { success: false, error: "Pesan tidak boleh kosong" }
+    const sanitized = sanitizeChatMessage(newText)
+    if (!sanitized) return { success: false, error: "Pesan tidak boleh kosong." }
+    if (sanitized.length > MAX_MESSAGE_LENGTH) {
+      return {
+        success: false,
+        error: `Pesan terlalu panjang (maksimal ${MAX_MESSAGE_LENGTH} karakter).`,
+      }
+    }
 
     if (!isSupabaseConfigured || !supabase) {
       return { success: false, error: "Supabase belum terkonfigurasi." }
@@ -510,7 +551,7 @@ export function useChatStore() {
         m.id === messageId
           ? {
               ...m,
-              message: trimmed,
+              message: sanitized,
               isEdited: true,
               editedAt: nowIso,
             }
@@ -522,7 +563,7 @@ export function useChatStore() {
       const { error } = await supabase
         .from("chat_messages")
         .update({
-          message: trimmed,
+          message: sanitized,
           is_edited: true,
           edited_at: nowIso,
         })
@@ -609,6 +650,11 @@ export function useChatStore() {
     emoji: string,
     currentUser: AuthUser
   ): Promise<{ success: boolean; error?: string }> => {
+    const cleanEmoji = emoji?.trim().slice(0, 16)
+    if (!cleanEmoji) {
+      return { success: false, error: "Emoji tidak valid." }
+    }
+
     if (currentUser.isGuest || currentUser.id === "guest-user") {
       return {
         success: false,
@@ -622,7 +668,7 @@ export function useChatStore() {
 
     const currentList = reactions[messageId] || []
     const existingRx = currentList.find(
-      (r) => r.userId === currentUser.id && r.emoji === emoji
+      (r) => r.userId === currentUser.id && r.emoji === cleanEmoji
     )
 
     const previousReactions = { ...reactions }
@@ -657,7 +703,7 @@ export function useChatStore() {
       const newRx: ChatReaction = {
         id: tempId,
         messageId,
-        emoji,
+        emoji: cleanEmoji,
         userId: currentUser.id,
         userName: currentUser.name,
         createdAt: nowIso,
@@ -672,7 +718,7 @@ export function useChatStore() {
         const { error } = await supabase.from("chat_reactions").insert({
           id: tempId,
           message_id: messageId,
-          emoji,
+          emoji: cleanEmoji,
           user_id: currentUser.id,
           user_name: currentUser.name,
           created_at: nowIso,

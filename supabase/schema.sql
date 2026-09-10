@@ -158,7 +158,11 @@ CREATE TABLE IF NOT EXISTS public.chat_messages (
     is_deleted BOOLEAN NOT NULL DEFAULT false,
     deleted_by TEXT, -- 'creator' | 'admin'
     deleted_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    CONSTRAINT chat_messages_message_content_check CHECK (
+      char_length(trim(regexp_replace(message, '[\u200B-\u200F\u2028-\u202F\u2060-\u206F\uFEFF\u180E\u2800]', '', 'g'))) > 0
+      AND char_length(message) <= 2000
+    )
 );
 
 -- 11. Table: chat_reactions (Reaksi emoji pada pesan chat)
@@ -169,7 +173,8 @@ CREATE TABLE IF NOT EXISTS public.chat_reactions (
     user_id TEXT NOT NULL,
     user_name TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
-    UNIQUE(message_id, emoji, user_id)
+    UNIQUE(message_id, emoji, user_id),
+    CONSTRAINT chat_reactions_emoji_length_check CHECK (char_length(emoji) > 0 AND char_length(emoji) <= 16)
 );
 
 -- ============================================================
