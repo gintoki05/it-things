@@ -10,13 +10,13 @@ Style:
 - intentionally NOT emoji-style
 
 Included:
-- 26 icons
+- 27 icons
 - PNG: 32, 48, 64, 128, 256 px
 - ICO multi-resolution
 - preview.png
 
 Core app icons:
-- pantry
+- vote
 - wheel
 - splitbill
 - kas

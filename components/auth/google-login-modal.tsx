@@ -48,16 +48,6 @@ export function GoogleLoginModal({ isOpen, onClose }: GoogleLoginModalProps) {
             <Lock className="size-3.5 text-[#2E5AA8]" />
             <span>SECURITY_GATE.EXE — LOGIN INTERNAL IT</span>
           </div>
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              title="Tutup Modal"
-              className="size-4 flex items-center justify-center text-[11px] font-bold bg-[#D4DDE6] hover:bg-[#C53030] hover:text-white text-[#14253D] border border-[#7D8E9E] rounded-[2px]"
-            >
-              ×
-            </button>
-          )}
         </div>
 
         {/* Content */}

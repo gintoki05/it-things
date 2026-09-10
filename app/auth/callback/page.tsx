@@ -13,16 +13,50 @@ export default function AuthCallbackPage() {
       router.replace("/")
       return
     }
+    const client = supabase
 
-    // supabase-js in browser handles the PKCE code exchange via localStorage
-    supabase.auth.getSession().then(({ data, error }) => {
-      if (error) {
-        console.error("Auth callback error:", error)
-        setErrorMessage(error.message)
-      } else {
+    const processAuth = async () => {
+      try {
+        // 1. Ambil code PKCE dari query param (?code=...) jika ada
+        if (typeof window !== "undefined") {
+          const url = new URL(window.location.href)
+          const code = url.searchParams.get("code")
+          if (code) {
+            const { error: exchangeError } = await client.auth.exchangeCodeForSession(code)
+            if (exchangeError) {
+              console.error("Code exchange error:", exchangeError)
+              throw exchangeError
+            }
+          }
+        }
+
+        // 2. Ambil sesi supabase aktif
+        const { data: { session }, error: sessionError } = await client.auth.getSession()
+        if (sessionError) {
+          console.error("Session fetch error:", sessionError)
+          throw sessionError
+        }
+
+        // 3. Bersihkan sesi tamu jika sesi login aktif
+        if (session?.user && typeof window !== "undefined") {
+          try {
+            localStorage.removeItem("it_things_guest_session")
+            localStorage.setItem("it_things_passcode_verified", "true")
+            sessionStorage.setItem("it_things_passcode_verified", "true")
+          } catch (e) {
+            console.warn("Storage cleanup error:", e)
+          }
+        }
+
         router.replace("/")
+      } catch (err: unknown) {
+        console.error("Auth callback error:", err)
+        const msg = err instanceof Error ? err.message : "Gagal memvalidasi sesi autentikasi."
+        setErrorMessage(msg)
       }
-    })
+    }
+
+    processAuth()
   }, [router])
 
   return (

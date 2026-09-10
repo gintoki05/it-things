@@ -29,6 +29,7 @@ export const RETRO_ICON_NAMES = [
   "task",
   "team",
   "trophy",
+  "vote",
   "wheel",
 ] as const
 
@@ -57,7 +58,8 @@ export const EMOJI_TO_RETRO_ICON: Record<string, RetroIconName> = {
   "🛡️": "team",
   "💡": "idea",
   "📅": "calendar",
-  "🗳️": "poll",
+  "🗳️": "vote",
+  "🗳": "vote",
   "🎮": "game",
   "⚙️": "settings",
   "🔍": "search",

@@ -16,7 +16,10 @@ import {
   CheckCircle2,
   AlertCircle,
   Crown,
-  User
+  User,
+  Lock,
+  Eye,
+  ShieldAlert
 } from "lucide-react"
 
 interface TaskbarProps {
@@ -25,7 +28,7 @@ interface TaskbarProps {
 
 export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
   const { windows, activeWindowId, openWindow, toggleWindow } = useDesktop()
-  const { user, isAdmin, isTreasurer, isSupabaseConnected, signOut, setDemoUserRole } = useAuth()
+  const { user, isAdmin, isTreasurer, isGuest, isSupabaseConnected, signOut, setDemoUserRole, lockApp } = useAuth()
 
   const [isStartOpen, setIsStartOpen] = React.useState(false)
   const [time, setTime] = React.useState("12:00")
@@ -108,7 +111,11 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
               <div className="min-w-0 flex-1">
                 <div className="font-bold text-[11px] truncate">{user?.name || "Tamu Internal IT"}</div>
                 <div className="flex items-center gap-1 text-[10px] text-gray-600">
-                  {isAdmin ? (
+                  {isGuest ? (
+                    <span className="text-amber-800 font-bold flex items-center gap-1 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">
+                      <Eye className="size-3" /> Mode Tamu (Read-Only)
+                    </span>
+                  ) : isAdmin ? (
                     <span className="text-purple-700 font-semibold flex items-center gap-0.5">
                       <ShieldCheck className="size-3" /> Administrator
                     </span>
@@ -147,74 +154,122 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
               ))}
             </div>
 
-            {/* Role Switcher */}
-            <div className="p-1.5 bg-[#E8EEF5] border border-[#A4B5C6] rounded text-[10px]">
-              <div className="font-bold flex items-center justify-between mb-1">
-                <span>Mode Peran:</span>
-                <span
-                  className={
-                    isAdmin
-                      ? "text-purple-700 font-bold flex items-center gap-1"
-                      : isTreasurer
-                      ? "text-amber-700 font-bold flex items-center gap-1"
-                      : "text-gray-600 font-bold flex items-center gap-1"
-                  }
-                >
-                  {isAdmin ? (
-                    <>
-                      <ShieldCheck className="size-3 text-purple-700" /> Admin
-                    </>
-                  ) : isTreasurer ? (
-                    <>
-                      <Crown className="size-3 text-amber-700" /> Bendahara
-                    </>
-                  ) : (
-                    <>
-                      <User className="size-3 text-gray-600" /> Anggota
-                    </>
-                  )}
-                </span>
+            {/* Role Switcher or Guest Notice */}
+            {isGuest ? (
+              <div className="p-2 bg-amber-50 border border-amber-300 rounded text-[10px] space-y-1">
+                <div className="font-bold text-amber-900 flex items-center gap-1">
+                  <ShieldAlert className="size-3.5 text-amber-700" /> Mode Akses Tamu
+                </div>
+                <p className="text-amber-800 text-[9px] leading-tight">
+                  Status Anda hanya dapat melihat data (Read-Only). Masuk dengan Google untuk berpartisipasi dan mengubah peran.
+                </p>
               </div>
-              <div className="grid grid-cols-3 gap-1">
-                <button
-                  type="button"
-                  onClick={() => setDemoUserRole && setDemoUserRole("member")}
-                  className={`py-0.5 px-1 border rounded text-[9px] font-mono text-center transition-colors ${
-                    user?.role === "member"
-                      ? "bg-[#1E4E8C] text-white font-bold border-[#102A45]"
-                      : "bg-white text-gray-700 hover:bg-gray-100 border-[#7D8E9E]"
-                  }`}
-                >
-                  Member
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDemoUserRole && setDemoUserRole("treasurer")}
-                  className={`py-0.5 px-1 border rounded text-[9px] font-mono text-center transition-colors ${
-                    user?.role === "treasurer"
-                      ? "bg-amber-600 text-white font-bold border-amber-800"
-                      : "bg-white text-gray-700 hover:bg-gray-100 border-[#7D8E9E]"
-                  }`}
-                >
-                  Bendahara
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDemoUserRole && setDemoUserRole("admin")}
-                  className={`py-0.5 px-1 border rounded text-[9px] font-mono text-center transition-colors ${
-                    user?.role === "admin"
-                      ? "bg-purple-700 text-white font-bold border-purple-900"
-                      : "bg-white text-gray-700 hover:bg-gray-100 border-[#7D8E9E]"
-                  }`}
-                >
-                  Admin
-                </button>
+            ) : (
+              <div className="p-1.5 bg-[#E8EEF5] border border-[#A4B5C6] rounded text-[10px]">
+                <div className="font-bold flex items-center justify-between mb-1">
+                  <span>Mode Peran:</span>
+                  <span
+                    className={
+                      isAdmin
+                        ? "text-purple-700 font-bold flex items-center gap-1"
+                        : isTreasurer
+                        ? "text-amber-700 font-bold flex items-center gap-1"
+                        : "text-gray-600 font-bold flex items-center gap-1"
+                    }
+                  >
+                    {isAdmin ? (
+                      <>
+                        <ShieldCheck className="size-3 text-purple-700" /> Admin
+                      </>
+                    ) : isTreasurer ? (
+                      <>
+                        <Crown className="size-3 text-amber-700" /> Bendahara
+                      </>
+                    ) : (
+                      <>
+                        <User className="size-3 text-gray-600" /> Anggota
+                      </>
+                    )}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setDemoUserRole && setDemoUserRole("member")}
+                    className={`py-0.5 px-1 border rounded text-[9px] font-mono text-center transition-colors ${
+                      user?.role === "member"
+                        ? "bg-[#1E4E8C] text-white font-bold border-[#102A45]"
+                        : "bg-white text-gray-700 hover:bg-gray-100 border-[#7D8E9E]"
+                    }`}
+                  >
+                    Member
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDemoUserRole && setDemoUserRole("treasurer")}
+                    className={`py-0.5 px-1 border rounded text-[9px] font-mono text-center transition-colors ${
+                      user?.role === "treasurer"
+                        ? "bg-amber-600 text-white font-bold border-amber-800"
+                        : "bg-white text-gray-700 hover:bg-gray-100 border-[#7D8E9E]"
+                    }`}
+                  >
+                    Bendahara
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDemoUserRole && setDemoUserRole("admin")}
+                    className={`py-0.5 px-1 border rounded text-[9px] font-mono text-center transition-colors ${
+                      user?.role === "admin"
+                        ? "bg-purple-700 text-white font-bold border-purple-900"
+                        : "bg-white text-gray-700 hover:bg-gray-100 border-[#7D8E9E]"
+                    }`}
+                  >
+                    Admin
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Auth Action */}
-            <div className="pt-1 border-t border-[#A4B5C6]/60">
-              {user ? (
+            <div className="pt-1 border-t border-[#A4B5C6]/60 space-y-0.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsStartOpen(false)
+                  lockApp()
+                }}
+                className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[#A4B5C6]/30 text-[#14253D] rounded-[2px] transition-colors text-left font-semibold text-[11px]"
+              >
+                <Lock className="size-3.5 text-[#1E4E8C]" />
+                <span>Kunci Layar (Lock PIN)</span>
+              </button>
+
+              {isGuest ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsStartOpen(false)
+                      onOpenLoginModal?.()
+                    }}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 bg-[#1E4E8C] text-white hover:bg-[#153A6B] rounded-[2px] transition-colors text-left font-semibold text-[11px]"
+                  >
+                    <LogIn className="size-3.5" />
+                    <span>Masuk dengan Google</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      signOut()
+                      setIsStartOpen(false)
+                    }}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[#C53030] hover:text-white rounded-[2px] transition-colors text-left font-semibold text-[11px]"
+                  >
+                    <LogOut className="size-3.5" />
+                    <span>Keluar Mode Tamu</span>
+                  </button>
+                </>
+              ) : user ? (
                 <button
                   type="button"
                   onClick={() => {
@@ -291,7 +346,19 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
         </div>
 
         {/* System Tray */}
-        <div className="h-7 px-2.5 bg-[#CBD5E1] border border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] flex items-center gap-2.5 shrink-0 text-xs font-mono text-[#14253D]">
+        <div className="h-7 px-2.5 bg-[#CBD5E1] border border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] flex items-center gap-2 shrink-0 text-xs font-mono text-[#14253D]">
+          {/* Guest Badge in Tray */}
+          {isGuest && (
+            <div
+              title="Akses Terbatas: Hanya Baca (Read-Only)"
+              className="flex items-center gap-1 bg-amber-200/90 border border-amber-500/60 px-1.5 py-0.5 rounded-[2px] text-amber-900 font-bold text-[10px]"
+            >
+              <Eye className="size-3 text-amber-800" />
+              <span className="hidden sm:inline">TAMU (READ-ONLY)</span>
+              <span className="sm:hidden">TAMU</span>
+            </div>
+          )}
+
           {/* Connection Indicator */}
           <div
             title={isSupabaseConnected ? "Supabase Realtime: Terhubung" : "Mode Demo (Local Storage)"}

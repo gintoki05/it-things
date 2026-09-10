@@ -2,7 +2,7 @@
 
 import * as React from "react"
 
-export type AppId = "pantry" | "wheel" | "splitbill" | "kas" | "team"
+export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team"
 
 export interface WindowState {
   id: AppId
@@ -34,11 +34,11 @@ interface DesktopContextType {
 const DesktopContext = React.createContext<DesktopContextType | undefined>(undefined)
 
 const INITIAL_WINDOWS: Record<AppId, WindowState> = {
-  pantry: {
-    id: "pantry",
-    title: "Pantry.exe - Usulan & Voting Belanja",
-    icon: "pantry",
-    filename: "pantry.exe",
+  vote: {
+    id: "vote",
+    title: "Vote.exe - Poll & Vote Groups",
+    icon: "vote",
+    filename: "vote.exe",
     isOpen: true,
     isMinimized: false,
     isMaximized: false,
@@ -108,7 +108,7 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
 
 export function DesktopProvider({ children }: { children: React.ReactNode }) {
   const [windows, setWindows] = React.useState<Record<AppId, WindowState>>(INITIAL_WINDOWS)
-  const [activeWindowId, setActiveWindowId] = React.useState<AppId | null>("pantry")
+  const [activeWindowId, setActiveWindowId] = React.useState<AppId | null>("vote")
   const [topZIndex, setTopZIndex] = React.useState(20)
 
   const bringToFront = React.useCallback(

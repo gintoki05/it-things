@@ -18,7 +18,8 @@ import {
   FileText,
   Lock,
   RotateCw,
-  Users
+  Users,
+  Eye
 } from "lucide-react"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 
@@ -208,8 +209,13 @@ export function KasApp() {
     }
   }
 
-  // Toggle Member Dues (Only Treasurer)
-  const handleToggleDue = (userId: string) => {
+  // Toggle Due Paid (Only Treasurer)
+  const handleToggleDue = async (userId: string) => {
+    if (isGuest) {
+      setPermError("Akses Ditolak: Tamu hanya memiliki izin melihat data (Read-Only).")
+      setTimeout(() => setPermError(null), 3000)
+      return
+    }
     if (!isTreasurer) {
       setPermError("Konfirmasi pembayaran iuran hanya dapat dilakukan oleh Bendahara.")
       setTimeout(() => setPermError(null), 3000)
@@ -315,7 +321,11 @@ export function KasApp() {
 
         <div className="flex items-center gap-2">
           <div className="text-[11px] font-mono flex items-center gap-1 text-gray-700">
-            {isTreasurer ? (
+            {isGuest ? (
+              <span className="text-amber-800 font-bold flex items-center gap-1 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">
+                <Eye className="size-3 text-amber-700" /> Mode Tamu (Read-Only)
+              </span>
+            ) : isTreasurer ? (
               <span className="text-amber-800 font-bold flex items-center gap-1">
                 <ShieldCheck className="size-3.5 text-amber-600" /> Anda: Bendahara
               </span>
@@ -324,17 +334,19 @@ export function KasApp() {
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              setPermError(null)
-              setShowTxForm((prev) => !prev)
-            }}
-            className="px-2.5 py-1 bg-[#2E5AA8] hover:bg-[#1E4E8C] text-white font-mono text-xs font-bold rounded-[2px] flex items-center gap-1 border border-[#14253D]"
-          >
-            <Plus className="size-3" />
-            <span>{showTxForm ? "Tutup Form" : "Catat Transaksi"}</span>
-          </button>
+          {!isGuest && (
+            <button
+              type="button"
+              onClick={() => {
+                setPermError(null)
+                setShowTxForm((prev) => !prev)
+              }}
+              className="px-2.5 py-1 bg-[#2E5AA8] hover:bg-[#1E4E8C] text-white font-mono text-xs font-bold rounded-[2px] flex items-center gap-1 border border-[#14253D] cursor-pointer"
+            >
+              <Plus className="size-3" />
+              <span>{showTxForm ? "Tutup Form" : "Catat Transaksi"}</span>
+            </button>
+          )}
         </div>
       </div>
 

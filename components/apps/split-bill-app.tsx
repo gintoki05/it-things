@@ -17,7 +17,8 @@ import {
   CreditCard, 
   Share2, 
   DollarSign,
-  AlertCircle
+  AlertCircle,
+  Eye
 } from "lucide-react"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 
@@ -80,7 +81,7 @@ const INITIAL_BILL: SplitBillData = {
 }
 
 export function SplitBillApp() {
-  const { user } = useAuth()
+  const { user, isGuest } = useAuth()
   const { members: teamMembers } = useTeamStore()
   const [bill, setBill] = React.useState<SplitBillData>(INITIAL_BILL)
   const [copiedWA, setCopiedWA] = React.useState(false)
@@ -483,54 +484,63 @@ export function SplitBillApp() {
               </span>
             </div>
 
-            {/* Add Participant Input */}
-            <div className="flex items-center gap-2 py-1">
-              <input
-                type="text"
-                placeholder="Nama teman yang ikut makan (cth: Rian, Siska)..."
-                value={newParticipantName}
-                onChange={(e) => setNewParticipantName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAddParticipant()}
-                className="flex-1 bg-[#FAFBFD] border border-[#95A5B5] p-1 rounded-[2px] text-xs font-mono"
-              />
-              <button
-                type="button"
-                onClick={handleAddParticipant}
-                className="px-2.5 py-1 bg-[#2E5AA8] hover:bg-[#1E4E8C] text-white font-mono text-xs font-bold rounded-[2px] flex items-center gap-1 border border-[#14253D]"
-              >
-                <Plus className="size-3" />
-                <span>Tambah</span>
-              </button>
-            </div>
-
-            {/* Quick-add chips from master team members */}
-            {teamMembers && teamMembers.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5 py-1 text-[10px] border-t border-dashed border-[#CBD5E1]">
-                <span className="text-gray-500 font-mono">Pilih cepat:</span>
-                {teamMembers.map((tm) => {
-                  const isAlreadyIn = bill.participants.some(
-                    (p) => p.name.toLowerCase() === tm.name.toLowerCase()
-                  )
-                  return (
-                    <button
-                      key={tm.id}
-                      type="button"
-                      disabled={isAlreadyIn}
-                      onClick={() => addParticipantByName(tm.name)}
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono border transition-all flex items-center gap-1 ${
-                        isAlreadyIn
-                          ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                          : "bg-[#EEF2F6] hover:bg-[#DCE4EC] text-[#1E4E8C] border-[#95A5B5] active:translate-y-px"
-                      }`}
-                      title={isAlreadyIn ? `${tm.name} sudah masuk tagihan` : `Klik untuk menambahkan ${tm.name}`}
-                    >
-                      <span>{tm.avatar_url || "👤"}</span>
-                      <span>{tm.name.split(" ")[0]}</span>
-                      {!isAlreadyIn && <span className="text-emerald-700 font-bold">+</span>}
-                    </button>
-                  )
-                })}
+            {/* Add Participant Input or Guest Notice */}
+            {isGuest ? (
+              <div className="py-1.5 px-2.5 bg-amber-50 text-amber-900 border border-amber-300 rounded text-[11px] font-mono flex items-center gap-1.5 my-1">
+                <Eye className="size-3.5 text-amber-700 shrink-0" />
+                <span>Mode Tamu: Anda hanya dapat melihat dan menyalin rincian patungan (Read-Only).</span>
               </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 py-1">
+                  <input
+                    type="text"
+                    placeholder="Nama teman yang ikut makan (cth: Rian, Siska)..."
+                    value={newParticipantName}
+                    onChange={(e) => setNewParticipantName(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddParticipant()}
+                    className="flex-1 bg-[#FAFBFD] border border-[#95A5B5] p-1 rounded-[2px] text-xs font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddParticipant}
+                    className="px-2.5 py-1 bg-[#2E5AA8] hover:bg-[#1E4E8C] text-white font-mono text-xs font-bold rounded-[2px] flex items-center gap-1 border border-[#14253D] cursor-pointer"
+                  >
+                    <Plus className="size-3" />
+                    <span>Tambah</span>
+                  </button>
+                </div>
+
+                {/* Quick-add chips from master team members */}
+                {teamMembers && teamMembers.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 py-1 text-[10px] border-t border-dashed border-[#CBD5E1]">
+                    <span className="text-gray-500 font-mono">Pilih cepat:</span>
+                    {teamMembers.map((tm) => {
+                      const isAlreadyIn = bill.participants.some(
+                        (p) => p.name.toLowerCase() === tm.name.toLowerCase()
+                      )
+                      return (
+                        <button
+                          key={tm.id}
+                          type="button"
+                          disabled={isAlreadyIn}
+                          onClick={() => addParticipantByName(tm.name)}
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-mono border transition-all flex items-center gap-1 cursor-pointer ${
+                            isAlreadyIn
+                              ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                              : "bg-[#EEF2F6] hover:bg-[#DCE4EC] text-[#1E4E8C] border-[#95A5B5] active:translate-y-px"
+                          }`}
+                          title={isAlreadyIn ? `${tm.name} sudah masuk tagihan` : `Klik untuk menambahkan ${tm.name}`}
+                        >
+                          <span>{tm.avatar_url || "👤"}</span>
+                          <span>{tm.name.split(" ")[0]}</span>
+                          {!isAlreadyIn && <span className="text-emerald-700 font-bold">+</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </>
             )}
 
             {/* Participants Rows */}
@@ -553,42 +563,58 @@ export function SplitBillApp() {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    {/* Member "Sudah Transfer" Toggle */}
-                    <button
-                      type="button"
-                      onClick={() => handleTogglePaid(p.id)}
-                      className={`h-6 px-2 text-[10px] font-mono font-bold rounded-[2px] border transition-colors ${
-                        p.isPaid
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-400"
-                          : "bg-gray-50 text-gray-600 border-gray-300 hover:bg-gray-100"
-                      }`}
-                    >
-                      {p.isPaid ? "Sudah Bayar" : "Belum Bayar"}
-                    </button>
+                    {isGuest ? (
+                      <span
+                        className={`h-6 px-2 text-[10px] font-mono font-bold rounded-[2px] border flex items-center ${
+                          p.isConfirmed
+                            ? "bg-blue-50 text-blue-900 border-blue-300"
+                            : p.isPaid
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-400"
+                            : "bg-gray-50 text-gray-500 border-gray-300"
+                        }`}
+                      >
+                        {p.isConfirmed ? "✓ Lunas" : p.isPaid ? "Sudah Bayar" : "Belum Bayar"}
+                      </span>
+                    ) : (
+                      <>
+                        {/* Member "Sudah Transfer" Toggle */}
+                        <button
+                          type="button"
+                          onClick={() => handleTogglePaid(p.id)}
+                          className={`h-6 px-2 text-[10px] font-mono font-bold rounded-[2px] border transition-colors cursor-pointer ${
+                            p.isPaid
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-400"
+                              : "bg-gray-50 text-gray-600 border-gray-300 hover:bg-gray-100"
+                          }`}
+                        >
+                          {p.isPaid ? "Sudah Bayar" : "Belum Bayar"}
+                        </button>
 
-                    {/* Admin/Creator Confirm Checkbox */}
-                    <button
-                      type="button"
-                      onClick={() => handleToggleConfirm(p.id)}
-                      title="Konfirmasi pembayaran lunas"
-                      className={`size-6 rounded-[2px] border flex items-center justify-center transition-colors ${
-                        p.isConfirmed
-                          ? "bg-[#1E4E8C] text-white border-[#102A45]"
-                          : "bg-white border-gray-300 hover:border-gray-500 text-transparent"
-                      }`}
-                    >
-                      ✓
-                    </button>
+                        {/* Admin/Creator Confirm Checkbox */}
+                        <button
+                          type="button"
+                          onClick={() => handleToggleConfirm(p.id)}
+                          title="Konfirmasi pembayaran lunas"
+                          className={`size-6 rounded-[2px] border flex items-center justify-center transition-colors cursor-pointer ${
+                            p.isConfirmed
+                              ? "bg-[#1E4E8C] text-white border-[#102A45]"
+                              : "bg-white border-gray-300 hover:border-gray-500 text-transparent"
+                          }`}
+                        >
+                          ✓
+                        </button>
 
-                    {/* Remove */}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveParticipant(p.id)}
-                      title="Hapus peserta"
-                      className="text-gray-400 hover:text-red-600 p-1"
-                    >
-                      <Trash2 className="size-3" />
-                    </button>
+                        {/* Remove */}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveParticipant(p.id)}
+                          title="Hapus dari daftar patungan"
+                          className="p-1 text-gray-400 hover:text-red-600 cursor-pointer"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}

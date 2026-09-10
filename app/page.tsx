@@ -7,16 +7,33 @@ import { DesktopIcons } from "@/components/desktop/desktop-icons"
 import { DesktopWindow } from "@/components/desktop/desktop-window"
 import { Taskbar } from "@/components/desktop/taskbar"
 import { GoogleLoginModal } from "@/components/auth/google-login-modal"
+import { PasscodeScreen } from "@/components/auth/passcode-screen"
 
 // Apps
-import { PantryApp } from "@/components/apps/pantry-app"
+import { VoteApp } from "@/components/apps/vote-app"
 import { WheelApp } from "@/components/apps/wheel-app"
 import { SplitBillApp } from "@/components/apps/split-bill-app"
 import { KasApp } from "@/components/apps/kas-app"
 import { TeamApp } from "@/components/apps/team-app"
 
 function DesktopWorkspace() {
+  const { isPasscodeVerified, isPasscodeLoading, isGuest } = useAuth()
   const [showLoginModal, setShowLoginModal] = React.useState(false)
+
+  // Saat pertama kali memuat / reload, tunggu pengecekan storage selesai
+  if (isPasscodeLoading) {
+    return (
+      <div className="w-screen h-screen bg-[#1A365D] flex items-center justify-center select-none">
+        <div className="font-mono text-xs text-blue-200 tracking-widest animate-pulse">
+          IT-THINGS.EXE // INITIALIZING...
+        </div>
+      </div>
+    )
+  }
+
+  if (!isPasscodeVerified) {
+    return <PasscodeScreen />
+  }
 
   return (
     <div className="relative w-screen h-screen overflow-hidden select-none bg-[#1A365D]">
@@ -29,22 +46,46 @@ function DesktopWorkspace() {
         }}
       />
 
+      {/* Guest Mode Warning Banner Bar */}
+      {isGuest && (
+        <div className="absolute top-0 left-0 right-0 z-40 bg-[#FFF3CD] border-b-2 border-b-[#E0A800] text-[#856404] px-3 py-1 font-mono text-xs flex items-center justify-between shadow-sm select-none">
+          <div className="flex items-center gap-2">
+            <span className="font-bold bg-[#856404] text-[#FFF3CD] px-1.5 py-0.5 rounded-[2px] text-[10px] tracking-wider uppercase">
+              Mode Tamu
+            </span>
+            <span className="font-semibold hidden sm:inline text-[11px]">
+              Akses Hanya Baca (Read-Only) — Anda tidak dapat menambah atau mengubah data.
+            </span>
+            <span className="font-semibold sm:hidden text-[11px]">
+              Hanya Baca (Read-Only)
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowLoginModal(true)}
+            className="bg-[#1E4E8C] hover:bg-[#153A6B] text-white text-[11px] font-bold px-2.5 py-0.5 rounded-[2px] border border-[#102A45] shadow-[1px_1px_0px_#102A45] active:translate-y-px cursor-pointer"
+          >
+            Masuk dengan Google
+          </button>
+        </div>
+      )}
+
       {/* Decorative Retro Desktop Branding in Center/Bottom-Right */}
       <div className="absolute right-6 bottom-16 pointer-events-none select-none text-right opacity-25 hidden sm:block">
         <div className="font-mono text-4xl sm:text-6xl font-black text-white tracking-widest">
           IT-THINGS
         </div>
         <div className="font-mono text-xs text-blue-200 tracking-wider">
-          INTERNAL TEAM SUITE 98 // v2.0.0
+          {isGuest ? "GUEST MODE // READ-ONLY ACCESS" : "INTERNAL TEAM SUITE 98 // v2.0.0"}
         </div>
       </div>
 
       {/* Desktop Icons on Wallpaper */}
       <DesktopIcons />
 
-      {/* Retro Window: Pantry.exe */}
-      <DesktopWindow id="pantry">
-        <PantryApp />
+      {/* Retro Window: Vote.exe */}
+      <DesktopWindow id="vote">
+        <VoteApp />
       </DesktopWindow>
 
       {/* Retro Window: Wheel.exe */}

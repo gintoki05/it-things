@@ -16,11 +16,12 @@ import {
   AlertCircle,
   X,
   Mail,
-  User
+  User,
+  Eye
 } from "lucide-react"
 
 export function TeamApp() {
-  const { user, isAdmin, isTreasurer, setDemoUserRole } = useAuth()
+  const { user, isAdmin, isTreasurer, isGuest, setDemoUserRole } = useAuth()
   const {
     members,
     isLoading,
@@ -107,7 +108,7 @@ export function TeamApp() {
 
   const handleSetRole = async (memberId: string, role: UserRole) => {
     await setMemberRole(memberId, role)
-    const roleLabels = { admin: "Administrator", treasurer: "Bendahara", member: "Anggota" }
+    const roleLabels: Record<UserRole, string> = { admin: "Administrator", treasurer: "Bendahara", member: "Anggota", guest: "Tamu" }
     setStatusMessage(`Peran anggota berhasil diubah ke: ${roleLabels[role]}`)
     setTimeout(() => setStatusMessage(null), 4000)
   }
@@ -115,7 +116,7 @@ export function TeamApp() {
   const handleSetMyRole = (role: UserRole) => {
     if (!setDemoUserRole || !user) return
     setDemoUserRole(role)
-    const roleLabels = { admin: "Administrator", treasurer: "Bendahara", member: "Anggota Tim" }
+    const roleLabels: Record<UserRole, string> = { admin: "Administrator", treasurer: "Bendahara", member: "Anggota Tim", guest: "Tamu" }
     setStatusMessage(`Peran akun aktif Anda dialihkan ke: ${roleLabels[role]}`)
     setTimeout(() => setStatusMessage(null), 4000)
   }
@@ -165,46 +166,53 @@ export function TeamApp() {
           </div>
         </div>
 
-        {/* Quick Role Switcher for active session */}
-        <div className="flex items-center gap-1">
-          <span className="text-[10px] text-gray-600 font-bold">Ubah Mode Cepat:</span>
-          <button
-            type="button"
-            onClick={() => handleSetMyRole("admin")}
-            title="Set akun Anda sebagai Administrator"
-            className={`px-2 py-0.5 text-[10px] font-bold rounded border ${
-              user?.role === "admin"
-                ? "bg-purple-800 text-white border-purple-900"
-                : "bg-[#C0C0C0] text-black border-t-white border-l-white border-b-[#404040] border-r-[#404040] hover:bg-[#D4D4D4]"
-            }`}
-          >
-            🛡️ Admin
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSetMyRole("treasurer")}
-            title="Set akun Anda sebagai Bendahara"
-            className={`px-2 py-0.5 text-[10px] font-bold rounded border ${
-              user?.role === "treasurer"
-                ? "bg-amber-600 text-white border-amber-800"
-                : "bg-[#C0C0C0] text-black border-t-white border-l-white border-b-[#404040] border-r-[#404040] hover:bg-[#D4D4D4]"
-            }`}
-          >
-            👑 Bendahara
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSetMyRole("member")}
-            title="Set akun Anda sebagai Anggota biasa"
-            className={`px-2 py-0.5 text-[10px] font-bold rounded border ${
-              user?.role === "member"
-                ? "bg-slate-700 text-white border-slate-900"
-                : "bg-[#C0C0C0] text-black border-t-white border-l-white border-b-[#404040] border-r-[#404040] hover:bg-[#D4D4D4]"
-            }`}
-          >
-            👤 Member
-          </button>
-        </div>
+        {/* Quick Role Switcher for active session or Guest Notice */}
+        {isGuest ? (
+          <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded text-[11px] font-bold">
+            <Eye className="w-3.5 h-3.5 text-amber-700" />
+            <span>Mode Tamu (Read-Only)</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-gray-600 font-bold">Ubah Mode Cepat:</span>
+            <button
+              type="button"
+              onClick={() => handleSetMyRole("admin")}
+              title="Set akun Anda sebagai Administrator"
+              className={`px-2 py-0.5 text-[10px] font-bold rounded border ${
+                user?.role === "admin"
+                  ? "bg-purple-800 text-white border-purple-900"
+                  : "bg-[#C0C0C0] text-black border-t-white border-l-white border-b-[#404040] border-r-[#404040] hover:bg-[#D4D4D4]"
+              }`}
+            >
+              🛡️ Admin
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetMyRole("treasurer")}
+              title="Set akun Anda sebagai Bendahara"
+              className={`px-2 py-0.5 text-[10px] font-bold rounded border ${
+                user?.role === "treasurer"
+                  ? "bg-amber-600 text-white border-amber-800"
+                  : "bg-[#C0C0C0] text-black border-t-white border-l-white border-b-[#404040] border-r-[#404040] hover:bg-[#D4D4D4]"
+              }`}
+            >
+              👑 Bendahara
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetMyRole("member")}
+              title="Set akun Anda sebagai Anggota biasa"
+              className={`px-2 py-0.5 text-[10px] font-bold rounded border ${
+                user?.role === "member"
+                  ? "bg-slate-700 text-white border-slate-900"
+                  : "bg-[#C0C0C0] text-black border-t-white border-l-white border-b-[#404040] border-r-[#404040] hover:bg-[#D4D4D4]"
+              }`}
+            >
+              👤 Member
+            </button>
+          </div>
+        )}
       </div>
 
       {statusMessage && (
@@ -217,14 +225,16 @@ export function TeamApp() {
       {/* 3. TOOLBAR */}
       <div className="px-2 pb-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={openAddModal}
-            className="px-3 py-1 font-bold bg-[#C0C0C0] border-2 border-t-white border-l-white border-b-[#404040] border-r-[#404040] active:border-t-[#404040] active:border-l-[#404040] active:border-b-white active:border-r-white hover:bg-[#D4D4D4] flex items-center gap-1.5 shadow-sm"
-          >
-            <UserPlus className="w-3.5 h-3.5 text-emerald-700" />
-            + Tambah Anggota Baru
-          </button>
+          {!isGuest && (
+            <button
+              type="button"
+              onClick={openAddModal}
+              className="px-3 py-1 font-bold bg-[#C0C0C0] border-2 border-t-white border-l-white border-b-[#404040] border-r-[#404040] active:border-t-[#404040] active:border-l-[#404040] active:border-b-white active:border-r-white hover:bg-[#D4D4D4] flex items-center gap-1.5 shadow-sm cursor-pointer"
+            >
+              <UserPlus className="w-3.5 h-3.5 text-emerald-700" />
+              + Tambah Anggota Baru
+            </button>
+          )}
           <button
             type="button"
             onClick={loadMembers}
@@ -313,38 +323,44 @@ export function TeamApp() {
                       )}
                     </td>
                     <td className="p-1.5 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        {/* Quick Role Dropdown */}
-                        <select
-                          value={member.role}
-                          onChange={(e) =>
-                            handleSetRole(member.id, e.target.value as UserRole)
-                          }
-                          title="Pilih peran anggota ini"
-                          className="px-1 py-0.5 bg-[#C0C0C0] text-black border border-t-white border-l-white border-b-[#404040] border-r-[#404040] text-[10px] font-mono outline-none cursor-pointer"
-                        >
-                          <option value="admin">🛡️ Admin</option>
-                          <option value="treasurer">👑 Bendahara</option>
-                          <option value="member">👤 Member</option>
-                        </select>
+                      {isGuest ? (
+                        <span className="text-[10px] text-gray-500 font-mono italic">
+                          Read-Only
+                        </span>
+                      ) : (
+                        <div className="flex items-center justify-center gap-1">
+                          {/* Quick Role Dropdown */}
+                          <select
+                            value={member.role}
+                            onChange={(e) =>
+                              handleSetRole(member.id, e.target.value as UserRole)
+                            }
+                            title="Pilih peran anggota ini"
+                            className="px-1 py-0.5 bg-[#C0C0C0] text-black border border-t-white border-l-white border-b-[#404040] border-r-[#404040] text-[10px] font-mono outline-none cursor-pointer"
+                          >
+                            <option value="admin">🛡️ Admin</option>
+                            <option value="treasurer">👑 Bendahara</option>
+                            <option value="member">👤 Member</option>
+                          </select>
 
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(member)}
-                          title="Edit nama/email/avatar"
-                          className="p-1 bg-[#C0C0C0] text-black border border-t-white border-l-white border-b-[#404040] border-r-[#404040] active:border-t-[#404040] active:border-l-[#404040] active:border-b-white active:border-r-white hover:bg-[#D4D4D4]"
-                        >
-                          <Edit2 className="w-3 h-3 text-blue-700" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(member)}
-                          title="Hapus anggota dari tim"
-                          className="p-1 bg-[#C0C0C0] text-black border border-t-white border-l-white border-b-[#404040] border-r-[#404040] active:border-t-[#404040] active:border-l-[#404040] active:border-b-white active:border-r-white hover:bg-[#D4D4D4]"
-                        >
-                          <Trash2 className="w-3 h-3 text-red-600" />
-                        </button>
-                      </div>
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(member)}
+                            title="Edit nama/email/avatar"
+                            className="p-1 bg-[#C0C0C0] text-black border border-t-white border-l-white border-b-[#404040] border-r-[#404040] active:border-t-[#404040] active:border-l-[#404040] active:border-b-white active:border-r-white hover:bg-[#D4D4D4] cursor-pointer"
+                          >
+                            <Edit2 className="w-3 h-3 text-blue-700" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(member)}
+                            title="Hapus anggota dari tim"
+                            className="p-1 bg-[#C0C0C0] text-black border border-t-white border-l-white border-b-[#404040] border-r-[#404040] active:border-t-[#404040] active:border-l-[#404040] active:border-b-white active:border-r-white hover:bg-[#D4D4D4] cursor-pointer"
+                          >
+                            <Trash2 className="w-3 h-3 text-red-600" />
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 )

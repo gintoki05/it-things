@@ -19,7 +19,8 @@ import {
   RotateCcw,
   X,
   Quote,
-  Bike
+  Bike,
+  Eye
 } from "lucide-react"
 import { RetroIcon } from "@/components/ui/retro-icon"
 
@@ -331,14 +332,20 @@ export function WheelApp() {
           </select>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setShowAddForm((prev) => !prev)}
-          className="px-2.5 py-1 bg-[#2E5AA8] hover:bg-[#1E4E8C] text-white font-mono text-xs font-bold rounded-[2px] flex items-center gap-1 border border-[#14253D]"
-        >
-          <Plus className="size-3" />
-          <span>{showAddForm ? "Tutup Form" : "Tambah Tempat"}</span>
-        </button>
+        {isGuest ? (
+          <span className="px-2 py-1 bg-amber-100 text-amber-800 font-mono text-[11px] font-bold rounded-[2px] border border-amber-300 flex items-center gap-1">
+            <Eye className="size-3 text-amber-700" /> Mode Tamu (Read-Only)
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowAddForm((prev) => !prev)}
+            className="px-2.5 py-1 bg-[#2E5AA8] hover:bg-[#1E4E8C] text-white font-mono text-xs font-bold rounded-[2px] flex items-center gap-1 border border-[#14253D] cursor-pointer"
+          >
+            <Plus className="size-3" />
+            <span>{showAddForm ? "Tutup Form" : "Tambah Tempat"}</span>
+          </button>
+        )}
       </div>
 
       {/* Add Place Drawer / Form */}
@@ -687,14 +694,16 @@ export function WheelApp() {
                     <div className="font-semibold text-[11px] text-[#14253D] truncate">{p.name}</div>
                     <div className="text-[9px] text-gray-500">{p.category}</div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleDeletePlace(p.id)}
-                    title="Hapus tempat ini"
-                    className="text-gray-400 hover:text-red-600 p-0.5"
-                  >
-                    <Trash2 className="size-3" />
-                  </button>
+                  {!isGuest && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePlace(p.id)}
+                      title="Hapus tempat ini"
+                      className="text-gray-400 hover:text-red-600 p-0.5 cursor-pointer"
+                    >
+                      <Trash2 className="size-3" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

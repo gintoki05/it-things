@@ -25,6 +25,7 @@ const ICON_OPTIONS: RetroIconName[] = [
   "task",
   "trophy",
   "poll",
+  "vote",
   "archive",
 ]
 

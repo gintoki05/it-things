@@ -90,80 +90,135 @@ export type Database = {
         }
         Relationships: []
       }
-      pantry_items: {
+      vote_groups: {
         Row: {
-          category: string | null
           created_at: string
-          detail: string | null
+          created_by_avatar: string | null
+          created_by_id: string
+          created_by_name: string
+          description: string | null
           emoji: string | null
+          expires_at: string
           id: string
-          month_period: string
+          is_closed: boolean
+          title: string
+          vote_type: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_avatar?: string | null
+          created_by_id: string
+          created_by_name: string
+          description?: string | null
+          emoji?: string | null
+          expires_at?: string
+          id?: string
+          is_closed?: boolean
+          title: string
+          vote_type?: string
+        }
+        Update: {
+          created_at?: string
+          created_by_avatar?: string | null
+          created_by_id?: string
+          created_by_name?: string
+          description?: string | null
+          emoji?: string | null
+          expires_at?: string
+          id?: string
+          is_closed?: boolean
+          title?: string
+          vote_type?: string
+        }
+        Relationships: []
+      }
+      vote_options: {
+        Row: {
+          created_at: string
+          emoji: string | null
+          group_id: string
+          id: string
           name: string
           proposed_by_avatar: string | null
           proposed_by_id: string
           proposed_by_name: string
         }
         Insert: {
-          category?: string | null
           created_at?: string
-          detail?: string | null
           emoji?: string | null
+          group_id: string
           id?: string
-          month_period: string
           name: string
           proposed_by_avatar?: string | null
           proposed_by_id: string
           proposed_by_name: string
         }
         Update: {
-          category?: string | null
           created_at?: string
-          detail?: string | null
           emoji?: string | null
+          group_id?: string
           id?: string
-          month_period?: string
           name?: string
           proposed_by_avatar?: string | null
           proposed_by_id?: string
           proposed_by_name?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vote_options_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "vote_groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-      pantry_votes: {
+      vote_records: {
         Row: {
           created_at: string
+          group_id: string
           id: string
-          item_id: string
+          option_id: string
           user_avatar: string | null
           user_id: string
           user_name: string
         }
         Insert: {
           created_at?: string
+          group_id: string
           id?: string
-          item_id: string
+          option_id: string
           user_avatar?: string | null
           user_id: string
           user_name: string
         }
         Update: {
           created_at?: string
+          group_id?: string
           id?: string
-          item_id?: string
+          option_id?: string
           user_avatar?: string | null
           user_id?: string
           user_name?: string
         }
         Relationships: [
           {
-            foreignKeyName: "pantry_votes_item_id_fkey"
-            columns: ["item_id"]
+            foreignKeyName: "vote_records_group_id_fkey"
+            columns: ["group_id"]
             isOneToOne: false
-            referencedRelation: "pantry_items"
+            referencedRelation: "vote_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vote_records_option_id_fkey"
+            columns: ["option_id"]
+            isOneToOne: false
+            referencedRelation: "vote_options"
             referencedColumns: ["id"]
           },
         ]
       }
+
       split_bill_participants: {
         Row: {
           amount_due: number
