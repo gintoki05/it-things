@@ -639,9 +639,14 @@ export function ChatApp() {
                           <SmilePlus className="size-3" />
                         </button>
 
-                        {/* Centered Reaction Popover (left-0 agar mengalir ke atas balon chat dan tidak terpotong di kiri) */}
+                        {/* Adaptive Reaction Popover (menyesuaikan panjang pesan agar tidak bablas ke kanan pada pesan pendek dan tidak terpotong pada pesan panjang) */}
                         {activeReactionPickerMessageId === msg.id && (
-                          <div className="reaction-picker-popover absolute bottom-full mb-2 left-0 flex items-center gap-0.5 bg-white border border-gray-300 rounded-full px-1.5 py-1 shadow-lg z-30 animate-in fade-in zoom-in-95 whitespace-nowrap">
+                          <div
+                            className={cn(
+                              "reaction-picker-popover absolute bottom-full mb-2 flex items-center gap-0.5 bg-white border border-gray-300 rounded-full px-1.5 py-1 shadow-lg z-30 animate-in fade-in zoom-in-95 whitespace-nowrap",
+                              msg.message.length <= 25 ? "right-[-55px]" : "left-0"
+                            )}
+                          >
                             {REACTION_EMOJIS.map((emoji) => (
                               <button
                                 key={emoji}
