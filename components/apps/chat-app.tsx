@@ -30,6 +30,7 @@ import {
   AlertCircle,
   Hash,
   Users,
+  User,
   Pencil,
   Check,
   X,
@@ -153,6 +154,41 @@ export function ChatApp() {
   // Active Emoji Reaction Picker popover
   const [activeReactionPickerMessageId, setActiveReactionPickerMessageId] = React.useState<string | null>(null)
 
+  // Active Member Profile popover
+  const [activeProfileMember, setActiveProfileMember] = React.useState<{
+    name: string
+    avatarUrl?: string | null
+    role?: string
+    userId?: string
+  } | null>(null)
+
+  // Channel Roster popover
+  const [isRosterOpen, setIsRosterOpen] = React.useState(false)
+
+  const handleMentionUser = React.useCallback((name: string) => {
+    const mentionTag = `@${name.trim()} `
+    setInputVal((prev) => {
+      if (prev.endsWith(" ") || prev.length === 0) {
+        return prev + mentionTag
+      }
+      return prev + " " + mentionTag
+    })
+    setActiveProfileMember(null)
+    setIsRosterOpen(false)
+    setTimeout(() => textareaRef.current?.focus(), 50)
+  }, [])
+
+  React.useEffect(() => {
+    const handleMentionEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ name: string }>
+      if (customEvent.detail?.name) {
+        handleMentionUser(customEvent.detail.name)
+      }
+    }
+    window.addEventListener("mention-member", handleMentionEvent)
+    return () => window.removeEventListener("mention-member", handleMentionEvent)
+  }, [handleMentionUser])
+
   React.useEffect(() => {
     const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
       const target = e.target as HTMLElement
@@ -160,10 +196,16 @@ export function ChatApp() {
         !target.closest(".reaction-picker-popover") &&
         !target.closest(".reaction-picker-trigger") &&
         !target.closest(".message-action-toolbar") &&
-        !target.closest(".message-bubble")
+        !target.closest(".message-bubble") &&
+        !target.closest(".member-profile-popover") &&
+        !target.closest(".member-profile-trigger") &&
+        !target.closest(".channel-roster-popover") &&
+        !target.closest(".channel-roster-trigger")
       ) {
         setActiveReactionPickerMessageId(null)
         setActiveMessageId(null)
+        setActiveProfileMember(null)
+        setIsRosterOpen(false)
       }
     }
     window.addEventListener("click", handleOutsideClick)
@@ -542,6 +584,61 @@ export function ChatApp() {
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
+          {/* Member Roster Button & Popover */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsRosterOpen((prev) => !prev)}
+              title={`Daftar Anggota Tim (${members.length})`}
+              className={cn(
+                "channel-roster-trigger px-1.5 py-0.5 border border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] shadow-sm active:translate-y-px cursor-pointer rounded-[2px] flex items-center gap-1 text-[10px] font-mono",
+                isRosterOpen
+                  ? "bg-[#1E4E8C] text-white font-bold"
+                  : "bg-[#CBD5E1] hover:bg-white text-[#102A45]"
+              )}
+            >
+              <Users className={cn("size-3", isRosterOpen ? "text-blue-200" : "text-[#1E4E8C]")} />
+              <span>{members.length}</span>
+            </button>
+
+            {/* Roster Dropdown */}
+            {isRosterOpen && (
+              <div className="channel-roster-popover absolute top-full right-0 mt-1 w-56 bg-[#D4DDE6] border-2 border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] shadow-xl rounded-[2px] z-40 overflow-hidden select-none animate-in fade-in zoom-in-95">
+                <div className="px-2 py-1 bg-gradient-to-r from-[#102A45] to-[#1E4E8C] text-white flex items-center justify-between text-[11px] font-mono font-bold">
+                  <span className="flex items-center gap-1">
+                    <Users className="size-3 text-blue-200" /> Anggota Tim ({members.length})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsRosterOpen(false)}
+                    className="size-3.5 hover:bg-white/20 rounded flex items-center justify-center text-xs leading-none"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="max-h-52 overflow-y-auto p-1 space-y-0.5 bg-white">
+                  {members.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => handleMentionUser(m.name)}
+                      title={`Klik untuk mention @${m.name}`}
+                      className="w-full flex items-center justify-between gap-1.5 p-1 rounded hover:bg-blue-50 text-left cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                        <UserAvatar src={m.avatar_url} name={m.name} size="size-5" textClass="text-[8px]" />
+                        <span className="text-[11px] font-medium text-[#14253D] truncate">{m.name}</span>
+                      </div>
+                      <span className="text-[9px] font-mono text-gray-500 shrink-0">
+                        {m.role === "admin" ? "🛡️" : m.role === "treasurer" ? "👑" : "👤"}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           <button
             type="button"
             onClick={toggleMute}
@@ -849,20 +946,45 @@ export function ChatApp() {
                 ) : (
                   /* Other Team Member Bubble (Left-aligned) */
                   <div className="relative flex w-full justify-start items-start gap-2 my-2 group">
-                    <UserAvatar
-                      src={msg.userAvatar}
-                      name={msg.userName}
-                      size="size-7"
-                      textClass="text-[10px]"
-                      className="mt-1 shrink-0"
-                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setActiveProfileMember({
+                          name: msg.userName,
+                          avatarUrl: msg.userAvatar,
+                          role: msg.userRole,
+                          userId: msg.userId,
+                        })
+                      }
+                      title={`Lihat profil ${msg.userName}`}
+                      className="member-profile-trigger mt-1 shrink-0 cursor-pointer hover:scale-105 transition-transform"
+                    >
+                      <UserAvatar
+                        src={msg.userAvatar}
+                        name={msg.userName}
+                        size="size-7"
+                        textClass="text-[10px]"
+                      />
+                    </button>
 
                     <div className="max-w-[85%] sm:max-w-[76%] flex flex-col items-start">
                       {/* Name & Role Header */}
                       <div className="flex items-center gap-1.5 mb-0.5 ml-1">
-                        <span className="font-bold text-[11px] text-[#1E3A8A]">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setActiveProfileMember({
+                              name: msg.userName,
+                              avatarUrl: msg.userAvatar,
+                              role: msg.userRole,
+                              userId: msg.userId,
+                            })
+                          }
+                          title={`Lihat profil ${msg.userName}`}
+                          className="member-profile-trigger font-bold text-[11px] text-[#1E3A8A] hover:underline cursor-pointer text-left"
+                        >
                           {msg.userName}
-                        </span>
+                        </button>
                         {msg.userRole === "admin" && (
                           <span className="flex items-center gap-0.5 text-[9px] font-bold font-mono px-1 py-0.2 rounded bg-purple-100 text-purple-800 border border-purple-300">
                             <ShieldCheck className="size-2.5" /> Admin
@@ -1187,6 +1309,69 @@ export function ChatApp() {
           </button>
         </div>
       </div>
+
+      {/* Retro Member Profile Popover Modal */}
+      {activeProfileMember && (
+        <div className="member-profile-popover fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+          <div className="w-64 bg-[#D4DDE6] border-2 border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] shadow-2xl rounded-[3px] overflow-hidden select-none animate-in fade-in zoom-in-95">
+            {/* Title Bar */}
+            <div className="h-7 bg-gradient-to-r from-[#102A45] to-[#1E4E8C] px-2 flex items-center justify-between text-white text-xs font-mono font-bold">
+              <span>Profil Anggota</span>
+              <button
+                type="button"
+                onClick={() => setActiveProfileMember(null)}
+                className="size-4 hover:bg-white/20 rounded flex items-center justify-center text-sm leading-none cursor-pointer"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Profile Content */}
+            <div className="p-4 flex flex-col items-center text-center bg-white">
+              <UserAvatar
+                src={activeProfileMember.avatarUrl}
+                name={activeProfileMember.name}
+                size="size-14"
+                textClass="text-lg"
+                className="mb-2.5 shadow-md border-2 border-[#1E4E8C]/20"
+              />
+              <div className="font-bold text-sm text-[#14253D] leading-tight mb-1">
+                {activeProfileMember.name}
+              </div>
+
+              {/* Role Badge */}
+              <div className="mb-3">
+                {activeProfileMember.role === "admin" ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-900 border border-purple-300">
+                    <ShieldCheck className="size-3 text-purple-700" />
+                    <span>Administrator</span>
+                  </span>
+                ) : activeProfileMember.role === "treasurer" ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                    <Crown className="size-3 text-amber-700" />
+                    <span>Bendahara</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-300">
+                    <User className="size-3 text-slate-500" />
+                    <span>Anggota Tim</span>
+                  </span>
+                )}
+              </div>
+
+              {/* Quick Mention Action */}
+              <button
+                type="button"
+                onClick={() => handleMentionUser(activeProfileMember.name)}
+                className="w-full py-1.5 px-3 bg-[#1E4E8C] hover:bg-[#153A6B] text-white rounded-[2px] font-mono text-xs font-bold flex items-center justify-center gap-1.5 active:translate-y-px cursor-pointer shadow-sm"
+              >
+                <AtSign className="size-3.5" />
+                <span>Mention di Pesan</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirmation Dialog for Message Deletion */}
       <ConfirmDialog

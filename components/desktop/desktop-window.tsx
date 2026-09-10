@@ -28,12 +28,7 @@ export function DesktopWindow({ id, children, className, bodyClassName }: Deskto
 
   // Dragging state
   const [isDragging, setIsDragging] = React.useState(false)
-  const dragStartRef = React.useRef<{ mouseX: number; mouseY: number; startX: number; startY: number }>({
-    mouseX: 0,
-    mouseY: 0,
-    startX: 0,
-    startY: 0,
-  })
+  const windowRef = React.useRef<HTMLDivElement>(null)
 
   // Detect mobile
   React.useEffect(() => {
@@ -56,34 +51,91 @@ export function DesktopWindow({ id, children, className, bodyClassName }: Deskto
     if (isMobile || win.isMaximized) return
     // Only drag with left mouse button / single touch
     if (e.button !== 0 && e.pointerType === "mouse") return
+    // Don't drag if clicking buttons
+    if ((e.target as HTMLElement).closest("button")) return
 
-    bringToFront(id)
-    setIsDragging(true)
-    dragStartRef.current = {
-      mouseX: e.clientX,
-      mouseY: e.clientY,
-      startX: win.position.x,
-      startY: win.position.y,
+    if (activeWindowId !== id) {
+      bringToFront(id)
     }
 
+    const titleBarEl = e.currentTarget
+    const windowEl = windowRef.current
+    if (!windowEl) return
+
+    const pointerId = e.pointerId
+    try {
+      titleBarEl.setPointerCapture(pointerId)
+    } catch {
+      // ignore
+    }
+
+    setIsDragging(true)
+
+    const startMouseX = e.clientX
+    const startMouseY = e.clientY
+    const startX = win.position.x
+    const startY = win.position.y
+
+    let currentX = startX
+    let currentY = startY
+    let hasMoved = false
+    let rafId: number | null = null
+
     const onPointerMove = (moveEvent: PointerEvent) => {
-      const deltaX = moveEvent.clientX - dragStartRef.current.mouseX
-      const deltaY = moveEvent.clientY - dragStartRef.current.mouseY
+      const deltaX = moveEvent.clientX - startMouseX
+      const deltaY = moveEvent.clientY - startMouseY
 
-      const nextX = Math.max(0, Math.min(window.innerWidth - 100, dragStartRef.current.startX + deltaX))
-      const nextY = Math.max(0, Math.min(window.innerHeight - 100, dragStartRef.current.startY + deltaY))
+      if (!hasMoved && Math.abs(deltaX) < 2 && Math.abs(deltaY) < 2) {
+        return
+      }
+      hasMoved = true
 
-      updatePosition(id, { x: nextX, y: nextY })
+      currentX = Math.max(0, Math.min(window.innerWidth - 100, startX + deltaX))
+      currentY = Math.max(0, Math.min(window.innerHeight - 100, startY + deltaY))
+
+      if (rafId === null) {
+        rafId = requestAnimationFrame(() => {
+          if (windowEl) {
+            windowEl.style.transform = `translate3d(${currentX - startX}px, ${currentY - startY}px, 0)`
+          }
+          rafId = null
+        })
+      }
     }
 
     const onPointerUp = () => {
-      setIsDragging(false)
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId)
+        rafId = null
+      }
+      try {
+        titleBarEl.releasePointerCapture(pointerId)
+      } catch {
+        // ignore
+      }
+
       window.removeEventListener("pointermove", onPointerMove)
       window.removeEventListener("pointerup", onPointerUp)
+      window.removeEventListener("pointercancel", onPointerUp)
+
+      if (windowEl) {
+        if (hasMoved) {
+          windowEl.style.left = `${currentX}px`
+          windowEl.style.top = `${currentY}px`
+        }
+        windowEl.style.transform = ""
+      }
+
+      setIsDragging(false)
+
+      if (hasMoved && (currentX !== startX || currentY !== startY)) {
+        updatePosition(id, { x: currentX, y: currentY })
+      }
     }
 
-    window.addEventListener("pointermove", onPointerMove)
+    window.addEventListener("pointermove", onPointerMove, { passive: true })
     window.addEventListener("pointerup", onPointerUp)
+    window.addEventListener("pointercancel", onPointerUp)
   }
 
   // Calculate window style based on state
@@ -122,13 +174,22 @@ export function DesktopWindow({ id, children, className, bodyClassName }: Deskto
 
   return (
     <div
-      onPointerDown={() => bringToFront(id)}
-      style={windowStyle}
+      ref={windowRef}
+      onPointerDown={() => {
+        if (activeWindowId !== id) {
+          bringToFront(id)
+        }
+      }}
+      style={{
+        ...windowStyle,
+        willChange: isDragging ? "transform" : "auto",
+      }}
       className={cn(
-        "flex flex-col rounded-[4px] border-2 select-none overflow-hidden transition-shadow",
+        "flex flex-col rounded-[4px] border-2 select-none overflow-hidden",
         // Retro bevel border styling
         "border-t-[#E8EEF5] border-l-[#E8EEF5] border-r-[#5E7287] border-b-[#5E7287] bg-[#D4DDE6] shadow-[2px_2px_12px_rgba(0,0,0,0.35)]",
         isActive ? "ring-1 ring-[#1A365D]/40" : "opacity-95",
+        isDragging && "shadow-[4px_8px_24px_rgba(0,0,0,0.45)] cursor-move",
         className
       )}
     >
@@ -148,7 +209,10 @@ export function DesktopWindow({ id, children, className, bodyClassName }: Deskto
         </div>
 
         {/* Window controls: _ □ × */}
-        <div className="flex items-center gap-1 shrink-0 font-mono ml-2">
+        <div 
+          className="flex items-center gap-1 shrink-0 font-mono ml-2"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
           <button
             type="button"
             onClick={(e) => {
@@ -188,7 +252,13 @@ export function DesktopWindow({ id, children, className, bodyClassName }: Deskto
       </div>
 
       {/* Window Body */}
-      <div className={cn("flex-1 overflow-auto bg-[#F4F6F9] text-[#1A202C] p-3 text-xs select-text", bodyClassName)}>
+      <div 
+        className={cn(
+          "flex-1 overflow-auto bg-[#F4F6F9] text-[#1A202C] p-3 text-xs select-text",
+          isDragging && "pointer-events-none select-none",
+          bodyClassName
+        )}
+      >
         {children}
       </div>
     </div>

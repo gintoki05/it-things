@@ -11,6 +11,7 @@ import { GoogleLoginModal } from "@/components/auth/google-login-modal"
 import { PasscodeScreen } from "@/components/auth/passcode-screen"
 import { ComingSoonDialog } from "@/components/desktop/coming-soon-dialog"
 import { AboutDialog } from "@/components/desktop/about-dialog"
+import { TeamWidget } from "@/components/desktop/team-widget"
 import { APP_VERSION } from "@/lib/version"
 
 // Apps
@@ -20,6 +21,15 @@ import { SplitBillApp } from "@/components/apps/split-bill-app"
 import { KasApp } from "@/components/apps/kas-app"
 import { TeamApp } from "@/components/apps/team-app"
 import { ChatApp } from "@/components/apps/chat-app"
+
+const MemoizedVoteApp = React.memo(VoteApp)
+const MemoizedWheelApp = React.memo(WheelApp)
+const MemoizedSplitBillApp = React.memo(SplitBillApp)
+const MemoizedKasApp = React.memo(KasApp)
+const MemoizedTeamApp = React.memo(TeamApp)
+const MemoizedChatApp = React.memo(ChatApp)
+const MemoizedDesktopIcons = React.memo(DesktopIcons)
+const MemoizedTeamWidget = React.memo(TeamWidget)
 
 function DesktopWorkspace() {
   const { isPasscodeVerified, isPasscodeLoading, isGuest, isAdmin, isRecoveryMode } = useAuth()
@@ -87,39 +97,40 @@ function DesktopWorkspace() {
       </div>
 
       {/* Desktop Icons on Wallpaper */}
-      <DesktopIcons />
+      <MemoizedDesktopIcons />
 
       {/* Retro Window: Vote.exe */}
       <DesktopWindow id="vote">
-        <VoteApp />
+        <MemoizedVoteApp />
       </DesktopWindow>
 
       {/* Retro Window: Wheel.exe */}
       <DesktopWindow id="wheel">
-        <WheelApp />
+        <MemoizedWheelApp />
       </DesktopWindow>
 
       {/* Retro Window: SplitBill.exe */}
       <DesktopWindow id="splitbill">
-        <SplitBillApp />
+        <MemoizedSplitBillApp />
       </DesktopWindow>
 
       {/* Retro Window: Kas.exe */}
       <DesktopWindow id="kas">
-        <KasApp />
+        <MemoizedKasApp />
       </DesktopWindow>
 
-      {/* Retro Window: Team.exe (Khusus Admin) */}
-      {isAdmin && (
-        <DesktopWindow id="team">
-          <TeamApp />
-        </DesktopWindow>
-      )}
+      {/* Retro Window: Team.exe (Direktori Tim) */}
+      <DesktopWindow id="team">
+        <MemoizedTeamApp />
+      </DesktopWindow>
 
       {/* Retro Window: Chat.exe */}
       <DesktopWindow id="chat">
-        <ChatApp />
+        <MemoizedChatApp />
       </DesktopWindow>
+
+      {/* Floating Retro Team Widget */}
+      <MemoizedTeamWidget />
 
       {/* Bottom Retro Taskbar */}
       <Taskbar onOpenLoginModal={() => setShowLoginModal(true)} />

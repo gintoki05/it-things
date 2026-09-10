@@ -3,25 +3,28 @@
 import * as React from "react"
 import { useAuth, UserRole } from "@/lib/auth"
 import { useTeamStore, TeamMember } from "@/lib/team-store"
+import { UserAvatar } from "@/components/retro/user-avatar"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   Users,
   UserPlus,
   Crown,
-  UserCheck,
+  ShieldCheck,
   Shield,
   Trash2,
   Edit2,
   RefreshCw,
   CheckCircle2,
-  AlertCircle,
   X,
-  Mail,
   User,
-  Eye
+  Eye,
+  Search,
+  Check,
 } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 export function TeamApp() {
-  const { user, isAdmin, isTreasurer, isGuest, setDemoUserRole } = useAuth()
+  const { user, isAdmin, isTreasurer, isGuest } = useAuth()
   const {
     members,
     isLoading,
@@ -29,9 +32,12 @@ export function TeamApp() {
     addMember,
     updateMember,
     setMemberRole,
-    toggleMemberRole,
     deleteMember,
   } = useTeamStore()
+
+  // Filter & Search states
+  const [searchQuery, setSearchQuery] = React.useState("")
+  const [roleFilter, setRoleFilter] = React.useState<"all" | UserRole>("all")
 
   // Modal form states
   const [showModal, setShowModal] = React.useState(false)
@@ -42,9 +48,26 @@ export function TeamApp() {
   const [formEmoji, setFormEmoji] = React.useState("👤")
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null)
 
+  // Delete confirm dialog state
+  const [memberToDelete, setMemberToDelete] = React.useState<TeamMember | null>(null)
+  const [isDeleting, setIsDeleting] = React.useState(false)
+
   const adminCount = members.filter((m) => m.role === "admin").length
   const treasurerCount = members.filter((m) => m.role === "treasurer").length
   const memberCount = members.filter((m) => m.role === "member").length
+
+  // Filtered members list
+  const filteredMembers = React.useMemo(() => {
+    return members.filter((m) => {
+      const matchesRole = roleFilter === "all" || m.role === roleFilter
+      const q = searchQuery.toLowerCase().trim()
+      const matchesSearch =
+        !q ||
+        m.name.toLowerCase().includes(q) ||
+        (isAdmin && m.email && m.email.toLowerCase().includes(q))
+      return matchesRole && matchesSearch
+    })
+  }, [members, roleFilter, searchQuery, isAdmin])
 
   const openAddModal = () => {
     setEditingMember(null)
@@ -95,325 +118,382 @@ export function TeamApp() {
     }
 
     setShowModal(false)
-    setTimeout(() => setStatusMessage(null), 4000)
+    setTimeout(() => setStatusMessage(null), 3500)
   }
 
-  const handleDelete = async (member: TeamMember) => {
-    if (confirm(`Apakah Anda yakin ingin menghapus "${member.name}" dari tim?`)) {
-      await deleteMember(member.id)
-      setStatusMessage(`Anggota "${member.name}" telah dihapus.`)
-      setTimeout(() => setStatusMessage(null), 4000)
-    }
+  const handleConfirmDelete = async () => {
+    if (!memberToDelete) return
+    setIsDeleting(true)
+    await deleteMember(memberToDelete.id)
+    setStatusMessage(`Anggota "${memberToDelete.name}" telah dihapus.`)
+    setIsDeleting(false)
+    setMemberToDelete(null)
+    setTimeout(() => setStatusMessage(null), 3500)
   }
 
   const handleSetRole = async (memberId: string, role: UserRole) => {
     await setMemberRole(memberId, role)
-    const roleLabels: Record<UserRole, string> = { admin: "Administrator", treasurer: "Bendahara", member: "Anggota", guest: "Tamu" }
-    setStatusMessage(`Peran anggota berhasil diubah ke: ${roleLabels[role]}`)
-    setTimeout(() => setStatusMessage(null), 4000)
-  }
-
-  const handleSetMyRole = (role: UserRole) => {
-    if (!setDemoUserRole || !user) return
-    setDemoUserRole(role)
-    const roleLabels: Record<UserRole, string> = { admin: "Administrator", treasurer: "Bendahara", member: "Anggota Tim", guest: "Tamu" }
-    setStatusMessage(`Peran akun aktif Anda dialihkan ke: ${roleLabels[role]}`)
-    setTimeout(() => setStatusMessage(null), 4000)
+    const roleLabels: Record<UserRole, string> = {
+      admin: "Administrator",
+      treasurer: "Bendahara",
+      member: "Anggota",
+      guest: "Tamu",
+    }
+    setStatusMessage(`Peran berhasil diubah ke: ${roleLabels[role]}`)
+    setTimeout(() => setStatusMessage(null), 3000)
   }
 
   return (
-    <div className="h-full flex flex-col bg-[#C0C0C0] text-black font-sans text-xs select-none">
-      {/* 1. RETRO TOP MENU & STATUS NOTIFICATION */}
-      <div className="px-2 py-1.5 bg-[#EFEFEF] border-b border-[#808080] flex items-center justify-between shadow-inner">
-        <div className="flex items-center gap-2">
-          <span className="font-bold flex items-center gap-1.5 text-xs">
-            <Users className="w-4 h-4 text-blue-700" />
-            Pengaturan Peserta & Manajemen Peran (Roles)
-          </span>
-        </div>
-        <div className="text-[11px] text-gray-700">
-          Total: <strong>{members.length}</strong> anggota (
-          <span className="text-purple-700 font-bold">{adminCount} Admin</span>,{" "}
-          <span className="text-amber-700 font-bold">{treasurerCount} Bendahara</span>,{" "}
-          <span className="text-slate-600">{memberCount} Member</span>)
-        </div>
-      </div>
-
-      {/* 2. ACTIVE USER ROLE SIMULATOR BANNER */}
-      <div className="m-2 p-2 bg-[#FFFFE1] border border-[#808080] shadow-sm flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Shield className="w-4 h-4 text-indigo-700 shrink-0" />
+    <div className="flex flex-col gap-3 min-h-full font-sans select-none text-[#14253D]">
+      {/* 1. TOP HEADER & STATS BAR */}
+      <div className="bg-white border border-[#CBD5E1] rounded-[3px] p-2.5 shadow-xs flex flex-wrap items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="size-8 rounded-[2px] bg-[#1E4E8C] text-white flex items-center justify-center shadow-inner shrink-0">
+            <Users className="size-4" />
+          </div>
           <div>
-            <span className="text-gray-700">Akun Anda: </span>
-            <strong className="text-gray-900">{user?.name || "Tamu"}</strong>
-            {" — "}
-            <span className="text-gray-700">Peran Aktif: </span>
-            <span
-              className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold ${
-                isAdmin
-                  ? "bg-purple-100 text-purple-900 border border-purple-400"
-                  : isTreasurer
-                  ? "bg-amber-100 text-amber-900 border border-amber-400"
-                  : "bg-blue-100 text-blue-900 border border-blue-400"
-              }`}
-            >
-              {isAdmin
-                ? "🛡️ Administrator (Superuser)"
-                : isTreasurer
-                ? "👑 Bendahara (Treasurer)"
-                : "👤 Anggota Tim (Member)"}
-            </span>
+            <div className="font-bold text-xs leading-none flex items-center gap-1.5">
+              <span>Direktori Tim IT</span>
+              <span className="font-mono text-[10px] bg-blue-50 text-[#1E4E8C] px-1.5 py-0.2 rounded border border-blue-200">
+                {members.length} Orang
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 mt-1 font-mono text-[10px] text-gray-500">
+              <span className="text-purple-700 font-semibold">{adminCount} Admin</span>
+              <span>·</span>
+              <span className="text-amber-700 font-semibold">{treasurerCount} Bendahara</span>
+              <span>·</span>
+              <span className="text-slate-600 font-semibold">{memberCount} Member</span>
+            </div>
           </div>
         </div>
 
-        {/* Quick Role Switcher for active session or Guest Notice */}
-        {isGuest ? (
-          <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded text-[11px] font-bold">
-            <Eye className="w-3.5 h-3.5 text-amber-700" />
-            <span>Mode Tamu (Read-Only)</span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1">
-            <span className="text-[10px] text-gray-600 font-bold">Ubah Mode Cepat:</span>
-            <button
-              type="button"
-              onClick={() => handleSetMyRole("admin")}
-              title="Set akun Anda sebagai Administrator"
-              className={`px-2 py-0.5 text-[10px] font-bold rounded border ${
-                user?.role === "admin"
-                  ? "bg-purple-800 text-white border-purple-900"
-                  : "bg-[#C0C0C0] text-black border-t-white border-l-white border-b-[#404040] border-r-[#404040] hover:bg-[#D4D4D4]"
-              }`}
-            >
-              🛡️ Admin
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSetMyRole("treasurer")}
-              title="Set akun Anda sebagai Bendahara"
-              className={`px-2 py-0.5 text-[10px] font-bold rounded border ${
-                user?.role === "treasurer"
-                  ? "bg-amber-600 text-white border-amber-800"
-                  : "bg-[#C0C0C0] text-black border-t-white border-l-white border-b-[#404040] border-r-[#404040] hover:bg-[#D4D4D4]"
-              }`}
-            >
-              👑 Bendahara
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSetMyRole("member")}
-              title="Set akun Anda sebagai Anggota biasa"
-              className={`px-2 py-0.5 text-[10px] font-bold rounded border ${
-                user?.role === "member"
-                  ? "bg-slate-700 text-white border-slate-900"
-                  : "bg-[#C0C0C0] text-black border-t-white border-l-white border-b-[#404040] border-r-[#404040] hover:bg-[#D4D4D4]"
-              }`}
-            >
-              👤 Member
-            </button>
-          </div>
-        )}
+        {/* Current User Status Pill */}
+        <div className="flex items-center gap-1.5 px-2 py-1 bg-[#F1F5F9] border border-[#CBD5E1] rounded-[2px] text-[11px]">
+          <span className="text-gray-500 text-[10px]">Akun Anda:</span>
+          <UserAvatar
+            src={user?.avatarUrl}
+            name={user?.name || "Tamu"}
+            size="size-4"
+            textClass="text-[8px]"
+          />
+          <strong className="text-gray-800 text-[10px] truncate max-w-[90px]">
+            {user?.name || "Tamu"}
+          </strong>
+          <span className="h-3 w-px bg-gray-300" />
+          {isGuest ? (
+            <span className="inline-flex items-center gap-0.5 text-amber-800 font-bold text-[9px]">
+              <Eye className="size-2.5" /> Tamu
+            </span>
+          ) : isAdmin ? (
+            <span className="inline-flex items-center gap-0.5 text-purple-700 font-bold text-[9px]">
+              <ShieldCheck className="size-2.5" /> Admin
+            </span>
+          ) : isTreasurer ? (
+            <span className="inline-flex items-center gap-0.5 text-amber-700 font-bold text-[9px]">
+              <Crown className="size-2.5" /> Bendahara
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-0.5 text-slate-600 font-medium text-[9px]">
+              <User className="size-2.5" /> Member
+            </span>
+          )}
+        </div>
       </div>
 
+      {/* Status Notification Banner */}
       {statusMessage && (
-        <div className="mx-2 mb-2 p-1.5 bg-[#D4EDDA] border border-[#C3E6CB] text-[#155724] text-[11px] flex items-center gap-2 shadow-inner">
-          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+        <div className="p-2 bg-[#D4EDDA] border border-[#C3E6CB] text-[#155724] text-xs flex items-center gap-2 rounded-[2px] shadow-inner animate-in fade-in duration-200">
+          <CheckCircle2 className="size-3.5 shrink-0" />
           <span>{statusMessage}</span>
         </div>
       )}
 
-      {/* 3. TOOLBAR */}
-      <div className="px-2 pb-2 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          {!isGuest && (
+      {/* 2. TOOLBAR: SEARCH, FILTERS & ACTIONS */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {/* Search Input & Role Filters */}
+        <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-[240px]">
+          <div className="relative flex-1 min-w-[160px] max-w-xs">
+            <Search className="size-3.5 text-gray-400 absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={isAdmin ? "Cari nama atau email..." : "Cari nama anggota..."}
+              className="w-full pl-7 pr-6 py-1 bg-white border border-[#CBD5E1] rounded-[2px] text-xs focus:outline-none focus:border-[#1E4E8C] shadow-inner"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5"
+              >
+                <X className="size-3" />
+              </button>
+            )}
+          </div>
+
+          {/* Quick Role Filters */}
+          <div className="flex items-center bg-[#CBD5E1]/60 p-0.5 rounded-[2px] border border-[#CBD5E1] text-[10px] font-mono">
+            <button
+              type="button"
+              onClick={() => setRoleFilter("all")}
+              className={cn(
+                "px-2 py-0.5 rounded-[2px] font-semibold transition-colors cursor-pointer",
+                roleFilter === "all"
+                  ? "bg-white text-[#14253D] shadow-xs font-bold"
+                  : "text-gray-600 hover:text-[#14253D]"
+              )}
+            >
+              Semua ({members.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setRoleFilter("admin")}
+              className={cn(
+                "px-2 py-0.5 rounded-[2px] font-semibold transition-colors cursor-pointer",
+                roleFilter === "admin"
+                  ? "bg-purple-100 text-purple-900 border border-purple-300 shadow-xs font-bold"
+                  : "text-gray-600 hover:text-purple-700"
+              )}
+            >
+              Admin ({adminCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setRoleFilter("treasurer")}
+              className={cn(
+                "px-2 py-0.5 rounded-[2px] font-semibold transition-colors cursor-pointer",
+                roleFilter === "treasurer"
+                  ? "bg-amber-100 text-amber-900 border border-amber-300 shadow-xs font-bold"
+                  : "text-gray-600 hover:text-amber-700"
+              )}
+            >
+              Bendahara ({treasurerCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setRoleFilter("member")}
+              className={cn(
+                "px-2 py-0.5 rounded-[2px] font-semibold transition-colors cursor-pointer",
+                roleFilter === "member"
+                  ? "bg-white text-slate-800 shadow-xs font-bold"
+                  : "text-gray-600 hover:text-slate-800"
+              )}
+            >
+              Member ({memberCount})
+            </button>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {isAdmin && (
             <button
               type="button"
               onClick={openAddModal}
-              className="px-3 py-1 font-bold bg-[#C0C0C0] border-2 border-t-white border-l-white border-b-[#404040] border-r-[#404040] active:border-t-[#404040] active:border-l-[#404040] active:border-b-white active:border-r-white hover:bg-[#D4D4D4] flex items-center gap-1.5 shadow-sm cursor-pointer"
+              className="h-7 px-2.5 bg-[#1E4E8C] hover:bg-[#153A6B] text-white border border-[#102A45] rounded-[2px] font-mono font-bold text-[11px] flex items-center gap-1.5 shadow-xs active:translate-y-px cursor-pointer"
             >
-              <UserPlus className="w-3.5 h-3.5 text-emerald-700" />
-              + Tambah Anggota Baru
+              <UserPlus className="size-3.5" />
+              <span>+ Tambah Anggota</span>
             </button>
           )}
+
           <button
             type="button"
             onClick={loadMembers}
-            className="px-2.5 py-1 bg-[#C0C0C0] border-2 border-t-white border-l-white border-b-[#404040] border-r-[#404040] active:border-t-[#404040] active:border-l-[#404040] active:border-b-white active:border-r-white hover:bg-[#D4D4D4] flex items-center gap-1 shadow-sm"
+            title="Muat ulang data anggota"
+            className="h-7 px-2 bg-white hover:bg-gray-50 text-[#14253D] border border-[#CBD5E1] rounded-[2px] font-mono text-[11px] flex items-center gap-1 shadow-xs active:translate-y-px cursor-pointer"
           >
-            <RefreshCw className="w-3 h-3 text-blue-800" />
-            Segarkan
+            <RefreshCw className={cn("size-3 text-blue-700", isLoading && "animate-spin")} />
+            <span className="hidden sm:inline">Segarkan</span>
           </button>
         </div>
-
-        <div className="text-[11px] text-gray-600 italic">
-          * Admin & Bendahara memegang otorisasi penuh transaksi dan iuran Kas
-        </div>
       </div>
 
-      {/* 4. RETRO LISTVIEW / TABLE */}
-      <div className="flex-1 mx-2 mb-2 bg-white border-2 border-t-[#808080] border-l-[#808080] border-b-white border-r-white overflow-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-[#DFDFDF] border-b border-[#808080] sticky top-0 z-10 text-[11px]">
-              <th className="p-1.5 border-r border-[#808080] w-8 text-center font-bold">#</th>
-              <th className="p-1.5 border-r border-[#808080] font-bold">Nama Anggota</th>
-              <th className="p-1.5 border-r border-[#808080] font-bold">Email</th>
-              <th className="p-1.5 border-r border-[#808080] font-bold w-48">Peran / Hak Akses</th>
-              <th className="p-1.5 font-bold text-center w-56">Aksi & Pengaturan Peran</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr>
-                <td colSpan={5} className="p-6 text-center text-gray-500 italic">
-                  Memuat data anggota...
-                </td>
+      {/* 3. RETRO TABLE DIRECTORY */}
+      <div className="flex-1 bg-white border border-[#CBD5E1] rounded-[3px] shadow-xs overflow-hidden flex flex-col">
+        <div className="overflow-x-auto overflow-y-auto flex-1 max-h-[calc(100vh-280px)]">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-[#F8FAFC] border-b border-[#CBD5E1] text-[11px] text-gray-600 font-mono sticky top-0 z-10 select-none">
+                <th className="p-2 border-r border-[#CBD5E1] w-10 text-center font-bold">#</th>
+                <th className="p-2 border-r border-[#CBD5E1] font-bold">Nama Anggota</th>
+                {isAdmin && (
+                  <th className="p-2 border-r border-[#CBD5E1] font-bold">Email</th>
+                )}
+                <th className="p-2 border-r border-[#CBD5E1] font-bold w-44">Peran</th>
+                <th className="p-2 font-bold text-center w-48">
+                  {isAdmin ? "Pengaturan Peran" : "Status Izin"}
+                </th>
               </tr>
-            ) : members.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="p-6 text-center text-gray-500 italic">
-                  Belum ada data anggota tim terdaftar.
-                </td>
-              </tr>
-            ) : (
-              members.map((member, idx) => {
-                const isItemAdmin = member.role === "admin"
-                const isItemTreasurer = member.role === "treasurer"
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-xs">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={isAdmin ? 5 : 4} className="p-8 text-center text-gray-400 font-mono italic">
+                    Memuat data direktori tim...
+                  </td>
+                </tr>
+              ) : filteredMembers.length === 0 ? (
+                <tr>
+                  <td colSpan={isAdmin ? 5 : 4} className="p-8 text-center text-gray-400 font-mono italic">
+                    {searchQuery
+                      ? "Tidak ada anggota yang cocok dengan kata kunci."
+                      : "Belum ada anggota tim terdaftar."}
+                  </td>
+                </tr>
+              ) : (
+                filteredMembers.map((member, idx) => {
+                  const isItemAdmin = member.role === "admin"
+                  const isItemTreasurer = member.role === "treasurer"
+                  const isMe = user?.id === member.user_id || user?.email === member.email
 
-                return (
-                  <tr
-                    key={member.id}
-                    className="border-b border-gray-200 hover:bg-blue-50 transition-colors"
-                  >
-                    <td className="p-1.5 border-r border-gray-200 text-center font-mono text-gray-500">
-                      {idx + 1}
-                    </td>
-                    <td className="p-1.5 border-r border-gray-200">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base">{member.avatar_url || "👤"}</span>
-                        <div>
-                          <strong className="text-gray-900">{member.name}</strong>
-                          {(user?.id === member.user_id || user?.email === member.email) && (
-                            <span className="ml-1.5 text-[10px] bg-blue-100 text-blue-700 px-1 py-0.2 rounded font-bold">
-                              (Anda)
+                  return (
+                    <tr
+                      key={member.id}
+                      className="hover:bg-blue-50/50 transition-colors"
+                    >
+                      {/* Index */}
+                      <td className="p-2 border-r border-gray-100 text-center font-mono text-[11px] text-gray-400">
+                        {idx + 1}
+                      </td>
+
+                      {/* Name & Avatar */}
+                      <td className="p-2 border-r border-gray-100">
+                        <div className="flex items-center gap-2">
+                          <UserAvatar
+                            src={member.avatar_url}
+                            name={member.name}
+                            size="size-6"
+                            textClass="text-[10px]"
+                          />
+                          <div className="min-w-0">
+                            <span className="font-semibold text-gray-900 leading-tight truncate">
+                              {member.name}
                             </span>
-                          )}
+                            {isMe && (
+                              <span className="ml-1.5 text-[9px] font-mono font-bold bg-blue-50 text-blue-700 px-1 py-0.2 rounded border border-blue-200">
+                                Anda
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="p-1.5 border-r border-gray-200 text-gray-600 font-mono text-[11px]">
-                      {member.email || "-"}
-                    </td>
-                    <td className="p-1.5 border-r border-gray-200">
-                      {isItemAdmin ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 text-purple-900 border border-purple-300">
-                          <Shield className="w-3 h-3 text-purple-700" />
-                          Administrator (Superuser)
-                        </span>
-                      ) : isItemTreasurer ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
-                          <Crown className="w-3 h-3 text-amber-600" />
-                          Bendahara (Treasurer)
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-300">
-                          <UserCheck className="w-3 h-3 text-slate-500" />
-                          Anggota Tim (Member)
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-1.5 text-center">
-                      {isGuest ? (
-                        <span className="text-[10px] text-gray-500 font-mono italic">
-                          Read-Only
-                        </span>
-                      ) : (
-                        <div className="flex items-center justify-center gap-1">
-                          {/* Quick Role Dropdown */}
-                          <select
-                            value={member.role}
-                            onChange={(e) =>
-                              handleSetRole(member.id, e.target.value as UserRole)
-                            }
-                            title="Pilih peran anggota ini"
-                            className="px-1 py-0.5 bg-[#C0C0C0] text-black border border-t-white border-l-white border-b-[#404040] border-r-[#404040] text-[10px] font-mono outline-none cursor-pointer"
-                          >
-                            <option value="admin">🛡️ Admin</option>
-                            <option value="treasurer">👑 Bendahara</option>
-                            <option value="member">👤 Member</option>
-                          </select>
+                      </td>
 
-                          <button
-                            type="button"
-                            onClick={() => openEditModal(member)}
-                            title="Edit nama/email/avatar"
-                            className="p-1 bg-[#C0C0C0] text-black border border-t-white border-l-white border-b-[#404040] border-r-[#404040] active:border-t-[#404040] active:border-l-[#404040] active:border-b-white active:border-r-white hover:bg-[#D4D4D4] cursor-pointer"
-                          >
-                            <Edit2 className="w-3 h-3 text-blue-700" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(member)}
-                            title="Hapus anggota dari tim"
-                            className="p-1 bg-[#C0C0C0] text-black border border-t-white border-l-white border-b-[#404040] border-r-[#404040] active:border-t-[#404040] active:border-l-[#404040] active:border-b-white active:border-r-white hover:bg-[#D4D4D4] cursor-pointer"
-                          >
-                            <Trash2 className="w-3 h-3 text-red-600" />
-                          </button>
-                        </div>
+                      {/* Email (Khusus Admin) */}
+                      {isAdmin && (
+                        <td className="p-2 border-r border-gray-100 font-mono text-[11px] text-gray-600 truncate max-w-[200px]">
+                          {member.email || "-"}
+                        </td>
                       )}
-                    </td>
-                  </tr>
-                )
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
 
-      {/* 5. RETRO STATUS BAR */}
-      <div className="px-2 py-1 bg-[#C0C0C0] border-t border-[#808080] flex items-center justify-between text-[11px] text-gray-700">
-        <div className="flex items-center gap-3">
-          <span className="border-r border-[#808080] pr-3">
-            {members.length} peserta terdata
-          </span>
-          <span className="border-r border-[#808080] pr-3">
-            {adminCount} Administrator, {treasurerCount} Bendahara
-          </span>
-          <span>Status: Siap</span>
+                      {/* Role Badge */}
+                      <td className="p-2 border-r border-gray-100">
+                        {isItemAdmin ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-900 border border-purple-300">
+                            <Shield className="size-3 text-purple-700" />
+                            <span>Administrator</span>
+                          </span>
+                        ) : isItemTreasurer ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                            <Crown className="size-3 text-amber-700" />
+                            <span>Bendahara</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-300">
+                            <User className="size-3 text-slate-500" />
+                            <span>Member</span>
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Actions */}
+                      <td className="p-2 text-center">
+                        {!isAdmin ? (
+                          <span className="text-[10px] text-gray-400 font-mono italic">
+                            {isGuest ? "Mode Tamu" : "Hanya Lihat"}
+                          </span>
+                        ) : (
+                          <div className="flex items-center justify-center gap-1">
+                            {/* Role Dropdown */}
+                            <select
+                              value={member.role}
+                              onChange={(e) =>
+                                handleSetRole(member.id, e.target.value as UserRole)
+                              }
+                              title="Pilih peran anggota ini"
+                              className="px-1.5 py-0.5 bg-white text-gray-800 border border-[#CBD5E1] rounded text-[10px] font-mono outline-none cursor-pointer focus:border-[#1E4E8C]"
+                            >
+                              <option value="admin">🛡️ Admin</option>
+                              <option value="treasurer">👑 Bendahara</option>
+                              <option value="member">👤 Member</option>
+                            </select>
+
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(member)}
+                              title="Edit anggota"
+                              className="p-1 hover:bg-blue-50 text-blue-700 rounded border border-transparent hover:border-blue-200 transition-colors cursor-pointer"
+                            >
+                              <Edit2 className="size-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setMemberToDelete(member)}
+                              title="Hapus anggota"
+                              className="p-1 hover:bg-red-50 text-red-600 rounded border border-transparent hover:border-red-200 transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="size-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
         </div>
-        <div className="font-mono text-[10px] text-gray-500">team.exe v2.0 // RBAC</div>
+
+        {/* Status Bar footer */}
+        <div className="px-3 py-1.5 bg-[#F8FAFC] border-t border-[#CBD5E1] flex items-center justify-between text-[11px] text-gray-500 font-mono">
+          <span>{filteredMembers.length} anggota ditampilkan</span>
+          <span className="text-[10px]">team.exe v2.1 // DIRECTORY</span>
+        </div>
       </div>
 
-      {/* 6. MODAL TAMBAH / EDIT ANGGOTA */}
+      {/* 4. MODAL TAMBAH / EDIT ANGGOTA */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md bg-[#C0C0C0] border-2 border-t-white border-l-white border-b-black border-r-black shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-[1px] p-4 select-none animate-in fade-in-0 duration-150">
+          <div className="w-full max-w-md bg-white border-2 border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] rounded-[4px] shadow-2xl overflow-hidden">
             {/* Modal Title Bar */}
-            <div className="bg-[#000080] text-white px-2 py-1 flex items-center justify-between font-bold text-xs select-none">
-              <span className="flex items-center gap-1">
-                <Users className="w-3.5 h-3.5" />
-                {editingMember ? "Edit Anggota Tim" : "Tambah Anggota Baru"}
+            <div className="h-8 bg-gradient-to-r from-[#102A45] via-[#1E4E8C] to-[#2E6FB5] text-white px-3 flex items-center justify-between font-mono font-bold text-xs">
+              <span className="flex items-center gap-1.5">
+                <Users className="size-3.5 text-blue-200" />
+                <span>{editingMember ? "Edit Anggota Tim" : "Tambah Anggota Baru"}</span>
               </span>
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="w-4 h-4 bg-[#C0C0C0] text-black font-bold flex items-center justify-center border border-t-white border-l-white border-b-black border-r-black text-[10px] leading-none hover:bg-red-200"
+                className="size-5 hover:bg-white/20 rounded flex items-center justify-center text-sm leading-none cursor-pointer"
               >
                 ×
               </button>
             </div>
 
             {/* Modal Body */}
-            <form onSubmit={handleSaveMember} className="p-3 space-y-3">
+            <form onSubmit={handleSaveMember} className="p-4 space-y-3.5 text-xs">
               <div>
                 <label className="block text-gray-800 font-bold mb-1">
-                  Nama Lengkap Peserta:
+                  Nama Lengkap:
                 </label>
                 <div className="flex items-center gap-2">
                   <select
                     value={formEmoji}
                     onChange={(e) => setFormEmoji(e.target.value)}
-                    className="p-1 border-2 border-t-[#808080] border-l-[#808080] border-b-white border-r-white bg-white text-base"
+                    className="p-1.5 border border-[#CBD5E1] rounded-[2px] bg-white text-base outline-none cursor-pointer"
                     title="Pilih Avatar Emoji"
                   >
                     <option value="👤">👤 Netral</option>
@@ -431,7 +511,7 @@ export function TeamApp() {
                     value={formName}
                     onChange={(e) => setFormName(e.target.value)}
                     placeholder="Contoh: Rian Hidayat"
-                    className="flex-1 p-1.5 border-2 border-t-[#808080] border-l-[#808080] border-b-white border-r-white bg-white text-xs outline-none focus:bg-yellow-50"
+                    className="flex-1 p-1.5 border border-[#CBD5E1] rounded-[2px] bg-white text-xs outline-none focus:border-[#1E4E8C] focus:ring-1 focus:ring-[#1E4E8C]"
                   />
                 </div>
               </div>
@@ -445,16 +525,23 @@ export function TeamApp() {
                   value={formEmail}
                   onChange={(e) => setFormEmail(e.target.value)}
                   placeholder="Contoh: rian@office.internal"
-                  className="w-full p-1.5 border-2 border-t-[#808080] border-l-[#808080] border-b-white border-r-white bg-white text-xs outline-none focus:bg-yellow-50 font-mono"
+                  className="w-full p-1.5 border border-[#CBD5E1] rounded-[2px] bg-white text-xs outline-none focus:border-[#1E4E8C] focus:ring-1 focus:ring-[#1E4E8C] font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-gray-800 font-bold mb-1">
-                  Peran & Hak Akses (Role):
+                <label className="block text-gray-800 font-bold mb-1.5">
+                  Peran & Hak Akses:
                 </label>
-                <div className="p-2 border-2 border-t-[#808080] border-l-[#808080] border-b-white border-r-white bg-[#EFEFEF] space-y-2">
-                  <label className="flex items-start gap-2 cursor-pointer">
+                <div className="space-y-1.5">
+                  <label
+                    className={cn(
+                      "flex items-start gap-2.5 p-2 rounded border cursor-pointer transition-colors",
+                      formRole === "admin"
+                        ? "bg-purple-50 border-purple-300 ring-1 ring-purple-400"
+                        : "bg-gray-50 border-gray-200 hover:bg-gray-100/70"
+                    )}
+                  >
                     <input
                       type="radio"
                       name="role"
@@ -463,18 +550,25 @@ export function TeamApp() {
                       onChange={() => setFormRole("admin")}
                       className="mt-0.5"
                     />
-                    <div>
-                      <strong className="text-purple-900 flex items-center gap-1">
-                        <Shield className="w-3 h-3 text-purple-700" />
+                    <div className="flex-1 min-w-0">
+                      <strong className="text-purple-900 flex items-center gap-1 text-xs">
+                        <Shield className="size-3 text-purple-700" />
                         Administrator (Superuser)
                       </strong>
-                      <p className="text-[10px] text-gray-600">
-                        Hak akses tertinggi: mengelola seluruh peran anggota, pengeluaran kas, serta tagihan.
+                      <p className="text-[10px] text-gray-500 leading-tight mt-0.5">
+                        Akses penuh: kelola anggota tim, pengeluaran kas, serta tagihan.
                       </p>
                     </div>
                   </label>
 
-                  <label className="flex items-start gap-2 cursor-pointer">
+                  <label
+                    className={cn(
+                      "flex items-start gap-2.5 p-2 rounded border cursor-pointer transition-colors",
+                      formRole === "treasurer"
+                        ? "bg-amber-50 border-amber-300 ring-1 ring-amber-400"
+                        : "bg-gray-50 border-gray-200 hover:bg-gray-100/70"
+                    )}
+                  >
                     <input
                       type="radio"
                       name="role"
@@ -483,18 +577,25 @@ export function TeamApp() {
                       onChange={() => setFormRole("treasurer")}
                       className="mt-0.5"
                     />
-                    <div>
-                      <strong className="text-amber-800 flex items-center gap-1">
-                        <Crown className="w-3 h-3 text-amber-600" />
+                    <div className="flex-1 min-w-0">
+                      <strong className="text-amber-900 flex items-center gap-1 text-xs">
+                        <Crown className="size-3 text-amber-700" />
                         Bendahara (Treasurer)
                       </strong>
-                      <p className="text-[10px] text-gray-600">
-                        Otorisasi keuangan: input & hapus pengeluaran kas, serta konfirmasi checklist iuran anggota.
+                      <p className="text-[10px] text-gray-500 leading-tight mt-0.5">
+                        Otorisasi kas: catat & hapus pengeluaran serta konfirmasi iuran tim.
                       </p>
                     </div>
                   </label>
 
-                  <label className="flex items-start gap-2 cursor-pointer">
+                  <label
+                    className={cn(
+                      "flex items-start gap-2.5 p-2 rounded border cursor-pointer transition-colors",
+                      formRole === "member"
+                        ? "bg-blue-50 border-blue-300 ring-1 ring-blue-400"
+                        : "bg-gray-50 border-gray-200 hover:bg-gray-100/70"
+                    )}
+                  >
                     <input
                       type="radio"
                       name="role"
@@ -503,10 +604,13 @@ export function TeamApp() {
                       onChange={() => setFormRole("member")}
                       className="mt-0.5"
                     />
-                    <div>
-                      <strong className="text-gray-900">Anggota Tim (Member)</strong>
-                      <p className="text-[10px] text-gray-600">
-                        Bisa mengajukan/vote usulan pantry, ikut putaran makan siang, patungan split bill, dan menyetor kas.
+                    <div className="flex-1 min-w-0">
+                      <strong className="text-gray-900 flex items-center gap-1 text-xs">
+                        <User className="size-3 text-gray-600" />
+                        Anggota Tim (Member)
+                      </strong>
+                      <p className="text-[10px] text-gray-500 leading-tight mt-0.5">
+                        Partisipasi standar: voting, live chat, patungan, dan setor kas.
                       </p>
                     </div>
                   </label>
@@ -514,25 +618,48 @@ export function TeamApp() {
               </div>
 
               {/* Modal Buttons */}
-              <div className="pt-2 flex justify-end gap-2 border-t border-[#808080]">
-                <button
-                  type="submit"
-                  className="px-4 py-1.5 font-bold bg-[#C0C0C0] text-black border-2 border-t-white border-l-white border-b-[#404040] border-r-[#404040] active:border-t-[#404040] active:border-l-[#404040] active:border-b-white active:border-r-white hover:bg-[#D4D4D4]"
-                >
-                  {editingMember ? "Simpan Perubahan" : "Tambahkan Anggota"}
-                </button>
+              <div className="pt-2 flex justify-end gap-2 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-3 py-1.5 bg-[#C0C0C0] text-black border-2 border-t-white border-l-white border-b-[#404040] border-r-[#404040] active:border-t-[#404040] active:border-l-[#404040] active:border-b-white active:border-r-white hover:bg-[#D4D4D4]"
+                  className="px-3 py-1 bg-white hover:bg-gray-100 text-gray-700 border border-[#CBD5E1] rounded-[2px] font-mono font-bold text-xs cursor-pointer shadow-xs"
                 >
                   Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1 bg-[#1E4E8C] hover:bg-[#153A6B] text-white border border-[#102A45] rounded-[2px] font-mono font-bold text-xs flex items-center gap-1 cursor-pointer shadow-xs active:translate-y-px"
+                >
+                  <Check className="size-3.5" />
+                  <span>{editingMember ? "Simpan Perubahan" : "Tambahkan Anggota"}</span>
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* 5. CONFIRM DELETE DIALOG */}
+      <ConfirmDialog
+        isOpen={Boolean(memberToDelete)}
+        onClose={() => setMemberToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="HAPUS_ANGGOTA.EXE"
+        message={
+          <div>
+            <p className="mb-1">
+              Apakah Anda yakin ingin menghapus{" "}
+              <strong>&quot;{memberToDelete?.name}&quot;</strong> dari tim?
+            </p>
+            <p className="text-[11px] text-gray-500 font-mono">
+              Akses akun ini akan dihapus dari daftar anggota tim.
+            </p>
+          </div>
+        }
+        confirmText={isDeleting ? "Menghapus..." : "Hapus Anggota"}
+        cancelText="Batal"
+        isLoading={isDeleting}
+      />
     </div>
   )
 }

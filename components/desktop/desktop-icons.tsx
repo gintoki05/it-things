@@ -7,6 +7,15 @@ import { useNotification } from "@/lib/notification-store"
 import { cn } from "@/lib/utils"
 import { RetroIcon } from "@/components/ui/retro-icon"
 
+const ITEM_GRID_POSITIONS: Record<AppId, string> = {
+  vote: "col-start-1 row-start-1",
+  wheel: "col-start-1 row-start-2",
+  splitbill: "col-start-1 row-start-3",
+  kas: "col-start-1 row-start-4",
+  team: "col-start-1 row-start-5",
+  chat: "col-start-2 row-start-1",
+}
+
 export function DesktopIcons() {
   const { windows, openWindow } = useDesktop()
   const { isAdmin } = useAuth()
@@ -24,7 +33,7 @@ export function DesktopIcons() {
   }
 
   return (
-    <div className="absolute top-4 left-4 flex flex-col gap-5 select-none z-0">
+    <div className="absolute top-4 left-4 grid grid-flow-col grid-rows-5 auto-cols-max gap-y-4 gap-x-2 select-none z-0">
       {items.map((item) => {
         const isSelected = selectedId === item.id
 
@@ -55,6 +64,7 @@ export function DesktopIcons() {
             }}
             className={cn(
               "group flex flex-col items-center justify-center w-20 p-2 rounded cursor-pointer text-center transition-all",
+              ITEM_GRID_POSITIONS[item.id],
               isSelected
                 ? "bg-[#1E4E8C]/50 border border-dotted border-white/80"
                 : "hover:bg-white/10"

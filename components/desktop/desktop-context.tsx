@@ -52,10 +52,10 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     isMinimized: false,
     isMaximized: false,
     zIndex: 10,
-    position: { x: 110, y: 24 },
+    position: { x: 195, y: 24 },
     size: { width: 780, height: 560 },
     defaultSize: { width: 780, height: 560 },
-    defaultPos: { x: 110, y: 24 },
+    defaultPos: { x: 195, y: 24 },
   },
   wheel: {
     id: "wheel",
@@ -66,10 +66,10 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     isMinimized: false,
     isMaximized: false,
     zIndex: 11,
-    position: { x: 140, y: 44 },
+    position: { x: 220, y: 44 },
     size: { width: 720, height: 580 },
     defaultSize: { width: 720, height: 580 },
-    defaultPos: { x: 140, y: 44 },
+    defaultPos: { x: 220, y: 44 },
     isComingSoon: true,
   },
   splitbill: {
@@ -81,10 +81,10 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     isMinimized: false,
     isMaximized: false,
     zIndex: 12,
-    position: { x: 170, y: 64 },
+    position: { x: 245, y: 64 },
     size: { width: 760, height: 600 },
     defaultSize: { width: 760, height: 600 },
-    defaultPos: { x: 170, y: 64 },
+    defaultPos: { x: 245, y: 64 },
     isComingSoon: true,
   },
   kas: {
@@ -96,26 +96,25 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     isMinimized: false,
     isMaximized: false,
     zIndex: 13,
-    position: { x: 200, y: 84 },
+    position: { x: 270, y: 84 },
     size: { width: 760, height: 570 },
     defaultSize: { width: 760, height: 570 },
-    defaultPos: { x: 200, y: 84 },
+    defaultPos: { x: 270, y: 84 },
     isComingSoon: true,
   },
   team: {
     id: "team",
-    title: "Team.exe - Pengaturan Peserta & Role",
+    title: "Team.exe - Direktori & Pengaturan Anggota",
     icon: "team",
     filename: "team.exe",
     isOpen: false,
     isMinimized: false,
     isMaximized: false,
     zIndex: 14,
-    position: { x: 230, y: 104 },
+    position: { x: 295, y: 104 },
     size: { width: 740, height: 560 },
     defaultSize: { width: 740, height: 560 },
-    defaultPos: { x: 230, y: 104 },
-    adminOnly: true,
+    defaultPos: { x: 295, y: 104 },
   },
   chat: {
     id: "chat",
@@ -183,30 +182,28 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
     })
   }, [])
 
-  // Otomatis tutup jendela team jika user kehilangan status admin
-  React.useEffect(() => {
-    if (!isAdmin) {
-      setWindows((curr) => {
-        if (curr.team?.isOpen) {
-          return {
-            ...curr,
-            team: {
-              ...curr.team,
-              isOpen: false,
-            },
-          }
-        }
-        return curr
-      })
-      setActiveWindowId((curr) => (curr === "team" ? null : curr))
-    }
-  }, [isAdmin])
+  const activeWindowIdRef = React.useRef(activeWindowId)
+  activeWindowIdRef.current = activeWindowId
 
   const bringToFront = React.useCallback(
     (id: AppId) => {
       if (id === "chat" && typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("chat-focused"))
       }
+      if (activeWindowIdRef.current === id) {
+        // Window sudah aktif di depan, jangan trigger re-render state
+        setWindows((curr) => {
+          if (curr[id]?.isMinimized) {
+            return {
+              ...curr,
+              [id]: { ...curr[id], isMinimized: false },
+            }
+          }
+          return curr
+        })
+        return
+      }
+
       setTopZIndex((prev) => {
         const nextZ = prev + 1
         setWindows((curr) => {
@@ -220,9 +217,9 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
             },
           }
         })
-        setActiveWindowId(id)
         return nextZ
       })
+      setActiveWindowId(id)
     },
     []
   )
@@ -386,26 +383,45 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("open-app", handleOpenApp)
   }, [openWindow, bringToFront])
 
+  const contextValue = React.useMemo(
+    () => ({
+      windows,
+      activeWindowId,
+      comingSoonApp,
+      openWindow,
+      closeWindow,
+      minimizeWindow,
+      maximizeWindow,
+      bringToFront,
+      toggleWindow,
+      updatePosition,
+      openComingSoonDialog,
+      closeComingSoonDialog,
+      isAboutOpen,
+      openAboutDialog,
+      closeAboutDialog,
+    }),
+    [
+      windows,
+      activeWindowId,
+      comingSoonApp,
+      openWindow,
+      closeWindow,
+      minimizeWindow,
+      maximizeWindow,
+      bringToFront,
+      toggleWindow,
+      updatePosition,
+      openComingSoonDialog,
+      closeComingSoonDialog,
+      isAboutOpen,
+      openAboutDialog,
+      closeAboutDialog,
+    ]
+  )
+
   return (
-    <DesktopContext.Provider
-      value={{
-        windows,
-        activeWindowId,
-        comingSoonApp,
-        openWindow,
-        closeWindow,
-        minimizeWindow,
-        maximizeWindow,
-        bringToFront,
-        toggleWindow,
-        updatePosition,
-        openComingSoonDialog,
-        closeComingSoonDialog,
-        isAboutOpen,
-        openAboutDialog,
-        closeAboutDialog,
-      }}
-    >
+    <DesktopContext.Provider value={contextValue}>
       {children}
     </DesktopContext.Provider>
   )
