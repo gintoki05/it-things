@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useAuth } from "@/lib/auth"
 
 export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team"
 
@@ -17,11 +18,14 @@ export interface WindowState {
   size: { width: number; height: number }
   defaultSize: { width: number; height: number }
   defaultPos: { x: number; y: number }
+  isComingSoon?: boolean
+  adminOnly?: boolean
 }
 
 interface DesktopContextType {
   windows: Record<AppId, WindowState>
   activeWindowId: AppId | null
+  comingSoonApp: WindowState | null
   openWindow: (id: AppId) => void
   closeWindow: (id: AppId) => void
   minimizeWindow: (id: AppId) => void
@@ -29,6 +33,8 @@ interface DesktopContextType {
   bringToFront: (id: AppId) => void
   toggleWindow: (id: AppId) => void
   updatePosition: (id: AppId, pos: { x: number; y: number }) => void
+  openComingSoonDialog: (app: WindowState) => void
+  closeComingSoonDialog: () => void
 }
 
 const DesktopContext = React.createContext<DesktopContextType | undefined>(undefined)
@@ -61,6 +67,7 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 720, height: 580 },
     defaultSize: { width: 720, height: 580 },
     defaultPos: { x: 140, y: 44 },
+    isComingSoon: true,
   },
   splitbill: {
     id: "splitbill",
@@ -75,6 +82,7 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 760, height: 600 },
     defaultSize: { width: 760, height: 600 },
     defaultPos: { x: 170, y: 64 },
+    isComingSoon: true,
   },
   kas: {
     id: "kas",
@@ -89,6 +97,7 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 760, height: 570 },
     defaultSize: { width: 760, height: 570 },
     defaultPos: { x: 200, y: 84 },
+    isComingSoon: true,
   },
   team: {
     id: "team",
@@ -103,13 +112,35 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 740, height: 560 },
     defaultSize: { width: 740, height: 560 },
     defaultPos: { x: 230, y: 104 },
+    adminOnly: true,
   },
 }
 
 export function DesktopProvider({ children }: { children: React.ReactNode }) {
+  const { isAdmin } = useAuth()
   const [windows, setWindows] = React.useState<Record<AppId, WindowState>>(INITIAL_WINDOWS)
   const [activeWindowId, setActiveWindowId] = React.useState<AppId | null>("vote")
   const [topZIndex, setTopZIndex] = React.useState(20)
+  const [comingSoonApp, setComingSoonApp] = React.useState<WindowState | null>(null)
+
+  // Otomatis tutup jendela team jika user kehilangan status admin
+  React.useEffect(() => {
+    if (!isAdmin) {
+      setWindows((curr) => {
+        if (curr.team?.isOpen) {
+          return {
+            ...curr,
+            team: {
+              ...curr.team,
+              isOpen: false,
+            },
+          }
+        }
+        return curr
+      })
+      setActiveWindowId((curr) => (curr === "team" ? null : curr))
+    }
+  }, [isAdmin])
 
   const bringToFront = React.useCallback(
     (id: AppId) => {
@@ -133,8 +164,24 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
     []
   )
 
+  const openComingSoonDialog = React.useCallback((app: WindowState) => {
+    setComingSoonApp(app)
+  }, [])
+
+  const closeComingSoonDialog = React.useCallback(() => {
+    setComingSoonApp(null)
+  }, [])
+
   const openWindow = React.useCallback(
     (id: AppId) => {
+      const target = windows[id]
+      if (!target) return
+      if (target.adminOnly && !isAdmin) return
+      if (target.isComingSoon) {
+        setComingSoonApp(target)
+        return
+      }
+
       setWindows((curr) => {
         const win = curr[id]
         if (!win) return curr
@@ -149,7 +196,7 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
       })
       bringToFront(id)
     },
-    [bringToFront]
+    [windows, isAdmin, bringToFront]
   )
 
   const closeWindow = React.useCallback((id: AppId) => {
@@ -200,6 +247,14 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
 
   const toggleWindow = React.useCallback(
     (id: AppId) => {
+      const target = windows[id]
+      if (!target) return
+      if (target.adminOnly && !isAdmin) return
+      if (target.isComingSoon) {
+        setComingSoonApp(target)
+        return
+      }
+
       setWindows((curr) => {
         const win = curr[id]
         if (!win) return curr
@@ -230,7 +285,7 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
         bringToFront(id)
       }
     },
-    [activeWindowId, windows, bringToFront]
+    [activeWindowId, windows, isAdmin, bringToFront]
   )
 
   const updatePosition = React.useCallback((id: AppId, pos: { x: number; y: number }) => {
@@ -252,6 +307,7 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
       value={{
         windows,
         activeWindowId,
+        comingSoonApp,
         openWindow,
         closeWindow,
         minimizeWindow,
@@ -259,6 +315,8 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
         bringToFront,
         toggleWindow,
         updatePosition,
+        openComingSoonDialog,
+        closeComingSoonDialog,
       }}
     >
       {children}

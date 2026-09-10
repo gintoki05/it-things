@@ -270,6 +270,36 @@ export function useVoteStore() {
     }
   }
 
+  // ─── Update Group (Title, Description, Emoji) ─────────────
+  const updateGroup = async (
+    groupId: string,
+    updates: { title?: string; description?: string; emoji?: string }
+  ): Promise<{ success: boolean; error?: string }> => {
+    // Optimistic update
+    setGroups((prev) =>
+      prev.map((g) => (g.id === groupId ? { ...g, ...updates } : g))
+    )
+
+    if (!isSupabaseConfigured || !supabase) return { success: true }
+
+    try {
+      const dbPayload: { title?: string; description?: string | null; emoji?: string } = {}
+      if (updates.title !== undefined) dbPayload.title = updates.title
+      if (updates.description !== undefined) dbPayload.description = updates.description || null
+      if (updates.emoji !== undefined) dbPayload.emoji = updates.emoji
+
+      const { error } = await supabase.from("vote_groups").update(dbPayload).eq("id", groupId)
+      if (error) {
+        await fetchData()
+        return { success: false, error: error.message }
+      }
+      return { success: true }
+    } catch (err) {
+      await fetchData()
+      return { success: false, error: err instanceof Error ? err.message : "Gagal memperbarui group." }
+    }
+  }
+
   // ─── Add Option ──────────────────────────────────────────
   const addOption = async (
     groupId: string,
@@ -452,6 +482,7 @@ export function useVoteStore() {
     tableMissing,
     isUsingSupabase,
     createGroup,
+    updateGroup,
     deleteGroup,
     toggleCloseGroup,
     addOption,

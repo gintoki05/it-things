@@ -5,11 +5,12 @@ import { useAuth } from "@/lib/auth"
 import {
   useVoteStore,
   VoteGroup,
+  VoteOption,
   VoteType,
   isGroupArchived,
   daysRemaining,
 } from "@/lib/vote-store"
-import { detectEmoji } from "@/lib/emoji-helper"
+import { RetroIcon } from "@/components/ui/retro-icon"
 import {
   Plus,
   RotateCw,
@@ -24,11 +25,46 @@ import {
   Vote,
   LayoutList,
   Eye,
+  Pencil,
+  Check,
+  X,
+  Trophy,
+  Share2,
+  Calendar,
+  Clock,
 } from "lucide-react"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { UserAvatar } from "@/components/retro/user-avatar"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 // ─── Helpers ─────────────────────────────────────────────────
+function formatDateTime(dateStr?: string) {
+  if (!dateStr) return ""
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return ""
+  const dateFormatted = d.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  })
+  const timeFormatted = d.toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+  return `${dateFormatted}, ${timeFormatted} WIB`
+}
+
+function formatDateShort(dateStr?: string) {
+  if (!dateStr) return ""
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return ""
+  return d.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  })
+}
+
 function VoteTypeBadge({ type }: { type: VoteType }) {
   return (
     <span
@@ -74,6 +110,8 @@ function VoteBar({ count, max }: { count: number; max: number }) {
   )
 }
 
+const PRESET_ICONS = ["🗳️", "💡", "☕", "🍕", "🎮", "🎯", "📅", "👥", "🏆", "💰"]
+
 // ─── Create Group Modal ──────────────────────────────────────
 function CreateGroupModal({
   onClose,
@@ -85,6 +123,7 @@ function CreateGroupModal({
   const [title, setTitle] = React.useState("")
   const [desc, setDesc] = React.useState("")
   const [emoji, setEmoji] = React.useState("🗳️")
+  const [showPicker, setShowPicker] = React.useState(false)
   const [voteType, setVoteType] = React.useState<VoteType>("single")
   const [loading, setLoading] = React.useState(false)
 
@@ -92,7 +131,8 @@ function CreateGroupModal({
     e.preventDefault()
     if (!title.trim()) return
     setLoading(true)
-    await onCreate(title.trim(), desc.trim(), emoji || "🗳️", voteType)
+    const finalEmoji = emoji.trim() || "🗳️"
+    await onCreate(title.trim(), desc.trim(), finalEmoji, voteType)
     setLoading(false)
     onClose()
   }
@@ -102,34 +142,77 @@ function CreateGroupModal({
       <div className="retro-window-frame max-w-sm w-full rounded-[4px] overflow-hidden shadow-[5px_5px_0px_rgba(0,0,0,0.3)] bg-white flex flex-col">
         <div className="retro-titlebar px-3 py-1.5 flex items-center justify-between font-mono text-xs font-bold text-[#14253D]">
           <div className="flex items-center gap-1.5">
-            <Vote className="size-3.5 text-[#1E4E8C]" />
+            <RetroIcon name="vote" iconSize={32} className="size-3.5 object-contain" />
             <span>BUAT_VOTE_GROUP.EXE</span>
           </div>
           <button type="button" onClick={onClose} className="text-[#526374] hover:text-black font-bold px-1">×</button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-3">
-          {/* Emoji + Title */}
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={emoji}
-              onChange={(e) => setEmoji(e.target.value)}
-              maxLength={2}
-              className="w-12 h-8 text-center text-lg border border-[#95A5B5] rounded-[2px] bg-[#FAFBFD] focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
-            />
-            <input
-              type="text"
-              placeholder="Judul vote group..."
-              value={title}
-              onChange={(e) => {
-                setTitle(e.target.value)
-                const detected = detectEmoji(e.target.value)
-                if (detected && detected !== "📦") setEmoji(detected)
-              }}
-              required
-              className="flex-1 h-8 px-2 border border-[#95A5B5] rounded-[2px] bg-[#FAFBFD] text-xs font-mono focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
-            />
+          {/* Icon Selector + Title Input */}
+          <div className="space-y-1.5">
+            <div className="flex gap-2">
+              {/* Icon Preview / Picker Toggle Button */}
+              <button
+                type="button"
+                onClick={() => setShowPicker(!showPicker)}
+                title="Pilih Icon / Emoji"
+                className="size-9 rounded-[2px] border border-[#95A5B5] bg-[#FAFBFD] hover:bg-[#EEF2F6] flex items-center justify-center shrink-0 transition-colors shadow-sm cursor-pointer"
+              >
+                <RetroIcon name={emoji || "vote"} iconSize={32} className="size-6 object-contain" />
+              </button>
+
+              {/* Title input - typing here will NEVER alter emoji */}
+              <input
+                type="text"
+                placeholder="Judul vote group..."
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+                className="flex-1 h-9 px-2.5 border border-[#95A5B5] rounded-[2px] bg-[#FAFBFD] text-xs font-mono focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
+              />
+            </div>
+
+            {/* Quick Icon Selector Pallet */}
+            <div className="p-2 bg-[#F1F5F9] border border-[#CBD5E1] rounded-[2px] space-y-1.5">
+              <div className="flex items-center justify-between text-[9px] font-mono text-gray-500">
+                <span>PILIH ICON:</span>
+                <span className="text-gray-400">klik untuk mengganti</span>
+              </div>
+              <div className="flex flex-wrap gap-1 items-center">
+                {PRESET_ICONS.map((item) => {
+                  const isSelected = emoji === item || (!emoji.trim() && item === "🗳️")
+                  return (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setEmoji(item)}
+                      className={`size-7 rounded flex items-center justify-center border transition-all cursor-pointer ${
+                        isSelected
+                          ? "bg-[#1E4E8C] border-[#102A45] shadow-inner"
+                          : "bg-white border-[#CBD5E1] hover:bg-slate-200"
+                      }`}
+                    >
+                      <RetroIcon name={item} iconSize={32} className="size-4 object-contain" />
+                    </button>
+                  )
+                })}
+                {/* Custom input */}
+                <input
+                  type="text"
+                  placeholder="Ketik..."
+                  value={PRESET_ICONS.includes(emoji) ? "" : emoji}
+                  onChange={(e) => {
+                    setEmoji(e.target.value)
+                  }}
+                  onBlur={() => {
+                    if (!emoji.trim()) setEmoji("🗳️")
+                  }}
+                  className="w-14 h-7 text-center text-xs border border-[#CBD5E1] bg-white rounded font-mono focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
+                  title="Emoji / simbol kustom"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Description */}
@@ -148,7 +231,7 @@ function CreateGroupModal({
               <button
                 type="button"
                 onClick={() => setVoteType("single")}
-                className={`p-2 border rounded-[2px] text-left transition-colors ${
+                className={`p-2 border rounded-[2px] text-left transition-colors cursor-pointer ${
                   voteType === "single"
                     ? "bg-[#1E4E8C] text-white border-[#102A45]"
                     : "bg-white text-[#14253D] border-[#95A5B5] hover:bg-[#EEF2F6]"
@@ -160,7 +243,7 @@ function CreateGroupModal({
               <button
                 type="button"
                 onClick={() => setVoteType("multiple")}
-                className={`p-2 border rounded-[2px] text-left transition-colors ${
+                className={`p-2 border rounded-[2px] text-left transition-colors cursor-pointer ${
                   voteType === "multiple"
                     ? "bg-[#1E4E8C] text-white border-[#102A45]"
                     : "bg-white text-[#14253D] border-[#95A5B5] hover:bg-[#EEF2F6]"
@@ -180,14 +263,14 @@ function CreateGroupModal({
             <button
               type="button"
               onClick={onClose}
-              className="retro-button-3d px-3 py-1 text-xs font-mono font-bold rounded-[2px]"
+              className="retro-button-3d px-3 py-1 text-xs font-mono font-bold rounded-[2px] cursor-pointer"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={loading || !title.trim()}
-              className="px-3 py-1 bg-[#1E4E8C] hover:bg-[#153A6B] disabled:opacity-50 text-white text-xs font-mono font-bold rounded-[2px] border border-[#102A45] flex items-center gap-1"
+              className="px-3 py-1 bg-[#1E4E8C] hover:bg-[#153A6B] disabled:opacity-50 text-white text-xs font-mono font-bold rounded-[2px] border border-[#102A45] flex items-center gap-1 cursor-pointer"
             >
               <Plus className="size-3" />
               {loading ? "Membuat..." : "Buat Group"}
@@ -210,10 +293,12 @@ function GroupCard({ group, onClick }: { group: VoteGroup; onClick: () => void }
     <button
       type="button"
       onClick={onClick}
-      className="w-full text-left p-3 bg-white border border-[#CBD5E1] rounded-[3px] hover:border-[#7D8E9E] hover:bg-[#F8FAFC] transition-all group"
+      className="w-full text-left p-3 bg-white border border-[#CBD5E1] rounded-[3px] hover:border-[#7D8E9E] hover:bg-[#F8FAFC] transition-all group cursor-pointer"
     >
       <div className="flex items-start gap-2.5">
-        <span className="text-2xl shrink-0 mt-0.5">{group.emoji}</span>
+        <div className="size-9 rounded bg-[#F1F5F9] border border-[#CBD5E1] flex items-center justify-center shrink-0 mt-0.5">
+          <RetroIcon name={group.emoji || "vote"} iconSize={32} className="size-6 object-contain" />
+        </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap mb-1">
             <span className="font-bold text-xs text-[#14253D] truncate">{group.title}</span>
@@ -223,14 +308,18 @@ function GroupCard({ group, onClick }: { group: VoteGroup; onClick: () => void }
           {group.description && (
             <p className="text-[10px] text-gray-500 truncate mb-1">{group.description}</p>
           )}
-          <div className="flex items-center gap-3 text-[10px] text-gray-500 font-mono">
+          <div className="flex items-center gap-2 text-[10px] text-gray-500 font-mono flex-wrap">
             <span>{group.options.length} opsi</span>
             <span>·</span>
             <span>{totalVotes} vote</span>
             <span>·</span>
-            <span>{uniqueVoters} voter</span>
-            <span>·</span>
             <span>by {group.createdByName.split(" ")[0]}</span>
+            {group.createdAt && (
+              <>
+                <span>·</span>
+                <span className="text-gray-400">{formatDateShort(group.createdAt)}</span>
+              </>
+            )}
           </div>
         </div>
         <span className="text-[#7D8E9E] group-hover:text-[#1E4E8C] text-xs font-mono shrink-0">›</span>
@@ -251,6 +340,8 @@ function GroupDetail({
   onDeleteOption,
   onToggleClose,
   onDeleteGroup,
+  onUpdateGroup,
+  onToast,
 }: {
   group: VoteGroup
   currentUserId: string | null
@@ -262,10 +353,30 @@ function GroupDetail({
   onDeleteOption: (optionId: string) => void
   onToggleClose: () => void
   onDeleteGroup: () => void
+  onUpdateGroup: (updates: { title?: string; description?: string; emoji?: string }) => Promise<{ success: boolean; error?: string }>
+  onToast?: (type: "success" | "error", msg: string) => void
 }) {
   const [newOptionName, setNewOptionName] = React.useState("")
   const [addingOption, setAddingOption] = React.useState(false)
-  const [confirmDelete, setConfirmDelete] = React.useState(false)
+  const [showDeleteGroupDialog, setShowDeleteGroupDialog] = React.useState(false)
+  const [optionToDelete, setOptionToDelete] = React.useState<VoteOption | null>(null)
+  const [showToggleCloseDialog, setShowToggleCloseDialog] = React.useState(false)
+  const [isDeleting, setIsDeleting] = React.useState(false)
+  const [isTogglingClose, setIsTogglingClose] = React.useState(false)
+  const [copiedWA, setCopiedWA] = React.useState(false)
+
+  // Edit group state
+  const [isEditing, setIsEditing] = React.useState(false)
+  const [editTitle, setEditTitle] = React.useState(group.title)
+  const [editDesc, setEditDesc] = React.useState(group.description || "")
+  const [editEmoji, setEditEmoji] = React.useState(group.emoji || "🗳️")
+  const [isSavingEdit, setIsSavingEdit] = React.useState(false)
+
+  React.useEffect(() => {
+    setEditTitle(group.title)
+    setEditDesc(group.description || "")
+    setEditEmoji(group.emoji || "🗳️")
+  }, [group.title, group.description, group.emoji])
 
   const archived = isGroupArchived(group)
   const days = daysRemaining(group)
@@ -275,12 +386,82 @@ function GroupDetail({
   const maxVotes = Math.max(...group.options.map((o) => o.voters.length), 0)
   const totalVotes = group.options.reduce((acc, o) => acc + o.voters.length, 0)
 
+  const sortedOptions = React.useMemo(() => {
+    return [...group.options].sort((a, b) => b.voters.length - a.voters.length)
+  }, [group.options])
+
+  const top3 = React.useMemo(() => {
+    return sortedOptions.filter((o) => o.voters.length > 0).slice(0, 3)
+  }, [sortedOptions])
+
+  const handleShareWhatsApp = () => {
+    const uniqueVoters = new Set(group.options.flatMap((o) => o.voters.map((v) => v.id))).size
+    const statusStr = archived ? "🔒 Selesai (Arsip)" : "🟢 Masih Aktif"
+    const typeStr = group.voteType === "single" ? "Single Vote (1 Suara/Orang)" : "Multiple Vote (Boleh Banyak Pilihan)"
+
+    const medals = ["🥇", "🥈", "🥉"]
+
+    const now = new Date()
+    const dateTimeStr = `${now.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    })} pukul ${now.toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })} WIB`
+
+    const lines = [
+      `🗳️ *HASIL VOTING: ${group.title.toUpperCase()}*`,
+      ...(group.description ? [`_${group.description}_`] : []),
+      `📅 *Waktu:* ${dateTimeStr}`,
+      `---------------------------------`,
+      `📊 *Status:* ${statusStr}`,
+      `⚙️ *Tipe:* ${typeStr}`,
+      `👥 *Partisipan:* ${uniqueVoters} orang · ${totalVotes} total suara`,
+      `---------------------------------`,
+      `🏆 *KLASEMEN / HASIL VOTING:*`,
+      ...sortedOptions.map((opt, idx) => {
+        const medal = idx < 3 && opt.voters.length > 0 ? `${medals[idx]} ` : `${idx + 1}. `
+        const pct = totalVotes > 0 ? Math.round((opt.voters.length / totalVotes) * 100) : 0
+        return `${medal}*${opt.name}*: ${opt.voters.length} suara (${pct}%)`
+      }),
+      `---------------------------------`,
+      `_Akses & tentukan pilihanmu di it-things! 🚀_`,
+    ]
+
+    const text = lines.join("\n")
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text)
+    }
+    setCopiedWA(true)
+    setTimeout(() => setCopiedWA(false), 2500)
+    if (onToast) {
+      onToast("success", "Format WhatsApp berhasil disalin ke clipboard!")
+    }
+  }
+
+  const handleSaveEdit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!editTitle.trim()) return
+    setIsSavingEdit(true)
+    const finalEmoji = editEmoji.trim() || "🗳️"
+    const res = await onUpdateGroup({
+      title: editTitle.trim(),
+      description: editDesc.trim(),
+      emoji: finalEmoji,
+    })
+    setIsSavingEdit(false)
+    if (res.success) {
+      setIsEditing(false)
+    }
+  }
+
   const handleAddOption = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newOptionName.trim()) return
     setAddingOption(true)
-    const emoji = detectEmoji(newOptionName.trim())
-    await onAddOption(newOptionName.trim(), emoji !== "📦" ? emoji : "📌")
+    await onAddOption(newOptionName.trim(), "📌")
     setNewOptionName("")
     setAddingOption(false)
   }
@@ -293,68 +474,251 @@ function GroupDetail({
           <button
             type="button"
             onClick={onBack}
-            className="p-1 hover:bg-[#EEF2F6] rounded text-[#526374] hover:text-[#14253D] transition-colors shrink-0"
+            className="p-1 hover:bg-[#EEF2F6] rounded text-[#526374] hover:text-[#14253D] transition-colors shrink-0 cursor-pointer"
           >
             <ChevronLeft className="size-4" />
           </button>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-0.5">
-              <span className="text-xl">{group.emoji}</span>
-              <span className="font-bold text-sm text-[#14253D]">{group.title}</span>
-              <VoteTypeBadge type={group.voteType} />
-              <StatusBadge archived={archived} days={days} />
-            </div>
-            {group.description && (
-              <p className="text-xs text-gray-500 ml-7">{group.description}</p>
-            )}
-            <div className="text-[10px] text-gray-400 font-mono ml-7 mt-0.5">
-              by {group.createdByName} · {totalVotes} total vote
-              {!archived && days > 0 && ` · berakhir dalam ${days} hari`}
-              {!archived && days === 0 && " · berakhir hari ini"}
-            </div>
-          </div>
-          {/* Manage buttons */}
-          {canManage && (
-            <div className="flex items-center gap-1 shrink-0">
-              <button
-                type="button"
-                onClick={onToggleClose}
-                title={archived ? "Buka kembali voting" : "Tutup voting"}
-                className="p-1.5 hover:bg-[#EEF2F6] rounded text-[#526374] hover:text-[#14253D] transition-colors"
-              >
-                {archived ? <Unlock className="size-3.5" /> : <Lock className="size-3.5" />}
-              </button>
-              {!confirmDelete ? (
+
+          {isEditing ? (
+            <form onSubmit={handleSaveEdit} className="flex-1 min-w-0 space-y-2">
+              <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-[#1E4E8C] uppercase">
+                <Pencil className="size-3" />
+                <span>Edit Judul, Deskripsi & Icon:</span>
+              </div>
+
+              {/* Icon Preview + Title input */}
+              <div className="flex gap-2">
+                <div className="size-9 rounded-[2px] border border-[#95A5B5] bg-[#FAFBFD] flex items-center justify-center shrink-0 shadow-sm">
+                  <RetroIcon name={editEmoji || "vote"} iconSize={32} className="size-6 object-contain" />
+                </div>
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  placeholder="Judul vote group..."
+                  required
+                  autoFocus
+                  className="flex-1 h-9 px-2.5 bg-[#FAFBFD] border border-[#1E4E8C] rounded-[2px] text-xs font-bold font-mono focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
+                />
+              </div>
+
+              {/* Quick Icon Selector Pallet */}
+              <div className="p-1.5 bg-[#F1F5F9] border border-[#CBD5E1] rounded-[2px] space-y-1">
+                <div className="flex items-center justify-between text-[9px] font-mono text-gray-500">
+                  <span>GANTI ICON:</span>
+                  <span className="text-gray-400">klik icon atau ketik</span>
+                </div>
+                <div className="flex flex-wrap gap-1 items-center">
+                  {PRESET_ICONS.map((item) => {
+                    const isSelected = editEmoji === item || (!editEmoji.trim() && item === "🗳️")
+                    return (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => setEditEmoji(item)}
+                        className={`size-6 rounded flex items-center justify-center border transition-all cursor-pointer ${
+                          isSelected
+                            ? "bg-[#1E4E8C] border-[#102A45] shadow-inner"
+                            : "bg-white border-[#CBD5E1] hover:bg-slate-200"
+                        }`}
+                      >
+                        <RetroIcon name={item} iconSize={32} className="size-3.5 object-contain" />
+                      </button>
+                    )
+                  })}
+                  <input
+                    type="text"
+                    placeholder="Ketik..."
+                    value={PRESET_ICONS.includes(editEmoji) ? "" : editEmoji}
+                    onChange={(e) => setEditEmoji(e.target.value)}
+                    onBlur={() => {
+                      if (!editEmoji.trim()) setEditEmoji("🗳️")
+                    }}
+                    className="w-14 h-6 text-center text-xs border border-[#CBD5E1] bg-white rounded font-mono focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
+                    title="Emoji / simbol kustom"
+                  />
+                </div>
+              </div>
+
+              {/* Description */}
+              <input
+                type="text"
+                value={editDesc}
+                onChange={(e) => setEditDesc(e.target.value)}
+                placeholder="Deskripsi (opsional)..."
+                className="w-full h-7 px-2 bg-[#FAFBFD] border border-[#95A5B5] rounded-[2px] text-[11px] font-mono focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
+              />
+
+              <div className="flex items-center gap-1.5 pt-0.5">
+                <button
+                  type="submit"
+                  disabled={isSavingEdit || !editTitle.trim()}
+                  className="h-6 px-2.5 bg-[#1E4E8C] hover:bg-[#153A6B] disabled:opacity-50 text-white font-mono text-[10px] font-bold rounded-[2px] flex items-center gap-1 border border-[#102A45] cursor-pointer"
+                >
+                  <Check className="size-3" />
+                  {isSavingEdit ? "Menyimpan..." : "Simpan"}
+                </button>
                 <button
                   type="button"
-                  onClick={() => setConfirmDelete(true)}
+                  onClick={() => {
+                    setEditTitle(group.title)
+                    setEditDesc(group.description || "")
+                    setEditEmoji(group.emoji || "🗳️")
+                    setIsEditing(false)
+                  }}
+                  className="h-6 px-2 bg-white text-[#526374] hover:bg-[#EEF2F6] font-mono text-[10px] rounded-[2px] flex items-center gap-1 border border-[#95A5B5] cursor-pointer"
+                >
+                  <X className="size-3" />
+                  Batal
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                <div className="size-7 rounded bg-[#F1F5F9] border border-[#CBD5E1] flex items-center justify-center shrink-0">
+                  <RetroIcon name={group.emoji || "vote"} iconSize={32} className="size-4.5 object-contain" />
+                </div>
+                <span className="font-bold text-sm text-[#14253D]">{group.title}</span>
+                <VoteTypeBadge type={group.voteType} />
+                <StatusBadge archived={archived} days={days} />
+              </div>
+              {group.description && (
+                <p className="text-xs text-gray-500 ml-9">{group.description}</p>
+              )}
+              <div className="text-[10px] text-gray-500 font-mono ml-9 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                <span>oleh <span className="font-semibold text-gray-700">{group.createdByName}</span></span>
+                {group.createdAt && (
+                  <>
+                    <span>·</span>
+                    <span className="text-gray-400">{formatDateTime(group.createdAt)}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Action buttons (Share WA & Manage) */}
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={handleShareWhatsApp}
+              title="Salin format WhatsApp ke clipboard"
+              className="h-7 px-2 bg-[#25D366] hover:bg-[#1EBE5D] text-white font-mono text-[10px] font-bold rounded-[2px] flex items-center gap-1 border border-[#128C7E] shadow-sm cursor-pointer transition-colors active:translate-y-px"
+            >
+              {copiedWA ? <Check className="size-3" /> : <Share2 className="size-3" />}
+              <span className="hidden sm:inline">{copiedWA ? "Disalin!" : "Copy WA"}</span>
+            </button>
+
+            {canManage && !isEditing && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditTitle(group.title)
+                    setEditDesc(group.description || "")
+                    setEditEmoji(group.emoji || "🗳️")
+                    setIsEditing(true)
+                  }}
+                  title="Edit judul & deskripsi"
+                  className="p-1.5 hover:bg-[#EEF2F6] rounded text-[#526374] hover:text-[#1E4E8C] transition-colors cursor-pointer"
+                >
+                  <Pencil className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowToggleCloseDialog(true)}
+                  title={archived ? "Buka kembali voting" : "Tutup voting"}
+                  className="p-1.5 hover:bg-[#EEF2F6] rounded text-[#526374] hover:text-[#14253D] transition-colors cursor-pointer"
+                >
+                  {archived ? <Unlock className="size-3.5 text-emerald-600" /> : <Lock className="size-3.5 text-amber-600" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteGroupDialog(true)}
                   title="Hapus group"
-                  className="p-1.5 hover:bg-red-50 rounded text-gray-400 hover:text-red-600 transition-colors"
+                  className="p-1.5 hover:bg-red-50 rounded text-gray-400 hover:text-red-600 transition-colors cursor-pointer"
                 >
                   <Trash2 className="size-3.5" />
                 </button>
-              ) : (
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={onDeleteGroup}
-                    className="px-2 py-0.5 bg-red-600 text-white text-[10px] font-mono font-bold rounded border border-red-800"
-                  >
-                    Hapus
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDelete(false)}
-                    className="px-2 py-0.5 bg-white text-[#526374] text-[10px] font-mono rounded border border-[#95A5B5]"
-                  >
-                    Batal
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+              </>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Top 3 Leaderboard Card */}
+      {top3.length > 0 && (
+        <div className="bg-white border border-[#95A5B5] rounded-[3px] p-3 space-y-2.5">
+          <div className="flex items-center justify-between pb-1 border-b border-[#E2E8F0]">
+            <div className="font-mono text-[11px] font-bold text-[#14253D] flex items-center gap-1.5">
+              <Trophy className="size-3.5 text-amber-500" />
+              <span>{top3.length === 1 ? "PILIHAN TERTINGGI" : `TOP ${top3.length} PILIHAN`}</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {top3.map((opt, idx) => {
+              const medalConfig = [
+                {
+                  badge: "bg-amber-100 text-amber-800 border-amber-300",
+                  card: "bg-gradient-to-b from-amber-50/70 to-white border-amber-300 shadow-sm",
+                  label: "Juara 1",
+                  medal: "🥇",
+                },
+                {
+                  badge: "bg-slate-100 text-slate-700 border-slate-300",
+                  card: "bg-gradient-to-b from-slate-50/70 to-white border-slate-300",
+                  label: "Juara 2",
+                  medal: "🥈",
+                },
+                {
+                  badge: "bg-orange-100 text-orange-800 border-orange-300",
+                  card: "bg-gradient-to-b from-orange-50/70 to-white border-orange-300",
+                  label: "Juara 3",
+                  medal: "🥉",
+                },
+              ][idx]
+
+              const pct = totalVotes > 0 ? Math.round((opt.voters.length / totalVotes) * 100) : 0
+
+              return (
+                <div
+                  key={opt.id}
+                  className={`p-2.5 rounded-[3px] border flex flex-col justify-between relative overflow-hidden ${medalConfig.card}`}
+                >
+                  <div className="flex items-start justify-between gap-1.5 mb-1.5">
+                    <span className="text-xl leading-none">{medalConfig.medal}</span>
+                    <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border ${medalConfig.badge}`}>
+                      #{idx + 1} · {pct}%
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 font-bold text-xs text-[#14253D] truncate" title={opt.name}>
+                      <RetroIcon name={opt.emoji || "📌"} iconSize={32} className="size-3.5 object-contain shrink-0" />
+                      <span className="truncate">{opt.name}</span>
+                    </div>
+                    <div className="text-[10px] font-mono text-gray-500 mt-1 flex items-center justify-between">
+                      <span>{opt.voters.length} suara</span>
+                      <div className="flex -space-x-1">
+                        {opt.voters.slice(0, 3).map((v) => (
+                          <UserAvatar
+                            key={v.id}
+                            src={v.avatarUrl}
+                            name={v.name}
+                            size="size-3.5"
+                            textClass="text-[7px]"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Options */}
       <div className="bg-white border border-[#95A5B5] rounded-[3px] p-3 space-y-2">
@@ -369,31 +733,42 @@ function GroupDetail({
           </div>
         ) : (
           <div className="divide-y divide-[#F1F5F9]">
-            {group.options
-              .sort((a, b) => b.voters.length - a.voters.length)
-              .map((option) => {
-                const hasVoted = currentUserId ? option.voters.some((v) => v.id === currentUserId) : false
-                const canDeleteOpt = currentUserId && (option.proposedById === currentUserId || canManage)
+            {sortedOptions.map((option, idx) => {
+              const hasVoted = currentUserId ? option.voters.some((v) => v.id === currentUserId) : false
+              const canDeleteOpt = currentUserId && (option.proposedById === currentUserId || canManage)
+              const isTopRank = idx < 3 && option.voters.length > 0
+              const medalIcons = ["🥇", "🥈", "🥉"]
 
-                return (
-                  <div key={option.id} className="py-2.5 flex items-center gap-2.5">
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-base shrink-0">{option.emoji}</span>
-                        <span className="font-semibold text-xs text-[#14253D] truncate">{option.name}</span>
-                        {hasVoted && (
-                          <span className="text-[9px] font-mono text-[#1E4E8C] font-bold">✓ Voted</span>
-                        )}
-                        {canDeleteOpt && !archived && (
-                          <button
-                            type="button"
-                            onClick={() => onDeleteOption(option.id)}
-                            className="text-gray-300 hover:text-red-500 transition-colors"
-                          >
-                            <Trash2 className="size-3" />
-                          </button>
-                        )}
-                      </div>
+              return (
+                <div key={option.id} className="py-2.5 flex items-center gap-2.5">
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {isTopRank && (
+                        <span className="text-xs shrink-0" title={`Peringkat #${idx + 1}`}>
+                          {medalIcons[idx]}
+                        </span>
+                      )}
+                      <RetroIcon name={option.emoji || "📌"} iconSize={32} className="size-4 object-contain shrink-0" />
+                      <span className="font-semibold text-xs text-[#14253D] truncate">{option.name}</span>
+                      {isTopRank && (
+                        <span className="text-[9px] font-mono px-1 py-0.5 rounded font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                          #{idx + 1}
+                        </span>
+                      )}
+                      {hasVoted && (
+                        <span className="text-[9px] font-mono text-[#1E4E8C] font-bold">✓ Voted</span>
+                      )}
+                      {canDeleteOpt && !archived && (
+                        <button
+                          type="button"
+                          onClick={() => setOptionToDelete(option)}
+                          title="Hapus opsi ini"
+                          className="text-gray-300 hover:text-red-500 transition-colors cursor-pointer p-0.5"
+                        >
+                          <Trash2 className="size-3" />
+                        </button>
+                      )}
+                    </div>
                       <VoteBar count={option.voters.length} max={maxVotes} />
                       <div className="flex items-center gap-1">
                         {option.voters.slice(0, 8).map((v) => (
@@ -487,6 +862,92 @@ function GroupDetail({
           </div>
         </div>
       )}
+      {/* Confirm Delete Group Dialog */}
+      <ConfirmDialog
+        isOpen={showDeleteGroupDialog}
+        onClose={() => setShowDeleteGroupDialog(false)}
+        isLoading={isDeleting}
+        onConfirm={async () => {
+          setIsDeleting(true)
+          await onDeleteGroup()
+          setIsDeleting(false)
+          setShowDeleteGroupDialog(false)
+        }}
+        title="HAPUS_VOTE_GROUP.EXE"
+        message={
+          <>
+            Apakah Anda yakin ingin menghapus vote group{" "}
+            <span className="font-bold text-[#14253D]">"{group.title}"</span>?
+            <br />
+            Semua data voting dan opsi di dalamnya akan dihapus secara permanen.
+          </>
+        }
+        confirmText="Ya, Hapus Group"
+        cancelText="Batal"
+        variant="destructive"
+      />
+
+      {/* Confirm Delete Option Dialog */}
+      <ConfirmDialog
+        isOpen={Boolean(optionToDelete)}
+        onClose={() => setOptionToDelete(null)}
+        isLoading={isDeleting}
+        onConfirm={async () => {
+          if (optionToDelete) {
+            setIsDeleting(true)
+            await onDeleteOption(optionToDelete.id)
+            setIsDeleting(false)
+            setOptionToDelete(null)
+          }
+        }}
+        title="HAPUS_OPSI.EXE"
+        message={
+          <>
+            Apakah Anda yakin ingin menghapus opsi{" "}
+            <span className="font-bold text-[#14253D]">"{optionToDelete?.name}"</span>?
+            <br />
+            Semua suara peserta pada opsi ini akan ikut terhapus.
+          </>
+        }
+        confirmText="Ya, Hapus Opsi"
+        cancelText="Batal"
+        variant="destructive"
+      />
+
+      {/* Confirm Toggle Close / Reopen Dialog */}
+      <ConfirmDialog
+        isOpen={showToggleCloseDialog}
+        onClose={() => setShowToggleCloseDialog(false)}
+        isLoading={isTogglingClose}
+        onConfirm={async () => {
+          setIsTogglingClose(true)
+          await onToggleClose()
+          setIsTogglingClose(false)
+          setShowToggleCloseDialog(false)
+        }}
+        title={archived ? "BUKA_VOTING.EXE" : "TUTUP_VOTING.EXE"}
+        icon={archived ? <Unlock className="size-5 text-emerald-600" /> : <Lock className="size-5 text-amber-600" />}
+        message={
+          archived ? (
+            <>
+              Buka kembali sesi voting untuk group{" "}
+              <span className="font-bold text-[#14253D]">"{group.title}"</span>?
+              <br />
+              Peserta akan dapat kembali memberikan suara dan mengusulkan opsi.
+            </>
+          ) : (
+            <>
+              Apakah Anda yakin ingin menutup sesi voting untuk group{" "}
+              <span className="font-bold text-[#14253D]">"{group.title}"</span>?
+              <br />
+              Setelah ditutup, voting akan masuk ke tab arsip dan peserta tidak dapat memberikan suara lagi.
+            </>
+          )
+        }
+        confirmText={archived ? "Buka Kembali" : "Ya, Tutup Voting"}
+        cancelText="Batal"
+        variant={archived ? "default" : "warning"}
+      />
     </div>
   )
 }
@@ -494,7 +955,7 @@ function GroupDetail({
 // ─── Main VoteApp ─────────────────────────────────────────────
 export function VoteApp() {
   const { user, isAdmin, isGuest } = useAuth()
-  const { groups, isLoading, tableMissing, createGroup, deleteGroup, toggleCloseGroup, addOption, deleteOption, castVote, refresh } =
+  const { groups, isLoading, tableMissing, createGroup, updateGroup, deleteGroup, toggleCloseGroup, addOption, deleteOption, castVote, refresh } =
     useVoteStore()
 
   const [activeTab, setActiveTab] = React.useState<"all" | "active" | "archived">("active")
@@ -639,6 +1100,13 @@ export function VoteApp() {
             setSelectedGroupId(null)
             showToast("success", `Group "${selectedGroup.title}" dihapus.`)
           }}
+          onUpdateGroup={async (updates) => {
+            const res = await updateGroup(selectedGroup.id, updates)
+            if (res.success) showToast("success", "Judul vote group berhasil diperbarui.")
+            else showToast("error", res.error || "Gagal memperbarui group.")
+            return res
+          }}
+          onToast={showToast}
         />
       ) : isLoading ? (
         <div className="py-16 text-center font-mono text-xs text-gray-500 flex flex-col items-center gap-2">

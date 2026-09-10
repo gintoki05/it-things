@@ -78,7 +78,8 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
     }
   }, [isStartOpen])
 
-  const openWindows = Object.values(windows).filter((w) => w.isOpen)
+  const openWindows = Object.values(windows).filter((w) => w.isOpen && (!w.adminOnly || isAdmin))
+  const programItems = Object.values(windows).filter((item) => !item.adminOnly || isAdmin)
 
   return (
     <>
@@ -135,7 +136,7 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
               <div className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-500 font-mono">
                 Programs (.exe)
               </div>
-              {Object.values(windows).map((item) => (
+              {programItems.map((item) => (
                 <button
                   key={item.id}
                   type="button"
@@ -143,11 +144,23 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                     openWindow(item.id)
                     setIsStartOpen(false)
                   }}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-1.5 hover:bg-[#1E4E8C] hover:text-white rounded-[2px] transition-colors text-left"
+                  className={cn(
+                    "w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-[2px] transition-colors text-left",
+                    item.isComingSoon
+                      ? "hover:bg-[#1E4E8C]/20 text-[#14253D]"
+                      : "hover:bg-[#1E4E8C] hover:text-white"
+                  )}
                 >
                   <RetroIcon name={item.icon || item.id} iconSize={32} className="size-5 object-contain shrink-0" />
-                  <div className="min-w-0">
-                    <div className="font-bold text-[11px]">{item.filename}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-bold text-[11px] flex items-center justify-between gap-1">
+                      <span className="truncate">{item.filename}</span>
+                      {item.isComingSoon && (
+                        <span className="text-[8px] font-mono font-bold bg-amber-100 text-amber-800 border border-amber-300 px-1 py-0.2 rounded shrink-0">
+                          Soon
+                        </span>
+                      )}
+                    </div>
                     <div className="text-[9px] opacity-80 truncate">{item.title.split(" - ")[1]}</div>
                   </div>
                 </button>

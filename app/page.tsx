@@ -8,6 +8,7 @@ import { DesktopWindow } from "@/components/desktop/desktop-window"
 import { Taskbar } from "@/components/desktop/taskbar"
 import { GoogleLoginModal } from "@/components/auth/google-login-modal"
 import { PasscodeScreen } from "@/components/auth/passcode-screen"
+import { ComingSoonDialog } from "@/components/desktop/coming-soon-dialog"
 
 // Apps
 import { VoteApp } from "@/components/apps/vote-app"
@@ -17,7 +18,8 @@ import { KasApp } from "@/components/apps/kas-app"
 import { TeamApp } from "@/components/apps/team-app"
 
 function DesktopWorkspace() {
-  const { isPasscodeVerified, isPasscodeLoading, isGuest } = useAuth()
+  const { isPasscodeVerified, isPasscodeLoading, isGuest, isAdmin } = useAuth()
+  const { comingSoonApp, closeComingSoonDialog } = useDesktop()
   const [showLoginModal, setShowLoginModal] = React.useState(false)
 
   // Saat pertama kali memuat / reload, tunggu pengecekan storage selesai
@@ -103,13 +105,21 @@ function DesktopWorkspace() {
         <KasApp />
       </DesktopWindow>
 
-      {/* Retro Window: Team.exe */}
-      <DesktopWindow id="team">
-        <TeamApp />
-      </DesktopWindow>
+      {/* Retro Window: Team.exe (Khusus Admin) */}
+      {isAdmin && (
+        <DesktopWindow id="team">
+          <TeamApp />
+        </DesktopWindow>
+      )}
 
       {/* Bottom Retro Taskbar */}
       <Taskbar onOpenLoginModal={() => setShowLoginModal(true)} />
+
+      {/* Retro Coming Soon Dialog */}
+      <ComingSoonDialog
+        app={comingSoonApp}
+        onClose={closeComingSoonDialog}
+      />
 
       {/* Google Login / Access Gate Modal */}
       <GoogleLoginModal

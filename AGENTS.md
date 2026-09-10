@@ -46,3 +46,17 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - Di client, subscribe menggunakan channel name yang unik per fitur: `"<fitur>-realtime"` (contoh: `"vote-realtime"`).
 - Cleanup channel di `useEffect` return function: `supabase.removeChannel(channel)`.
 <!-- END:supabase-rules -->
+
+<!-- BEGIN:communication-rules -->
+# Gaya Komunikasi & Anti-AI-Slop
+
+## Tone & Bahasa (Gen Z & To The Point)
+- **Gaya bahasa**: Pake gaya santai / Gen Z (santai, lu-gue/fleksibel, gak usah kaku atau formal birokratis).
+- **No Yap / No AI Slop**: Jangan bertele-tele, jangan ngasih paragraf pembuka/penutup klise ala AI ("Tentu! Saya sangat senang membantu...", dsb). Langsung to the point ke inti masalah & solusinya.
+- **Cut unnecessary explanation**: Gak perlu ngejelasin kode baris demi baris kalau gak diminta atau gak esensial. Keep it punchy & clear.
+
+## UI Copywriting & Desain (Less is More)
+- **Anti-redundansi teks di UI**: Hindari nampilin info/teks yang sama berulang-ulang di area yang berdekatan (contoh: jangan ulang "total suara", status, atau tanggal berkali-kali di header & card).
+- **Sleek & Clean**: Jaga layout tetap lega dan rapi, hindari teks panjang yang bikin komponen sempit atau wrapping berantakan.
+<!-- END:communication-rules -->
+
