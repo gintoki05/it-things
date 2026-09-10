@@ -322,16 +322,22 @@ CREATE POLICY "team_members_insert" ON public.team_members
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL 
     AND user_id = auth.uid()::text 
-    AND (role = 'member' OR public.is_treasurer())
+    AND (role = 'member' OR public.is_admin() OR public.is_treasurer())
   );
 
 CREATE POLICY "team_members_update" ON public.team_members
   FOR UPDATE USING (
     auth.uid() IS NOT NULL 
-    AND (user_id = auth.uid()::text OR public.is_treasurer())
+    AND (user_id = auth.uid()::text OR public.is_admin() OR public.is_treasurer())
   ) WITH CHECK (
     auth.uid() IS NOT NULL 
-    AND (role = 'member' OR public.is_treasurer())
+    AND (role = 'member' OR public.is_admin() OR public.is_treasurer())
+  );
+
+CREATE POLICY "team_members_delete" ON public.team_members
+  FOR DELETE USING (
+    auth.uid() IS NOT NULL 
+    AND public.is_admin()
   );
 
 -- ============================================================

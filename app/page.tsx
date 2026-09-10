@@ -21,7 +21,7 @@ import { TeamApp } from "@/components/apps/team-app"
 import { ChatApp } from "@/components/apps/chat-app"
 
 function DesktopWorkspace() {
-  const { isPasscodeVerified, isPasscodeLoading, isGuest, isAdmin } = useAuth()
+  const { isPasscodeVerified, isPasscodeLoading, isGuest, isAdmin, isRecoveryMode } = useAuth()
   const { comingSoonApp, closeComingSoonDialog, isAboutOpen, closeAboutDialog } = useDesktop()
   const [showLoginModal, setShowLoginModal] = React.useState(false)
 
@@ -36,7 +36,7 @@ function DesktopWorkspace() {
     )
   }
 
-  if (!isPasscodeVerified) {
+  if (!isPasscodeVerified && !isRecoveryMode) {
     return <PasscodeScreen />
   }
 

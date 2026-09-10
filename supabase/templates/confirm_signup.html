@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Konfirmasi Pendaftaran Akun - IT-Things</title>
+  <!--[if mso]>
+  <style type="text/css">
+    body, table, td, a { font-family: Arial, Helvetica, sans-serif !important; }
+  </style>
+  <![endif]-->
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+  <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 32px 16px;">
+    <tr>
+      <td align="center">
+        <!-- Main Card -->
+        <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 520px; background-color: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);">
+          
+          <!-- Header Banner -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #102a45 0%, #1e4e8c 100%); background-color: #102a45; padding: 24px 28px; text-align: left;">
+              <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td>
+                    <!-- Retro Tag / Badge -->
+                    <div style="display: inline-block; background-color: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 4px; padding: 3px 8px; font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: bold; color: #93c5fd; letter-spacing: 0.5px; margin-bottom: 8px;">
+                      SECURITY_GATE.EXE // AUTH
+                    </div>
+                    <h1 style="margin: 0; font-size: 20px; font-weight: 700; color: #ffffff; line-height: 1.3;">
+                      Konfirmasi Pendaftaran Akun
+                    </h1>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Body Content -->
+          <tr>
+            <td style="padding: 28px 28px 24px 28px; color: #1e293b; font-size: 14px; line-height: 1.6;">
+              <p style="margin: 0 0 16px 0; font-size: 15px;">
+                Halo <strong>{{ .Data.name }}</strong>,
+              </p>
+              <p style="margin: 0 0 20px 0; color: #475569;">
+                Terima kasih telah mendaftar di <strong>IT-Things Suite</strong>. Satu langkah lagi untuk mengaktifkan akun Kamu. Silakan klik tombol verifikasi di bawah ini:
+              </p>
+
+              <!-- Primary CTA Button -->
+              <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 24px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="{{ .ConfirmationURL }}" target="_blank" style="display: inline-block; background-color: #1e4e8c; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 12px 28px; border-radius: 6px; box-shadow: 0 2px 4px rgba(30, 78, 140, 0.3); border: 1px solid #102a45;">
+                      Verifikasi & Aktifkan Akun
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- OTP Code Alternative -->
+              <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 6px; margin: 20px 0 16px 0; padding: 14px;">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0 0 6px 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-family: 'Courier New', Courier, monospace;">
+                      Kode Verifikasi (OTP)
+                    </p>
+                    <div style="font-family: 'Courier New', Courier, monospace; font-size: 24px; font-weight: 700; color: #0f172a; letter-spacing: 6px;">
+                      {{ .Token }}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Link Fallback -->
+              <p style="margin: 20px 0 8px 0; font-size: 12px; color: #64748b;">
+                Jika tombol di atas tidak berfungsi, salin dan buka tautan berikut di browsermu:
+              </p>
+              <p style="margin: 0 0 16px 0; font-size: 11px; word-break: break-all; color: #2563eb;">
+                <a href="{{ .ConfirmationURL }}" style="color: #2563eb; text-decoration: underline;">
+                  {{ .ConfirmationURL }}
+                </a>
+              </p>
+
+              <!-- Security Notice -->
+              <div style="background-color: #fef2f2; border-left: 3px solid #ef4444; padding: 10px 12px; border-radius: 0 4px 4px 0; margin-top: 20px;">
+                <p style="margin: 0; font-size: 11px; color: #991b1b; line-height: 1.4;">
+                  <strong>Penting:</strong> Tautan dan kode ini hanya berlaku terbatas. Jika Kamu tidak pernah merasa mendaftar di IT-Things, abaikan email ini dengan aman.
+                </p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 16px 28px; text-align: center; font-size: 11px; color: #94a3b8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+              <p style="margin: 0 0 4px 0;">
+                © 2026 <strong>IT-Things</strong> Internal Suite • Automated Security Dispatch
+              </p>
+              <p style="margin: 0; color: #cbd5e1;">
+                Email ini dikirim secara otomatis, mohon untuk tidak membalas.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

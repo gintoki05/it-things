@@ -130,20 +130,32 @@ export function ChatApp() {
   const [deleteTargetId, setDeleteTargetId] = React.useState<string | null>(null)
   const [isDeleting, setIsDeleting] = React.useState(false)
 
+  // Active Message selection (Tap to show actions on mobile)
+  const [activeMessageId, setActiveMessageId] = React.useState<string | null>(null)
+
   // Active Emoji Reaction Picker popover
   const [activeReactionPickerMessageId, setActiveReactionPickerMessageId] = React.useState<string | null>(null)
 
   React.useEffect(() => {
-    if (!activeReactionPickerMessageId) return
-    const handleOutsideClick = (e: MouseEvent) => {
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
       const target = e.target as HTMLElement
-      if (!target.closest(".reaction-picker-popover") && !target.closest(".reaction-picker-trigger")) {
+      if (
+        !target.closest(".reaction-picker-popover") &&
+        !target.closest(".reaction-picker-trigger") &&
+        !target.closest(".message-action-toolbar") &&
+        !target.closest(".message-bubble")
+      ) {
         setActiveReactionPickerMessageId(null)
+        setActiveMessageId(null)
       }
     }
     window.addEventListener("mousedown", handleOutsideClick)
-    return () => window.removeEventListener("mousedown", handleOutsideClick)
-  }, [activeReactionPickerMessageId])
+    window.addEventListener("touchstart", handleOutsideClick)
+    return () => {
+      window.removeEventListener("mousedown", handleOutsideClick)
+      window.removeEventListener("touchstart", handleOutsideClick)
+    }
+  }, [])
 
   // Timer update for 15-minute countdowns
   const [, setTick] = React.useState(0)
@@ -611,51 +623,52 @@ export function ChatApp() {
                   </div>
                 ) : isOwn ? (
                   /* Own Message Bubble (Right-aligned) */
-                  <div className="flex w-full justify-end items-end gap-1.5 my-1.5 group">
-                    {/* Hover Actions */}
+                  <div className="relative flex w-full justify-end items-end gap-1.5 my-2 group">
+                    {/* Action Toolbar */}
                     <div
                       className={cn(
-                        "flex items-center gap-0.5 bg-white/90 border border-gray-200 rounded px-1 py-0.5 shadow-sm text-gray-500 mb-1 transition-opacity",
-                        activeReactionPickerMessageId === msg.id
-                          ? "opacity-100"
-                          : "opacity-0 group-hover:opacity-100"
+                        "message-action-toolbar flex items-center gap-0.5 bg-white/95 border border-gray-300 rounded px-1.5 py-0.5 shadow-sm text-gray-500 transition-all z-20",
+                        "absolute -top-7.5 right-1 sm:relative sm:top-auto sm:right-auto sm:mb-1",
+                        activeReactionPickerMessageId === msg.id || activeMessageId === msg.id
+                          ? "opacity-100 scale-100 pointer-events-auto"
+                          : "opacity-0 scale-95 pointer-events-none sm:pointer-events-auto sm:group-hover:opacity-100 sm:group-hover:scale-100"
                       )}
                     >
-                      {/* Reaction Trigger & Centered Popover */}
+                      {/* Reaction Trigger & Popover */}
                       <div className="relative">
                         <button
                           type="button"
-                          onClick={() =>
+                          onClick={(e) => {
+                            e.stopPropagation()
                             setActiveReactionPickerMessageId(
                               activeReactionPickerMessageId === msg.id ? null : msg.id
                             )
-                          }
+                          }}
                           title="Beri reaksi emoji"
                           className={cn(
-                            "reaction-picker-trigger p-1 hover:text-amber-600 hover:bg-amber-50 rounded cursor-pointer transition-colors",
+                            "reaction-picker-trigger p-1.5 sm:p-1 hover:text-amber-600 hover:bg-amber-50 rounded cursor-pointer transition-colors",
                             activeReactionPickerMessageId === msg.id && "text-amber-600 bg-amber-50"
                           )}
                         >
-                          <SmilePlus className="size-3" />
+                          <SmilePlus className="size-3.5 sm:size-3" />
                         </button>
 
-                        {/* Adaptive Reaction Popover (menyesuaikan panjang pesan agar tidak bablas ke kanan pada pesan pendek dan tidak terpotong pada pesan panjang) */}
+                        {/* Reaction Popover */}
                         {activeReactionPickerMessageId === msg.id && (
                           <div
-                            className={cn(
-                              "reaction-picker-popover absolute bottom-full mb-2 flex items-center gap-0.5 bg-white border border-gray-300 rounded-full px-1.5 py-1 shadow-lg z-30 animate-in fade-in zoom-in-95 whitespace-nowrap",
-                              msg.message.length <= 25 ? "right-[-55px]" : "left-0"
-                            )}
+                            className="reaction-picker-popover absolute bottom-full right-0 mb-1.5 flex items-center gap-0.5 bg-white border border-gray-300 rounded-full px-1.5 py-1 shadow-lg z-30 animate-in fade-in zoom-in-95 whitespace-nowrap max-w-[calc(100vw-32px)]"
                           >
                             {REACTION_EMOJIS.map((emoji) => (
                               <button
                                 key={emoji}
                                 type="button"
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation()
                                   toggleReaction(msg.id, emoji, user)
                                   setActiveReactionPickerMessageId(null)
+                                  setActiveMessageId(null)
                                 }}
-                                className="size-6 flex items-center justify-center hover:scale-125 transition-transform rounded-full hover:bg-gray-100 text-xs cursor-pointer"
+                                className="size-7 sm:size-6 flex items-center justify-center hover:scale-125 transition-transform rounded-full hover:bg-gray-100 text-sm sm:text-xs cursor-pointer"
                               >
                                 {emoji}
                               </button>
@@ -667,31 +680,45 @@ export function ChatApp() {
                       {canEdit && (
                         <button
                           type="button"
-                          onClick={() => startEdit(msg)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            startEdit(msg)
+                            setActiveMessageId(null)
+                          }}
                           title={`Edit pesan (Sisa waktu: ${remainingMins} menit)`}
-                          className="p-1 hover:text-blue-600 hover:bg-blue-50 rounded cursor-pointer"
+                          className="p-1.5 sm:p-1 hover:text-blue-600 hover:bg-blue-50 rounded cursor-pointer"
                         >
-                          <Pencil className="size-3" />
+                          <Pencil className="size-3.5 sm:size-3" />
                         </button>
                       )}
                       {canDelete && (
                         <button
                           type="button"
-                          onClick={() => setDeleteTargetId(msg.id)}
-                          title={`Hapus pesan (Sisa waktu: ${remainingMins} menit)`}
-                          className="p-1 hover:text-red-600 hover:bg-red-50 rounded cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setDeleteTargetId(msg.id)
+                            setActiveMessageId(null)
+                          }}
+                          title={
+                            isAdmin
+                              ? "Hapus pesan ini (Hak Akses Admin)"
+                              : `Hapus pesan (Sisa waktu: ${remainingMins} menit)`
+                          }
+                          className="p-1.5 sm:p-1 hover:text-red-600 hover:bg-red-50 text-red-500 sm:text-gray-500 rounded cursor-pointer"
                         >
-                          <Trash2 className="size-3" />
+                          <Trash2 className="size-3.5 sm:size-3" />
                         </button>
                       )}
                     </div>
 
                     {/* Own Bubble Body & Reaction Pills */}
-                    <div className="max-w-[76%] flex flex-col items-end">
+                    <div className="max-w-[85%] sm:max-w-[76%] flex flex-col items-end">
                       <div
+                        onClick={() => setActiveMessageId((prev) => (prev === msg.id ? null : msg.id))}
                         className={cn(
-                          "w-full rounded-2xl rounded-br-xs px-3.5 py-2 shadow-sm text-[13px] leading-relaxed bg-[#1E4E8C] text-white border border-[#163B6B] select-text transition-all",
-                          isEditingThis && "ring-2 ring-blue-300 ring-offset-1"
+                          "message-bubble w-full rounded-2xl rounded-br-xs px-3.5 py-2 shadow-sm text-[13px] leading-relaxed bg-[#1E4E8C] text-white border border-[#163B6B] select-text transition-all cursor-pointer",
+                          isEditingThis && "ring-2 ring-blue-300 ring-offset-1",
+                          activeMessageId === msg.id && "ring-2 ring-blue-300 ring-offset-1"
                         )}
                       >
                         <div className="break-words whitespace-pre-wrap select-text flow-root">
@@ -732,7 +759,7 @@ export function ChatApp() {
                   </div>
                 ) : (
                   /* Other Team Member Bubble (Left-aligned) */
-                  <div className="flex w-full justify-start items-start gap-2 my-1.5 group">
+                  <div className="relative flex w-full justify-start items-start gap-2 my-2 group">
                     <UserAvatar
                       src={msg.userAvatar}
                       name={msg.userName}
@@ -741,7 +768,7 @@ export function ChatApp() {
                       className="mt-1 shrink-0"
                     />
 
-                    <div className="max-w-[76%] flex flex-col items-start">
+                    <div className="max-w-[85%] sm:max-w-[76%] flex flex-col items-start">
                       {/* Name & Role Header */}
                       <div className="flex items-center gap-1.5 mb-0.5 ml-1">
                         <span className="font-bold text-[11px] text-[#1E3A8A]">
@@ -764,14 +791,16 @@ export function ChatApp() {
                         )}
                       </div>
 
-                      <div className="flex items-end gap-1.5">
+                      <div className="relative flex items-end gap-1.5 w-full">
                         {/* Bubble Body */}
                         <div
+                          onClick={() => setActiveMessageId((prev) => (prev === msg.id ? null : msg.id))}
                           className={cn(
-                            "rounded-2xl rounded-tl-xs px-3.5 py-2 shadow-sm text-[13px] leading-relaxed select-text",
+                            "message-bubble rounded-2xl rounded-tl-xs px-3.5 py-2 shadow-sm text-[13px] leading-relaxed select-text transition-all cursor-pointer",
                             isMentioned
                               ? "bg-[#FFFDE7] border border-[#FACC15] text-[#1E293B] shadow-[2px_2px_0px_rgba(245,158,11,0.15)]"
-                              : "bg-white text-[#1E293B] border border-[#E2E8F0]"
+                              : "bg-white text-[#1E293B] border border-[#E2E8F0]",
+                            activeMessageId === msg.id && "ring-2 ring-[#1E4E8C]/60 ring-offset-1"
                           )}
                         >
                           <div className="break-words whitespace-pre-wrap select-text flow-root">
@@ -786,45 +815,49 @@ export function ChatApp() {
                           </div>
                         </div>
 
-                        {/* Hover Action Buttons for Other Messages */}
+                        {/* Action Buttons for Other Messages */}
                         <div
                           className={cn(
-                            "flex items-center gap-0.5 bg-white/90 border border-gray-200 rounded px-1 py-0.5 shadow-sm text-gray-500 mb-1 transition-opacity",
-                            activeReactionPickerMessageId === msg.id
-                              ? "opacity-100"
-                              : "opacity-0 group-hover:opacity-100"
+                            "message-action-toolbar flex items-center gap-0.5 bg-white/95 border border-gray-300 rounded px-1.5 py-0.5 shadow-sm text-gray-500 transition-all z-20",
+                            "absolute -top-7.5 left-1 sm:relative sm:top-auto sm:left-auto sm:mb-1",
+                            activeReactionPickerMessageId === msg.id || activeMessageId === msg.id
+                              ? "opacity-100 scale-100 pointer-events-auto"
+                              : "opacity-0 scale-95 pointer-events-none sm:pointer-events-auto sm:group-hover:opacity-100 sm:group-hover:scale-100"
                           )}
                         >
-                          {/* Reaction Trigger & Centered Popover */}
+                          {/* Reaction Trigger & Popover */}
                           <div className="relative">
                             <button
                               type="button"
-                              onClick={() =>
+                              onClick={(e) => {
+                                e.stopPropagation()
                                 setActiveReactionPickerMessageId(
                                   activeReactionPickerMessageId === msg.id ? null : msg.id
                                 )
-                              }
+                              }}
                               title="Beri reaksi emoji"
                               className={cn(
-                                "reaction-picker-trigger p-1 hover:text-amber-600 hover:bg-amber-50 rounded cursor-pointer transition-colors",
+                                "reaction-picker-trigger p-1.5 sm:p-1 hover:text-amber-600 hover:bg-amber-50 rounded cursor-pointer transition-colors",
                                 activeReactionPickerMessageId === msg.id && "text-amber-600 bg-amber-50"
                               )}
                             >
-                              <SmilePlus className="size-3" />
+                              <SmilePlus className="size-3.5 sm:size-3" />
                             </button>
 
-                            {/* Centered Reaction Popover */}
+                            {/* Reaction Popover */}
                             {activeReactionPickerMessageId === msg.id && (
-                              <div className="reaction-picker-popover absolute bottom-full mb-2 left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-white border border-gray-300 rounded-full px-1.5 py-1 shadow-lg z-30 animate-in fade-in zoom-in-95 whitespace-nowrap">
+                              <div className="reaction-picker-popover absolute bottom-full left-0 mb-1.5 flex items-center gap-0.5 bg-white border border-gray-300 rounded-full px-1.5 py-1 shadow-lg z-30 animate-in fade-in zoom-in-95 whitespace-nowrap max-w-[calc(100vw-32px)]">
                                 {REACTION_EMOJIS.map((emoji) => (
                                   <button
                                     key={emoji}
                                     type="button"
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                      e.stopPropagation()
                                       toggleReaction(msg.id, emoji, user)
                                       setActiveReactionPickerMessageId(null)
+                                      setActiveMessageId(null)
                                     }}
-                                    className="size-6 flex items-center justify-center hover:scale-125 transition-transform rounded-full hover:bg-gray-100 text-xs cursor-pointer"
+                                    className="size-7 sm:size-6 flex items-center justify-center hover:scale-125 transition-transform rounded-full hover:bg-gray-100 text-sm sm:text-xs cursor-pointer"
                                   >
                                     {emoji}
                                   </button>
@@ -836,11 +869,15 @@ export function ChatApp() {
                           {canDelete && (
                             <button
                               type="button"
-                              onClick={() => setDeleteTargetId(msg.id)}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setDeleteTargetId(msg.id)
+                                setActiveMessageId(null)
+                              }}
                               title="Hapus pesan ini (Hak Akses Admin)"
-                              className="p-1 hover:text-red-600 hover:bg-red-50 rounded cursor-pointer"
+                              className="p-1.5 sm:p-1 hover:text-red-600 hover:bg-red-50 text-red-500 sm:text-gray-500 rounded cursor-pointer"
                             >
-                              <Trash2 className="size-3" />
+                              <Trash2 className="size-3.5 sm:size-3" />
                             </button>
                           )}
                         </div>

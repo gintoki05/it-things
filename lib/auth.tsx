@@ -29,6 +29,11 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>
   signInWithPassword: (email: string, password: string) => Promise<void>
   signUpWithPassword: (email: string, password: string, name: string) => Promise<{ needsEmailConfirmation?: boolean }>
+  resetPasswordForEmail: (email: string) => Promise<void>
+  updatePassword: (newPassword: string) => Promise<void>
+  resetPasswordWithOtp: (email: string, token: string, newPassword: string) => Promise<void>
+  isRecoveryMode: boolean
+  setIsRecoveryMode: (active: boolean) => void
   signInAsGuest: () => void
   signOut: () => Promise<void>
   setDemoUserRole?: (role: UserRole) => void
@@ -51,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = React.useState(true)
   const [isPasscodeVerified, setIsPasscodeVerified] = React.useState<boolean>(false)
   const [isPasscodeLoading, setIsPasscodeLoading] = React.useState<boolean>(true)
+  const [isRecoveryMode, setIsRecoveryMode] = React.useState<boolean>(false)
   const isUpdatingProfileRef = React.useRef(false)
 
   React.useEffect(() => {
@@ -156,11 +162,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initAuth = async () => {
       // 1. Prioritaskan Supabase jika terkonfigurasi
       if (isSupabaseConfigured && supabase) {
+        if (
+          typeof window !== "undefined" &&
+          (window.location.hash.includes("type=recovery") || window.location.href.includes("type=recovery"))
+        ) {
+          setIsRecoveryMode(true)
+        }
+
         // Setup realtime auth state listener
         const { data } = supabase.auth.onAuthStateChange(
-          async (_event, session) => {
+          async (event, session) => {
             if (!isMounted) return
             if (isUpdatingProfileRef.current) return
+            if (event === "PASSWORD_RECOVERY") {
+              setIsRecoveryMode(true)
+            }
             if (session?.user) {
               if (typeof window !== "undefined") {
                 try {
@@ -444,6 +460,83 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { needsEmailConfirmation: false }
   }
 
+  const resetPasswordForEmail = async (email: string): Promise<void> => {
+    if (!isSupabaseConfigured || !supabase) {
+      throw new Error("Supabase belum dikonfigurasi. Periksa NEXT_PUBLIC_SUPABASE_URL dan key di .env.local.")
+    }
+    const trimmedEmail = email.trim()
+    if (!trimmedEmail) {
+      throw new Error("Alamat email wajib diisi.")
+    }
+    const redirectUrl = typeof window !== "undefined" ? `${window.location.origin}` : undefined
+    const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
+      redirectTo: redirectUrl,
+    })
+    if (error) {
+      console.error("Supabase Reset Password Error:", error.message)
+      throw error
+    }
+  }
+
+  const updatePassword = async (newPassword: string): Promise<void> => {
+    if (!isSupabaseConfigured || !supabase) {
+      throw new Error("Supabase belum dikonfigurasi.")
+    }
+    if (!newPassword || newPassword.length < 6) {
+      throw new Error("Kata sandi minimal 6 karakter.")
+    }
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword,
+    })
+    if (error) {
+      console.error("Supabase Update Password Error:", error.message)
+      throw error
+    }
+    if (data.user) {
+      await mapAndSetSupabaseUser(data.user)
+    }
+    setIsRecoveryMode(false)
+    if (typeof window !== "undefined" && window.history.replaceState) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search)
+    }
+  }
+
+  const resetPasswordWithOtp = async (
+    email: string,
+    token: string,
+    newPassword: string
+  ): Promise<void> => {
+    if (!isSupabaseConfigured || !supabase) {
+      throw new Error("Supabase belum dikonfigurasi.")
+    }
+    const trimmedEmail = email.trim()
+    const trimmedToken = token.trim()
+    if (!trimmedEmail || !trimmedToken) {
+      throw new Error("Email dan kode OTP 6-digit wajib diisi.")
+    }
+    if (!newPassword || newPassword.length < 6) {
+      throw new Error("Kata sandi minimal 6 karakter.")
+    }
+
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: trimmedEmail,
+      token: trimmedToken,
+      type: "recovery",
+    })
+    if (error) {
+      console.error("Supabase Verify OTP Error:", error.message)
+      throw error
+    }
+    if (data?.user) {
+      const { error: updateErr } = await supabase.auth.updateUser({
+        password: newPassword,
+      })
+      if (updateErr) throw updateErr
+      await mapAndSetSupabaseUser(data.user)
+    }
+    setIsRecoveryMode(false)
+  }
+
   const signInAsGuest = () => {
     if (typeof window !== "undefined") {
       try {
@@ -632,6 +725,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signInWithGoogle,
         signInWithPassword,
         signUpWithPassword,
+        resetPasswordForEmail,
+        updatePassword,
+        resetPasswordWithOtp,
+        isRecoveryMode,
+        setIsRecoveryMode,
         signInAsGuest,
         signOut,
         setDemoUserRole,

@@ -51,7 +51,7 @@ export function ConfirmDialog({
   const isDestructive = variant === "destructive"
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[1px] flex items-center justify-center p-4 select-none animate-in fade-in-0 duration-150">
+    <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-[1px] flex items-center justify-center p-4 select-none animate-in fade-in-0 duration-150">
       <div
         role="alertdialog"
         aria-modal="true"

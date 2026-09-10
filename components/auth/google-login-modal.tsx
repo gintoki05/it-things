@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
-import { Lock, Mail, Key, User, Eye, EyeOff, AlertTriangle, AlertCircle, CheckCircle2, ShieldCheck } from "lucide-react"
+import { Lock, Mail, Key, User, Eye, EyeOff, AlertTriangle, AlertCircle, CheckCircle2, ShieldCheck, ArrowLeft, KeyRound } from "lucide-react"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 
 interface GoogleLoginModalProps {
@@ -11,7 +11,7 @@ interface GoogleLoginModalProps {
 }
 
 type AuthMethod = "password" | "google"
-type PasswordMode = "signin" | "signup"
+type PasswordMode = "signin" | "signup" | "forgot" | "reset_confirm"
 
 export function GoogleLoginModal({ isOpen, onClose }: GoogleLoginModalProps) {
   const {
@@ -20,6 +20,10 @@ export function GoogleLoginModal({ isOpen, onClose }: GoogleLoginModalProps) {
     signInWithGoogle,
     signInWithPassword,
     signUpWithPassword,
+    resetPasswordForEmail,
+    updatePassword,
+    isRecoveryMode,
+    setIsRecoveryMode,
     signInAsGuest,
     isSupabaseConnected,
   } = useAuth()
@@ -31,14 +35,26 @@ export function GoogleLoginModal({ isOpen, onClose }: GoogleLoginModalProps) {
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")
   const [name, setName] = React.useState("")
+  const [newPassword, setNewPassword] = React.useState("")
+  const [confirmPassword, setConfirmPassword] = React.useState("")
   const [showPassword, setShowPassword] = React.useState(false)
 
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
   const [infoMessage, setInfoMessage] = React.useState<string | null>(null)
 
-  // Show if explicitly opened via isOpen, OR if user is not logged in and not loading
-  const shouldShow = Boolean(isOpen || (!user && !isLoading))
+  // Auto-switch to reset_confirm if recovery mode is active
+  React.useEffect(() => {
+    if (isRecoveryMode) {
+      setActiveTab("password")
+      setPasswordMode("reset_confirm")
+      setErrorMessage(null)
+      setInfoMessage("Sesi pemulihan aktif. Silakan masukkan kata sandi baru untuk akun Anda.")
+    }
+  }, [isRecoveryMode])
+
+  // Show if explicitly opened via isOpen, OR if user is not logged in and not loading, OR if in recovery mode
+  const shouldShow = Boolean(isOpen || (!user && !isLoading) || isRecoveryMode)
   if (!shouldShow || isLoading) return null
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
@@ -46,18 +62,36 @@ export function GoogleLoginModal({ isOpen, onClose }: GoogleLoginModalProps) {
     setErrorMessage(null)
     setInfoMessage(null)
 
-    if (!email.trim() || !password) {
-      setErrorMessage("Email dan kata sandi wajib diisi.")
-      return
-    }
-
-    if (passwordMode === "signup") {
+    if (passwordMode === "signin") {
+      if (!email.trim() || !password) {
+        setErrorMessage("Email dan kata sandi wajib diisi.")
+        return
+      }
+    } else if (passwordMode === "signup") {
+      if (!email.trim() || !password) {
+        setErrorMessage("Email dan kata sandi wajib diisi.")
+        return
+      }
       if (password.length < 6) {
         setErrorMessage("Kata sandi minimal 6 karakter.")
         return
       }
       if (!name.trim()) {
         setErrorMessage("Nama lengkap / username wajib diisi.")
+        return
+      }
+    } else if (passwordMode === "forgot") {
+      if (!email.trim()) {
+        setErrorMessage("Alamat email wajib diisi.")
+        return
+      }
+    } else if (passwordMode === "reset_confirm") {
+      if (!newPassword || newPassword.length < 6) {
+        setErrorMessage("Kata sandi baru minimal 6 karakter.")
+        return
+      }
+      if (newPassword !== confirmPassword) {
+        setErrorMessage("Konfirmasi kata sandi baru tidak cocok.")
         return
       }
     }
@@ -67,18 +101,32 @@ export function GoogleLoginModal({ isOpen, onClose }: GoogleLoginModalProps) {
       if (passwordMode === "signin") {
         await signInWithPassword(email, password)
         onClose?.()
-      } else {
+      } else if (passwordMode === "signup") {
         const res = await signUpWithPassword(email, password, name)
+        setPasswordMode("signin")
+        setPassword("")
+        setName("")
         if (res?.needsEmailConfirmation) {
-          setInfoMessage("Akun berhasil dibuat! Silakan cek email Anda untuk konfirmasi, atau hubungi admin.")
+          setInfoMessage("Akun berhasil dibuat! Silakan periksa email Anda untuk konfirmasi, lalu masuk.")
         } else {
           onClose?.()
         }
+      } else if (passwordMode === "forgot") {
+        await resetPasswordForEmail(email)
+        setInfoMessage(`Tautan pemulihan kata sandi telah dikirim ke ${email.trim()}. Silakan buka kotak masuk atau folder spam email Anda, lalu klik tautan untuk mengatur kata sandi baru!`)
+      } else if (passwordMode === "reset_confirm") {
+        await updatePassword(newPassword)
+        setInfoMessage("Kata sandi berhasil diperbarui! Silakan lanjutkan penggunaan akun Anda.")
+        setIsRecoveryMode(false)
+        setPasswordMode("signin")
+        setPassword("")
+        setNewPassword("")
+        setConfirmPassword("")
+        onClose?.()
       }
     } catch (err: unknown) {
       console.error(err)
       const rawMsg = err instanceof Error ? err.message : "Gagal memproses autentikasi."
-      // Buat pesan error lebih ramah
       let friendlyMsg = rawMsg
       if (rawMsg.includes("Invalid login credentials")) {
         friendlyMsg = "Email atau kata sandi salah. Silakan periksa kembali."
@@ -86,6 +134,8 @@ export function GoogleLoginModal({ isOpen, onClose }: GoogleLoginModalProps) {
         friendlyMsg = "Email ini sudah terdaftar. Silakan pilih tab 'Masuk'."
       } else if (rawMsg.includes("Password should be at least")) {
         friendlyMsg = "Kata sandi minimal 6 karakter."
+      } else if (rawMsg.includes("Token has expired") || rawMsg.includes("invalid token") || rawMsg.includes("otp_expired")) {
+        friendlyMsg = "Kode OTP atau tautan pemulihan sudah kedaluwarsa atau tidak valid."
       }
       setErrorMessage(friendlyMsg)
     } finally {
@@ -190,126 +240,260 @@ export function GoogleLoginModal({ isOpen, onClose }: GoogleLoginModalProps) {
           {/* TAB 1: EMAIL & PASSWORD */}
           {activeTab === "password" && (
             <form onSubmit={handlePasswordSubmit} className="space-y-3.5">
-              {/* Toggle Submode: Masuk vs Daftar */}
-              <div className="flex items-center justify-between p-1 bg-[#EEF2F6] border border-[#A4B5C6] rounded-[2px] font-mono text-xs">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPasswordMode("signin")
-                    setErrorMessage(null)
-                    setInfoMessage(null)
-                  }}
-                  className={`flex-1 py-1 text-center font-bold rounded-[2px] transition-all cursor-pointer ${
-                    passwordMode === "signin"
-                      ? "bg-[#1E4E8C] text-white shadow-sm"
-                      : "text-gray-600 hover:text-[#102A45]"
-                  }`}
-                >
-                  Masuk Akun
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPasswordMode("signup")
-                    setErrorMessage(null)
-                    setInfoMessage(null)
-                  }}
-                  className={`flex-1 py-1 text-center font-bold rounded-[2px] transition-all cursor-pointer ${
-                    passwordMode === "signup"
-                      ? "bg-[#1E4E8C] text-white shadow-sm"
-                      : "text-gray-600 hover:text-[#102A45]"
-                  }`}
-                >
-                  Daftar Baru
-                </button>
-              </div>
-
-              {/* Privacy Notice (Safe from Google access) */}
-              <div className="p-2 bg-emerald-50 border border-emerald-300 rounded-[2px] text-[10px] text-emerald-800 font-sans flex items-start gap-1.5">
-                <ShieldCheck className="size-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                <span>
-                  <strong>Aman & Mandiri:</strong> Akun ini disimpan langsung di database internal suite. Tidak terhubung atau meminta akses ke akun Google Anda.
-                </span>
-              </div>
-
-              {/* Input Nama (hanya jika Daftar) */}
-              {passwordMode === "signup" && (
-                <div className="space-y-1">
-                  <label className="block text-[11px] font-mono font-bold text-[#14253D]">
-                    Nama Lengkap / Username:
-                  </label>
-                  <div className="relative">
-                    <User className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="text"
-                      required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="cth. Ajie Saputra"
-                      className="w-full pl-8 pr-2.5 py-1.5 text-xs bg-white text-[#14253D] font-mono border-2 border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
-                    />
+              {/* Mode: Sign In / Sign Up */}
+              {(passwordMode === "signin" || passwordMode === "signup") && (
+                <>
+                  {/* Toggle Submode: Masuk vs Daftar */}
+                  <div className="flex items-center justify-between p-1 bg-[#EEF2F6] border border-[#A4B5C6] rounded-[2px] font-mono text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPasswordMode("signin")
+                        setErrorMessage(null)
+                        setInfoMessage(null)
+                      }}
+                      className={`flex-1 py-1 text-center font-bold rounded-[2px] transition-all cursor-pointer ${
+                        passwordMode === "signin"
+                          ? "bg-[#1E4E8C] text-white shadow-sm"
+                          : "text-gray-600 hover:text-[#102A45]"
+                      }`}
+                    >
+                      Masuk Akun
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPasswordMode("signup")
+                        setErrorMessage(null)
+                        setInfoMessage(null)
+                      }}
+                      className={`flex-1 py-1 text-center font-bold rounded-[2px] transition-all cursor-pointer ${
+                        passwordMode === "signup"
+                          ? "bg-[#1E4E8C] text-white shadow-sm"
+                          : "text-gray-600 hover:text-[#102A45]"
+                      }`}
+                    >
+                      Daftar Baru
+                    </button>
                   </div>
-                </div>
+
+                  {/* Privacy Notice (Safe from Google access) */}
+                  <div className="p-2 bg-emerald-50 border border-emerald-300 rounded-[2px] text-[10px] text-emerald-800 font-sans flex items-start gap-1.5">
+                    <ShieldCheck className="size-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                    <span>
+                      <strong>Aman & Mandiri:</strong> Akun ini disimpan langsung di database internal suite. Tidak terhubung atau meminta akses ke akun Google Anda.
+                    </span>
+                  </div>
+
+                  {/* Input Nama (hanya jika Daftar) */}
+                  {passwordMode === "signup" && (
+                    <div className="space-y-1">
+                      <label className="block text-[11px] font-mono font-bold text-[#14253D]">
+                        Nama Lengkap / Username:
+                      </label>
+                      <div className="relative">
+                        <User className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                          type="text"
+                          required
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="cth. Username Kamu"
+                          className="w-full pl-8 pr-2.5 py-1.5 text-xs bg-white text-[#14253D] font-mono border-2 border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Input Email */}
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-mono font-bold text-[#14253D]">
+                      Alamat Email:
+                    </label>
+                    <div className="relative">
+                      <Mail className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="nama@email.com"
+                        className="w-full pl-8 pr-2.5 py-1.5 text-xs bg-white text-[#14253D] font-mono border-2 border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Input Sandi */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-[11px] font-mono font-bold text-[#14253D]">
+                        Kata Sandi:
+                      </label>
+                      {passwordMode === "signin" && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPasswordMode("forgot")
+                            setErrorMessage(null)
+                            setInfoMessage(null)
+                          }}
+                          className="text-[10px] font-mono text-[#1E4E8C] hover:underline cursor-pointer font-bold"
+                        >
+                          Lupa kata sandi?
+                        </button>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <Key className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder={passwordMode === "signup" ? "Minimal 6 karakter" : "Masukkan kata sandi"}
+                        className="w-full pl-8 pr-8 py-1.5 text-xs bg-white text-[#14253D] font-mono border-2 border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || !isSupabaseConnected}
+                    className="w-full py-2 px-4 rounded-[2px] border border-[#102A45] bg-[#1E4E8C] hover:bg-[#153A6B] active:translate-y-px text-white font-mono text-xs font-bold shadow-[1px_1px_0px_#102A45] transition-all disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isSubmitting ? (
+                      <span>MEMPROSES...</span>
+                    ) : passwordMode === "signin" ? (
+                      <span>MASUK KE SISTEM</span>
+                    ) : (
+                      <span>BUAT AKUN BARU</span>
+                    )}
+                  </button>
+                </>
               )}
 
-              {/* Input Email */}
-              <div className="space-y-1">
-                <label className="block text-[11px] font-mono font-bold text-[#14253D]">
-                  Alamat Email:
-                </label>
-                <div className="relative">
-                  <Mail className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="nama@email.com"
-                    className="w-full pl-8 pr-2.5 py-1.5 text-xs bg-white text-[#14253D] font-mono border-2 border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
-                  />
-                </div>
-              </div>
+              {/* Mode: Lupa Kata Sandi (Forgot Password) */}
+              {passwordMode === "forgot" && (
+                <>
+                  <div className="flex items-center justify-between pb-1 border-b border-[#A4B5C6] font-mono">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPasswordMode("signin")
+                        setErrorMessage(null)
+                        setInfoMessage(null)
+                      }}
+                      className="flex items-center gap-1 text-xs text-[#1E4E8C] hover:underline font-bold cursor-pointer"
+                    >
+                      <ArrowLeft className="size-3.5" />
+                      <span>Kembali ke Masuk</span>
+                    </button>
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">
+                      Pemulihan Sandi
+                    </span>
+                  </div>
 
-              {/* Input Sandi */}
-              <div className="space-y-1">
-                <label className="block text-[11px] font-mono font-bold text-[#14253D]">
-                  Kata Sandi:
-                </label>
-                <div className="relative">
-                  <Key className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={passwordMode === "signup" ? "Minimal 6 karakter" : "Masukkan kata sandi"}
-                    className="w-full pl-8 pr-8 py-1.5 text-xs bg-white text-[#14253D] font-mono border-2 border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
-                  />
+                  <p className="text-[11px] text-gray-600 font-sans leading-relaxed">
+                    Masukkan alamat email akun Kamu. Kami akan mengirimkan tautan untuk mengatur ulang kata sandi ke email tersebut.
+                  </p>
+
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-mono font-bold text-[#14253D]">
+                      Alamat Email:
+                    </label>
+                    <div className="relative">
+                      <Mail className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="nama@email.com"
+                        className="w-full pl-8 pr-2.5 py-1.5 text-xs bg-white text-[#14253D] font-mono border-2 border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
+                      />
+                    </div>
+                  </div>
+
                   <button
-                    type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
-                    tabIndex={-1}
+                    type="submit"
+                    disabled={isSubmitting || !isSupabaseConnected}
+                    className="w-full py-2 px-4 rounded-[2px] border border-[#102A45] bg-[#1E4E8C] hover:bg-[#153A6B] active:translate-y-px text-white font-mono text-xs font-bold shadow-[1px_1px_0px_#102A45] transition-all disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    {showPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                    {isSubmitting ? <span>MENGIRIM TAUTAN...</span> : <span>KIRIM TAUTAN PEMULIHAN</span>}
                   </button>
-                </div>
-              </div>
+                </>
+              )}
 
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={isSubmitting || !isSupabaseConnected}
-                className="w-full py-2 px-4 rounded-[2px] border border-[#102A45] bg-[#1E4E8C] hover:bg-[#153A6B] active:translate-y-px text-white font-mono text-xs font-bold shadow-[1px_1px_0px_#102A45] transition-all disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isSubmitting ? (
-                  <span>MEMPROSES...</span>
-                ) : passwordMode === "signin" ? (
-                  <span>MASUK KE SISTEM</span>
-                ) : (
-                  <span>BUAT AKUN BARU</span>
-                )}
-              </button>
+              {/* Mode: Reset Konfirmasi via Link Email */}
+              {passwordMode === "reset_confirm" && (
+                <>
+                  <div className="p-2.5 bg-blue-50 border border-blue-300 rounded-[2px] text-xs text-blue-900 font-mono flex items-start gap-2">
+                    <KeyRound className="size-4 text-blue-600 shrink-0 mt-0.5" />
+                    <div>
+                      <strong>Sesi Pemulihan Terbuka</strong>
+                      <p className="text-[11px] text-blue-800 mt-0.5 font-sans">
+                        Tautan verifikasi valid. Silakan buat kata sandi baru untuk akun Anda.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-mono font-bold text-[#14253D]">
+                      Kata Sandi Baru:
+                    </label>
+                    <div className="relative">
+                      <Key className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        required
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Minimal 6 karakter"
+                        className="w-full pl-8 pr-8 py-1.5 text-xs bg-white text-[#14253D] font-mono border-2 border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-mono font-bold text-[#14253D]">
+                      Konfirmasi Kata Sandi Baru:
+                    </label>
+                    <div className="relative">
+                      <Key className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        required
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Ketik ulang kata sandi baru"
+                        className="w-full pl-8 pr-8 py-1.5 text-xs bg-white text-[#14253D] font-mono border-2 border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || !isSupabaseConnected}
+                    className="w-full py-2 px-4 rounded-[2px] border border-[#102A45] bg-[#1E4E8C] hover:bg-[#153A6B] active:translate-y-px text-white font-mono text-xs font-bold shadow-[1px_1px_0px_#102A45] transition-all disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isSubmitting ? <span>MEMPERBARUI...</span> : <span>PERBARUI KATA SANDI</span>}
+                  </button>
+                </>
+              )}
             </form>
           )}
 
