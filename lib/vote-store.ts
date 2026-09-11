@@ -172,8 +172,9 @@ export function useVoteStore() {
     }
 
     if (isSupabaseConfigured && supabase) {
+      const channelName = `vote-realtime-${Math.random().toString(36).substring(2, 8)}`
       const channel = supabase
-        .channel("vote-realtime")
+        .channel(channelName)
         .on("postgres_changes", { event: "*", schema: "public", table: "vote_groups" }, () => fetchData())
         .on("postgres_changes", { event: "*", schema: "public", table: "vote_options" }, () => fetchData())
         .on("postgres_changes", { event: "*", schema: "public", table: "vote_records" }, () => fetchData())

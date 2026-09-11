@@ -123,8 +123,9 @@ export function usePicStore() {
 
     let channel: RealtimeChannel | null = null
     try {
+      const channelName = `module-pics-realtime-${Math.random().toString(36).substring(2, 9)}`
       channel = supabase
-        .channel("module-pics-realtime")
+        .channel(channelName)
         .on(
           "postgres_changes",
           {

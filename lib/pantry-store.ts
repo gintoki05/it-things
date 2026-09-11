@@ -224,8 +224,9 @@ export function usePantryStore() {
   React.useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return
 
+    const channelName = `pantry-realtime-${Math.random().toString(36).substring(2, 8)}`
     const channel = supabase
-      .channel("pantry-realtime")
+      .channel(channelName)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "pantry_items" },

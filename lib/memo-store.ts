@@ -102,8 +102,9 @@ export function useMemoStore() {
     let channel: RealtimeChannel | null = null
 
     try {
+      const channelName = `desktop-memos-realtime-${Math.random().toString(36).substring(2, 8)}`
       channel = supabase
-        .channel("desktop-memos-realtime")
+        .channel(channelName)
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "desktop_memos" },
