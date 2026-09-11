@@ -58,8 +58,24 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
   const [isProfileModalOpen, setIsProfileModalOpen] = React.useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false)
   const [time, setTime] = React.useState("12:00")
+  const [isKeyboardOpen, setIsKeyboardOpen] = React.useState(false)
   const startMenuRef = React.useRef<HTMLDivElement>(null)
   const startBtnRef = React.useRef<HTMLButtonElement>(null)
+
+  // Track virtual keyboard on mobile to prevent taskbar from overlaying chat
+  React.useEffect(() => {
+    if (typeof window === "undefined" || !window.visualViewport) return
+    const handleVV = () => {
+      if (window.innerWidth >= 768) {
+        setIsKeyboardOpen(false)
+        return
+      }
+      const kbActive = (window.innerHeight - window.visualViewport.height) > 100
+      setIsKeyboardOpen(kbActive)
+    }
+    window.visualViewport.addEventListener("resize", handleVV)
+    return () => window.visualViewport?.removeEventListener("resize", handleVV)
+  }, [])
 
   // Clock
   React.useEffect(() => {
@@ -395,7 +411,10 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
       )}
 
       {/* Main Bottom Taskbar */}
-      <footer className="fixed bottom-0 left-0 right-0 h-[44px] bg-[#D4DDE6] border-t-2 border-t-white border-b border-b-[#5E7287] shadow-md flex items-center px-1.5 gap-2 select-none z-50">
+      <footer className={cn(
+        "fixed bottom-0 left-0 right-0 h-[44px] bg-[#D4DDE6] border-t-2 border-t-white border-b border-b-[#5E7287] shadow-md flex items-center px-1.5 gap-2 select-none z-50 transition-opacity",
+        isKeyboardOpen && "hidden"
+      )}>
         {/* Start Button */}
         <button
           ref={startBtnRef}

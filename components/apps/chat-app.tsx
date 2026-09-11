@@ -274,6 +274,19 @@ export function ChatApp() {
     }
   }
 
+  // Auto-resize textarea dynamically based on content (min 38px, max 110px)
+  const adjustTextareaHeight = React.useCallback(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = "auto"
+    const nextHeight = Math.min(Math.max(el.scrollHeight, 38), 110)
+    el.style.height = `${nextHeight}px`
+  }, [])
+
+  React.useEffect(() => {
+    adjustTextareaHeight()
+  }, [inputVal, adjustTextareaHeight])
+
   // Auto-scroll ke bawah hanya saat pertama kali load atau ada pesan baru di bawah
   const lastMessageId = messages[messages.length - 1]?.id
   const isInitialLoadRef = React.useRef(true)
@@ -1134,10 +1147,10 @@ export function ChatApp() {
       </div>
 
       {/* Input Area */}
-      <div className="relative bg-[#D4DDE6] border-t-2 border-t-[#A4B5C6] p-2.5 flex flex-col gap-1.5 shrink-0">
+      <div className="relative bg-[#D4DDE6] border-t-2 border-t-[#A4B5C6] p-2 sm:p-2.5 flex flex-col gap-1.5 shrink-0">
         {/* Mention Autocomplete Dropdown Popup */}
         {mentionQuery !== null && mentionOptions.length > 0 && (
-          <div className="absolute bottom-full left-2 mb-1 w-64 max-h-48 overflow-y-auto bg-white border-2 border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] shadow-xl rounded-[3px] z-50 select-none py-1">
+          <div className="absolute bottom-full left-1.5 right-1.5 sm:right-auto sm:left-2 mb-1 sm:w-64 max-h-36 sm:max-h-48 overflow-y-auto bg-white border-2 border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] shadow-xl rounded-[3px] z-50 select-none py-1">
             <div className="px-2 py-1 text-[10px] font-mono font-bold text-gray-500 bg-[#E2E8F0] border-b border-gray-300 flex items-center gap-1">
               <AtSign className="size-3 text-blue-600" />
               <span>PILIH MENTION TIM</span>
@@ -1199,27 +1212,43 @@ export function ChatApp() {
           </div>
         )}
 
-        {/* Quick Emoji Bar & Mention Hint */}
-        <div className="flex items-center justify-between text-xs gap-1">
-          <div className="flex items-center gap-1 overflow-x-auto py-0.5">
+        {/* Quick Emoji Bar, Mention Hint & Character Counter */}
+        <div className="flex items-center justify-between text-xs gap-1 select-none">
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
             {QUICK_EMOJIS.map((emoji) => (
               <button
                 key={emoji}
                 type="button"
                 onClick={() => addEmoji(emoji)}
-                className="px-1.5 py-0.5 text-xs bg-white/70 hover:bg-white rounded border border-[#A4B5C6] shadow-sm active:translate-y-px cursor-pointer"
+                className="px-1.5 py-0.5 text-xs bg-white/70 hover:bg-white rounded border border-[#A4B5C6] shadow-sm active:translate-y-px cursor-pointer shrink-0"
               >
                 {emoji}
               </button>
             ))}
           </div>
 
-          <div
-            className="flex items-center gap-1 text-[10px] text-gray-500 font-mono shrink-0"
-            title="Ketik @ untuk mention anggota tim"
-          >
-            <AtSign className="size-3 text-blue-600" />
-            <span>@mention</span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {inputVal.length > 0 && (
+              <span
+                className={cn(
+                  "text-[9px] font-mono px-1 py-0.2 rounded transition-colors",
+                  inputVal.length >= MAX_MESSAGE_LENGTH
+                    ? "bg-red-100 text-red-700 font-bold border border-red-300"
+                    : inputVal.length >= MAX_MESSAGE_LENGTH * 0.8
+                    ? "bg-amber-100 text-amber-800 font-semibold border border-amber-300"
+                    : "text-gray-500 bg-white/70 border border-gray-200"
+                )}
+              >
+                {inputVal.length}/{MAX_MESSAGE_LENGTH}
+              </span>
+            )}
+            <div
+              className="flex items-center gap-0.5 text-[10px] text-gray-500 font-mono"
+              title="Ketik @ untuk mention anggota tim"
+            >
+              <AtSign className="size-3 text-blue-600" />
+              <span className="hidden sm:inline">@mention</span>
+            </div>
           </div>
         </div>
 
@@ -1248,43 +1277,33 @@ export function ChatApp() {
         )}
 
         {/* Input Textarea & Send / Save Button */}
-        <div className="flex items-end gap-2">
+        <div className="flex items-end gap-1.5 sm:gap-2">
           <div className="relative flex-1 flex flex-col">
             <textarea
               ref={textareaRef}
-              rows={2}
+              rows={1}
               maxLength={MAX_MESSAGE_LENGTH}
               placeholder={
                 editingMessageId
-                  ? "Edit pesan... (Tekan Enter untuk simpan, Esc untuk batal)"
+                  ? "Edit pesan... (Enter simpan, Esc batal)"
                   : "Tulis pesan... (@ untuk mention)"
               }
               value={inputVal}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
+              onFocus={() => {
+                setTimeout(() => {
+                  messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+                }, 150)
+              }}
               className={cn(
-                "w-full p-2 pb-5 bg-white text-xs font-sans rounded-[2px] border-2 border-t-[#5E7287] border-l-[#5E7287] border-r-white border-b-white shadow-inner focus:outline-none focus:ring-1 resize-none",
+                "w-full py-2 px-2.5 bg-white text-[16px] sm:text-xs font-sans rounded-[2px] border-2 border-t-[#5E7287] border-l-[#5E7287] border-r-white border-b-white shadow-inner focus:outline-none focus:ring-1 resize-none leading-relaxed transition-[height] duration-75 overflow-y-auto",
                 editingMessageId
                   ? "focus:ring-emerald-600 border-emerald-500/50 bg-emerald-50/20"
                   : "focus:ring-[#1E4E8C]"
               )}
+              style={{ minHeight: "38px", maxHeight: "110px" }}
             />
-
-            {/* Character counter (selalu tampak agar pengguna tahu sisa karakter) */}
-            <div className="absolute right-2 bottom-1.5 pointer-events-none select-none text-[9px] font-mono leading-none">
-              <span
-                className={cn(
-                  "px-1 py-0.2 rounded transition-colors",
-                  inputVal.length >= MAX_MESSAGE_LENGTH
-                    ? "bg-red-100 text-red-700 font-bold border border-red-300"
-                    : inputVal.length >= MAX_MESSAGE_LENGTH * 0.8
-                    ? "bg-amber-100 text-amber-800 font-semibold border border-amber-300"
-                    : "text-gray-400 bg-white/70"
-                )}
-              >
-                {inputVal.length}/{MAX_MESSAGE_LENGTH}
-              </span>
-            </div>
           </div>
 
           <button
@@ -1292,7 +1311,7 @@ export function ChatApp() {
             onClick={handleSendMessage}
             disabled={!sanitizeChatMessage(inputVal) || isSending || isSavingEdit}
             className={cn(
-              "h-12 px-4 flex items-center justify-center gap-1.5 font-mono font-bold text-xs rounded-[2px] transition-all cursor-pointer select-none shrink-0",
+              "h-[38px] px-3 sm:px-4 flex items-center justify-center gap-1.5 font-mono font-bold text-xs rounded-[2px] transition-all cursor-pointer select-none shrink-0",
               !sanitizeChatMessage(inputVal) || isSending || isSavingEdit
                 ? "bg-gray-300 text-gray-500 border-2 border-gray-400 cursor-not-allowed opacity-60"
                 : editingMessageId
@@ -1302,14 +1321,14 @@ export function ChatApp() {
           >
             {editingMessageId ? (
               <>
-                <Check className="size-3.5" />
+                <Check className="size-4 sm:size-3.5" />
                 <span className="hidden sm:inline">
                   {isSavingEdit ? "Simpan..." : "Simpan"}
                 </span>
               </>
             ) : (
               <>
-                <Send className="size-3.5" />
+                <Send className="size-4 sm:size-3.5" />
                 <span className="hidden sm:inline">Kirim</span>
               </>
             )}

@@ -186,7 +186,7 @@ function DesktopWorkspace() {
       </DesktopWindow>
 
       {/* Retro Window: Chat.exe */}
-      <DesktopWindow id="chat">
+      <DesktopWindow id="chat" bodyClassName="p-0 overflow-hidden flex flex-col">
         <MemoizedChatApp />
       </DesktopWindow>
 

@@ -2,13 +2,14 @@
 
 import * as React from "react"
 import { X, Monitor, Upload, Palette, Check, RotateCcw, Image as ImageIcon, Sparkles, AlertTriangle, Loader2 } from "lucide-react"
-import { useWallpaper, WALLPAPER_PRESETS, WallpaperConfig, WallpaperDisplayMode } from "@/lib/wallpaper-store"
+import { useWallpaper, WALLPAPER_PRESETS, WallpaperConfig, WallpaperDisplayMode, WallpaperCategory } from "@/lib/wallpaper-store"
 import { cn } from "@/lib/utils"
 
 export function DisplayPropertiesDialog() {
   const { wallpaper, isDialogOpen, storageWarning, closeDialog, setWallpaper, resetWallpaper, getBackgroundStyle } = useWallpaper()
 
   const [activeTab, setActiveTab] = React.useState<"presets" | "custom" | "options">("presets")
+  const [presetCategory, setPresetCategory] = React.useState<WallpaperCategory>("all")
   const [draftConfig, setDraftConfig] = React.useState<WallpaperConfig>(wallpaper)
   const [customUrlInput, setCustomUrlInput] = React.useState("")
   const [urlErrorMessage, setUrlErrorMessage] = React.useState<string | null>(null)
@@ -40,7 +41,10 @@ export function DisplayPropertiesDialog() {
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [isDialogOpen, closeDialog])
 
-  if (!isDialogOpen) return null
+  const filteredPresets = React.useMemo(() => {
+    if (presetCategory === "all") return WALLPAPER_PRESETS
+    return WALLPAPER_PRESETS.filter((p) => p.category === presetCategory)
+  }, [presetCategory])
 
   const handleApply = () => {
     setWallpaper(draftConfig)
@@ -206,6 +210,8 @@ export function DisplayPropertiesDialog() {
     "#1E3A8A", // Royal Blue
   ]
 
+  if (!isDialogOpen) return null
+
   return (
     <div
       className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[1px] flex items-center justify-center p-3 select-none animate-in fade-in-0 duration-150"
@@ -335,11 +341,38 @@ export function DisplayPropertiesDialog() {
           {/* Tab 1: Presets List */}
           {activeTab === "presets" && (
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-[#14253D] block">
-                Pilih Wallpaper Klasik:
-              </label>
-              <div className="bg-white border-2 border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white max-h-44 overflow-y-auto p-1 space-y-0.5">
-                {WALLPAPER_PRESETS.map((preset) => {
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-[#14253D] block">
+                  Pilih Wallpaper ({filteredPresets.length}):
+                </label>
+              </div>
+
+              {/* Category Filter Chips */}
+              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-0.5 text-[10px] font-mono">
+                {[
+                  { id: "all", label: "Semua" },
+                  { id: "retro", label: "Retro 98 💾" },
+                  { id: "aesthetic", label: "Aesthetic & Scene 🌆" },
+                  { id: "gradient", label: "Modern Gradient 🎨" },
+                ].map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setPresetCategory(cat.id as WallpaperCategory)}
+                    className={cn(
+                      "px-2 py-0.5 rounded-[2px] border transition-all shrink-0 cursor-pointer",
+                      presetCategory === cat.id
+                        ? "bg-[#1E4E8C] text-white font-bold border-[#102A45] shadow-xs"
+                        : "bg-[#CCD7E2] hover:bg-white text-gray-700 border-[#7D8E9E]"
+                    )}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="bg-white border-2 border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white max-h-48 overflow-y-auto p-1 space-y-0.5">
+                {filteredPresets.map((preset) => {
                   const isSelected = draftConfig.id === preset.id
                   return (
                     <button

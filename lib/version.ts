@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.4"
+export const APP_VERSION = "v2.3.5"
 export const APP_BUILD = "2026.09.11"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.5",
+    date: "11 Sep 2026",
+    codename: "Aesthetic Wallpaper Expansion & Mobile Chat Polish",
+    changes: [
+      "Ekspansi galeri Display Properties dengan 21 preset wallpaper beresolusi tinggi (Retro 98, Aesthetic & Scene, Modern Gradient).",
+      "Kategori filter interaktif pada Properti Tampilan untuk mempermudah pemilihan tema wallpaper.",
+      "Optimasi tampilan mobile untuk jendela desktop dan chat input mengikuti viewport virtual keyboard.",
+      "Perbaikan urutan React Hook pada Display Properties dialog untuk stabilitas render.",
+      "Operasi hening tanpa efek suara retro saat minimize/restore desktop dan ganti wallpaper.",
+    ],
+  },
   {
     version: "v2.3.4",
     date: "11 Sep 2026",

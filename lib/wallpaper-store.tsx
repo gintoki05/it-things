@@ -6,10 +6,13 @@ export type WallpaperDisplayMode = "fill" | "fit" | "tile" | "center"
 
 export type WallpaperType = "preset-color" | "preset-gradient" | "preset-image" | "custom-image" | "custom-color"
 
+export type WallpaperCategory = "all" | "retro" | "aesthetic" | "gradient"
+
 export interface WallpaperConfig {
   id: string
   name: string
   type: WallpaperType
+  category?: "retro" | "aesthetic" | "gradient"
   value: string // hex color, css gradient, image url, or base64 data url
   mode: WallpaperDisplayMode
   showGridTexture: boolean
@@ -17,10 +20,12 @@ export interface WallpaperConfig {
 }
 
 export const WALLPAPER_PRESETS: WallpaperConfig[] = [
+  // --- Kategori: Retro 98 ---
   {
     id: "it-things-default",
     name: "IT-Things 98 (Default)",
     type: "preset-color",
+    category: "retro",
     value: "#1A365D",
     mode: "fill",
     showGridTexture: true,
@@ -30,6 +35,7 @@ export const WALLPAPER_PRESETS: WallpaperConfig[] = [
     id: "win98-teal",
     name: "Windows 98 Classic Teal",
     type: "preset-color",
+    category: "retro",
     value: "#008080",
     mode: "fill",
     showGridTexture: false,
@@ -39,6 +45,7 @@ export const WALLPAPER_PRESETS: WallpaperConfig[] = [
     id: "win2k-blue",
     name: "Windows 2000 Pro Blue",
     type: "preset-color",
+    category: "retro",
     value: "#3A6EA5",
     mode: "fill",
     showGridTexture: false,
@@ -48,6 +55,7 @@ export const WALLPAPER_PRESETS: WallpaperConfig[] = [
     id: "matrix-cyber",
     name: "Matrix Terminal",
     type: "preset-color",
+    category: "retro",
     value: "#0A0E14",
     mode: "fill",
     showGridTexture: true,
@@ -57,7 +65,142 @@ export const WALLPAPER_PRESETS: WallpaperConfig[] = [
     id: "win98-setup",
     name: "Setup 98 Gradient",
     type: "preset-gradient",
+    category: "retro",
     value: "linear-gradient(180deg, #000080 0%, #000040 100%)",
+    mode: "fill",
+    showGridTexture: false,
+    showWatermark: true,
+  },
+  {
+    id: "xp-bliss",
+    name: "XP Bliss Landscape",
+    type: "preset-image",
+    category: "retro",
+    value: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1920&auto=format&fit=crop",
+    mode: "fill",
+    showGridTexture: false,
+    showWatermark: true,
+  },
+
+  // --- Kategori: Aesthetic & Populer (Foto / Scene) ---
+  {
+    id: "cyberpunk-tokyo",
+    name: "Cyberpunk Tokyo Night",
+    type: "preset-image",
+    category: "aesthetic",
+    value: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=1920&auto=format&fit=crop",
+    mode: "fill",
+    showGridTexture: false,
+    showWatermark: true,
+  },
+  {
+    id: "nordic-mist-forest",
+    name: "Nordic Mist Pine Forest",
+    type: "preset-image",
+    category: "aesthetic",
+    value: "https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?q=80&w=1920&auto=format&fit=crop",
+    mode: "fill",
+    showGridTexture: false,
+    showWatermark: true,
+  },
+  {
+    id: "cosmic-nebula",
+    name: "Cosmic Deep Space",
+    type: "preset-image",
+    category: "aesthetic",
+    value: "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?q=80&w=1920&auto=format&fit=crop",
+    mode: "fill",
+    showGridTexture: false,
+    showWatermark: true,
+  },
+  {
+    id: "cozy-rainy-cafe",
+    name: "Cozy Rainy Cafe",
+    type: "preset-image",
+    category: "aesthetic",
+    value: "https://images.unsplash.com/photo-1517256064527-09c73fc73e38?q=80&w=1920&auto=format&fit=crop",
+    mode: "fill",
+    showGridTexture: false,
+    showWatermark: true,
+  },
+  {
+    id: "alpine-sunrise",
+    name: "Alpine Mountain Peaks",
+    type: "preset-image",
+    category: "aesthetic",
+    value: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1920&auto=format&fit=crop",
+    mode: "fill",
+    showGridTexture: false,
+    showWatermark: true,
+  },
+  {
+    id: "anime-sky",
+    name: "Pastel Twilight Sea",
+    type: "preset-image",
+    category: "aesthetic",
+    value: "https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=1920&auto=format&fit=crop",
+    mode: "fill",
+    showGridTexture: false,
+    showWatermark: true,
+  },
+  {
+    id: "neon-bokeh-night",
+    name: "Neon Glow City Bokeh",
+    type: "preset-image",
+    category: "aesthetic",
+    value: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1920&auto=format&fit=crop",
+    mode: "fill",
+    showGridTexture: false,
+    showWatermark: true,
+  },
+  {
+    id: "hacker-code",
+    name: "Digital Matrix Stream",
+    type: "preset-image",
+    category: "aesthetic",
+    value: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=1920&auto=format&fit=crop",
+    mode: "fill",
+    showGridTexture: false,
+    showWatermark: true,
+  },
+
+  // --- Kategori: Modern Gradient & Minimal ---
+  {
+    id: "macos-dark-fluid",
+    name: "macOS Dark Fluid Wave",
+    type: "preset-gradient",
+    category: "gradient",
+    value: "linear-gradient(135deg, #0F172A 0%, #1E1B4B 35%, #312E81 70%, #4F46E5 100%)",
+    mode: "fill",
+    showGridTexture: false,
+    showWatermark: true,
+  },
+  {
+    id: "catppuccin-mocha",
+    name: "Catppuccin Mocha",
+    type: "preset-gradient",
+    category: "gradient",
+    value: "linear-gradient(135deg, #1E1E2E 0%, #313244 45%, #CBA6F7 85%, #F38BA8 100%)",
+    mode: "fill",
+    showGridTexture: false,
+    showWatermark: true,
+  },
+  {
+    id: "dracula-dark",
+    name: "Dracula Dark Tech",
+    type: "preset-gradient",
+    category: "gradient",
+    value: "linear-gradient(135deg, #181920 0%, #282A36 50%, #44475A 100%)",
+    mode: "fill",
+    showGridTexture: false,
+    showWatermark: true,
+  },
+  {
+    id: "aurora-green",
+    name: "Aurora Borealis Glow",
+    type: "preset-gradient",
+    category: "gradient",
+    value: "linear-gradient(135deg, #051923 0%, #003554 35%, #006466 70%, #2EC4B6 100%)",
     mode: "fill",
     showGridTexture: false,
     showWatermark: true,
@@ -66,6 +209,7 @@ export const WALLPAPER_PRESETS: WallpaperConfig[] = [
     id: "retro-synthwave",
     name: "80s Synthwave Sunset",
     type: "preset-gradient",
+    category: "gradient",
     value: "linear-gradient(135deg, #1A102F 0%, #2A0845 35%, #6441A5 70%, #FE8C00 100%)",
     mode: "fill",
     showGridTexture: false,
@@ -75,6 +219,7 @@ export const WALLPAPER_PRESETS: WallpaperConfig[] = [
     id: "retro-vaporwave",
     name: "Vaporwave Neon",
     type: "preset-gradient",
+    category: "gradient",
     value: "linear-gradient(135deg, #2D112C 0%, #0D2B45 50%, #C44569 100%)",
     mode: "fill",
     showGridTexture: true,
@@ -84,18 +229,10 @@ export const WALLPAPER_PRESETS: WallpaperConfig[] = [
     id: "midnight-slate",
     name: "Midnight Charcoal",
     type: "preset-color",
+    category: "gradient",
     value: "#12161A",
     mode: "fill",
     showGridTexture: true,
-    showWatermark: true,
-  },
-  {
-    id: "xp-bliss",
-    name: "XP Bliss Landscape",
-    type: "preset-image",
-    value: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1920&auto=format&fit=crop",
-    mode: "fill",
-    showGridTexture: false,
     showWatermark: true,
   },
 ]

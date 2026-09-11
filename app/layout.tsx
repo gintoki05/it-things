@@ -1,3 +1,4 @@
+import type { Viewport } from "next"
 import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -23,6 +24,15 @@ export const metadata = {
     shortcut: "/IT-THINGS-icon-pack/it-things-icon-pack/png-64/grid.png",
     apple: "/IT-THINGS-icon-pack/it-things-icon-pack/png-128/grid.png",
   },
+}
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  interactiveWidget: "resizes-content",
+  themeColor: "#1E4E8C",
 }
 
 export default function RootLayout({

@@ -25,19 +25,41 @@ export function DesktopWindow({ id, children, className, bodyClassName }: Deskto
 
   const win = windows[id]
   const [isMobile, setIsMobile] = React.useState(false)
+  const [viewportHeight, setViewportHeight] = React.useState<number | null>(null)
+  const [isKeyboardOpen, setIsKeyboardOpen] = React.useState(false)
 
   // Dragging state
   const [isDragging, setIsDragging] = React.useState(false)
   const windowRef = React.useRef<HTMLDivElement>(null)
 
-  // Detect mobile
+  // Detect mobile and visual viewport for virtual keyboard
   React.useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
+    const handleViewport = () => {
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+      if (mobile && typeof window !== "undefined" && window.visualViewport) {
+        const vvHeight = window.visualViewport.height
+        setViewportHeight(vvHeight)
+        const kbActive = (window.innerHeight - vvHeight) > 100
+        setIsKeyboardOpen(kbActive)
+      } else {
+        setViewportHeight(null)
+        setIsKeyboardOpen(false)
+      }
     }
-    checkMobile()
-    window.addEventListener("resize", checkMobile)
-    return () => window.removeEventListener("resize", checkMobile)
+    handleViewport()
+    window.addEventListener("resize", handleViewport)
+    if (typeof window !== "undefined" && window.visualViewport) {
+      window.visualViewport.addEventListener("resize", handleViewport)
+      window.visualViewport.addEventListener("scroll", handleViewport)
+    }
+    return () => {
+      window.removeEventListener("resize", handleViewport)
+      if (typeof window !== "undefined" && window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", handleViewport)
+        window.visualViewport.removeEventListener("scroll", handleViewport)
+      }
+    }
   }, [])
 
   if (!win || !win.isOpen || win.isMinimized) {
@@ -145,10 +167,12 @@ export function DesktopWindow({ id, children, className, bodyClassName }: Deskto
         top: 0,
         left: 0,
         right: 0,
-        bottom: "44px", // Above taskbar
+        bottom: isKeyboardOpen ? 0 : "44px", // If keyboard is open, sit directly on top of keyboard
         zIndex: win.zIndex,
         width: "100%",
-        height: "calc(100vh - 44px)",
+        height: viewportHeight
+          ? (isKeyboardOpen ? `${viewportHeight}px` : `${viewportHeight - 44}px`)
+          : "calc(100dvh - 44px)",
       }
     : win.isMaximized
     ? {
@@ -159,7 +183,7 @@ export function DesktopWindow({ id, children, className, bodyClassName }: Deskto
         bottom: "44px",
         zIndex: win.zIndex,
         width: "100%",
-        height: "calc(100vh - 44px)",
+        height: "calc(100dvh - 44px)",
       }
     : {
         position: "absolute",
@@ -168,7 +192,7 @@ export function DesktopWindow({ id, children, className, bodyClassName }: Deskto
         width: `${win.size.width}px`,
         maxWidth: "calc(100vw - 20px)",
         height: `${win.size.height}px`,
-        maxHeight: "calc(100vh - 65px)",
+        maxHeight: "calc(100dvh - 65px)",
         zIndex: win.zIndex,
       }
 
