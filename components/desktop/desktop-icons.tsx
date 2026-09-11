@@ -17,13 +17,12 @@ const ITEM_GRID_POSITIONS: Record<AppId, string> = {
   kas: "col-start-2 row-start-2",
   pantry: "col-start-2 row-start-3",
   lapak: "col-start-2 row-start-4",
-  fridge: "col-start-2 row-start-5",
 }
 
 export function DesktopIcons() {
   const { windows, openWindow } = useDesktop()
   const { isAdmin } = useAuth()
-  const { unreadChatCount, activeVoteCount, activePantryCount, alertFridgeCount, clearUnreadChat } = useNotification()
+  const { unreadChatCount, activeVoteCount, activePantryCount, clearUnreadChat } = useNotification()
   const [selectedId, setSelectedId] = React.useState<AppId | null>(null)
 
   // Hanya tampilkan modul yang tidak disembunyikan dan bukan adminOnly (kecuali admin)
@@ -111,14 +110,6 @@ export function DesktopIcons() {
                   className="absolute -top-1.5 -right-2 bg-rose-500 text-white font-mono text-[8px] font-black px-1 py-0.5 rounded border border-rose-600 shadow leading-none uppercase animate-pulse"
                 >
                   {unreadChatCount > 99 ? "99+" : `${unreadChatCount} BARU`}
-                </span>
-              )}
-              {!item.isComingSoon && item.id === "fridge" && alertFridgeCount > 0 && (
-                <span
-                  title={`${alertFridgeCount} item kulkas expired/segera expired`}
-                  className="absolute -top-1.5 -right-2 bg-amber-500 text-slate-950 font-mono text-[8px] font-black px-1 py-0.5 rounded border border-amber-600 shadow leading-none uppercase animate-pulse"
-                >
-                  {alertFridgeCount > 1 ? `${alertFridgeCount} ⚠️` : "1 ⚠️"}
                 </span>
               )}
             </div>

@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
 
-export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "fridge"
+export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak"
 
 export interface WindowState {
   id: AppId
@@ -118,7 +118,6 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 760, height: 570 },
     defaultSize: { width: 760, height: 570 },
     defaultPos: { x: 270, y: 84 },
-    isComingSoon: true,
   },
   pantry: {
     id: "pantry",
@@ -176,20 +175,6 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     defaultSize: { width: 440, height: 720 },
     defaultPos: { x: 880, y: 10 },
   },
-  fridge: {
-    id: "fridge",
-    title: "Kulkas.exe — Kulkas Virtual Kantor (LG 1 Pintu 3D)",
-    icon: "fridge",
-    filename: "kulkas.exe",
-    isOpen: false,
-    isMinimized: false,
-    isMaximized: false,
-    zIndex: 17,
-    position: { x: 230, y: 30 },
-    size: { width: 920, height: 660 },
-    defaultSize: { width: 920, height: 660 },
-    defaultPos: { x: 230, y: 30 },
-  },
 }
 
 export function DesktopProvider({ children }: { children: React.ReactNode }) {
@@ -217,7 +202,7 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
       requestedApp = "splitbill"
     }
 
-    const validApps: AppId[] = ["vote", "splitbill", "kas", "team", "chat", "readme", "pantry", "lapak", "fridge"]
+    const validApps: AppId[] = ["vote", "splitbill", "kas", "team", "chat", "readme", "pantry", "lapak"]
     const targetApp = requestedApp && validApps.includes(requestedApp) ? requestedApp : null
 
     if (targetApp) {

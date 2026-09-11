@@ -28,7 +28,6 @@ import { ChatApp } from "@/components/apps/chat-app"
 import { ReadmeApp } from "@/components/apps/readme-app"
 import { PantryApp } from "@/components/apps/pantry-app"
 import { LapakApp } from "@/components/apps/lapak-app"
-import { FridgeApp } from "@/components/apps/fridge-app"
 
 const MemoizedReadmeApp = React.memo(ReadmeApp)
 const MemoizedVoteApp = React.memo(VoteApp)
@@ -42,7 +41,6 @@ const MemoizedChatApp = React.memo(ChatApp)
 const MemoizedDesktopIcons = React.memo(DesktopIcons)
 const MemoizedTeamWidget = React.memo(TeamWidget)
 const MemoizedStickyNoteWidget = React.memo(StickyNoteWidget)
-const MemoizedFridgeApp = React.memo(FridgeApp)
 
 function DesktopWorkspace() {
   const { isPasscodeVerified, isPasscodeLoading, isGuest, isAdmin, isRecoveryMode } = useAuth()
@@ -190,11 +188,6 @@ function DesktopWorkspace() {
       {/* Retro Window: Chat.exe */}
       <DesktopWindow id="chat">
         <MemoizedChatApp />
-      </DesktopWindow>
-
-      {/* Retro Window: Kulkas.exe (Kulkas Virtual) */}
-      <DesktopWindow id="fridge">
-        <MemoizedFridgeApp />
       </DesktopWindow>
 
       {/* Floating Retro Team Widget */}
