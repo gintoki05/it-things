@@ -7,6 +7,7 @@ import { useDesktop } from "./desktop-context"
 import { useAuth } from "@/lib/auth"
 import { UserAvatar } from "@/components/retro/user-avatar"
 import { cn } from "@/lib/utils"
+import { formatDisplayPrice } from "@/components/apps/lapak-app"
 import {
   ChevronUp,
   ChevronDown,
@@ -592,7 +593,7 @@ export function StickyNoteWidget() {
                 )}
                 {currentLapak.priceRange && (
                   <div className="mt-1 text-[10px] font-bold text-emerald-800 font-mono">
-                    🏷️ {currentLapak.priceRange}
+                    🏷️ {formatDisplayPrice(currentLapak.priceRange)}
                   </div>
                 )}
                 <div className="mt-1 flex items-center gap-1 text-[9px] text-gray-600">

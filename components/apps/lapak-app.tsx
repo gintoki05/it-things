@@ -151,6 +151,20 @@ function parseExistingPrice(raw: string): {
   }
 }
 
+export function formatDisplayPrice(price?: string | null): string {
+  if (!price) return ""
+  const trimmed = price.trim()
+  if (!trimmed) return ""
+  if (/^(rp|mulai|sesuai|nego|gratis|hubungi)/i.test(trimmed)) {
+    return trimmed
+  }
+  const digits = trimmed.replace(/\D/g, "")
+  if (digits && !trimmed.includes("-") && !trimmed.includes("/")) {
+    return `Rp ${maskRupiahInput(digits)}`
+  }
+  return `Rp ${trimmed}`
+}
+
 export function LapakApp() {
   const { user, isAdmin, isGuest } = useAuth()
   const {
@@ -562,7 +576,7 @@ export function LapakApp() {
                     {item.priceRange && (
                       <div className="mt-2 flex items-center gap-1.5 text-xs font-mono font-bold text-emerald-700">
                         <Tag className="size-3 text-emerald-600 shrink-0" />
-                        <span>{item.priceRange}</span>
+                        <span>{formatDisplayPrice(item.priceRange)}</span>
                       </div>
                     )}
                   </div>
