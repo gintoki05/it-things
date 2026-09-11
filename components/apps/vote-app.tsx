@@ -4,9 +4,12 @@ import * as React from "react"
 import { useAuth } from "@/lib/auth"
 import {
   useVoteStore,
+  useVoteComments,
   VoteGroup,
   VoteOption,
+  VoteComment,
   VoteType,
+  Voter,
   isGroupArchived,
   daysRemaining,
 } from "@/lib/vote-store"
@@ -33,6 +36,8 @@ import {
   Share2,
   Calendar,
   Clock,
+  MessageSquare,
+  Send,
 } from "lucide-react"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { UserAvatar } from "@/components/retro/user-avatar"
@@ -65,6 +70,18 @@ function formatDateShort(dateStr?: string) {
     month: "short",
     year: "numeric",
   })
+}
+
+function formatTimeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return "baru saja"
+  if (mins < 60) return `${mins}m lalu`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}j lalu`
+  const days = Math.floor(hrs / 24)
+  if (days < 7) return `${days}h lalu`
+  return formatDateShort(dateStr)
 }
 
 function VoteTypeBadge({ type }: { type: VoteType }) {
@@ -330,6 +347,132 @@ function formatVoteWhatsAppText(group: VoteGroup): string {
   return lines.join("\n")
 }
 
+// ─── Comment Section ──────────────────────────────────────────
+function VoteCommentSection({
+  groupId,
+  currentUser,
+  isGuest,
+  isAdmin,
+  onToast,
+}: {
+  groupId: string
+  currentUser: { id: string; name: string; avatarUrl?: string | null } | null
+  isGuest: boolean
+  isAdmin: boolean
+  onToast?: (type: "success" | "error", msg: string) => void
+}) {
+  const { comments, isLoading, tableMissing, addComment, deleteComment } = useVoteComments(groupId)
+  const [text, setText] = React.useState("")
+  const [isSending, setIsSending] = React.useState(false)
+  const bottomRef = React.useRef<HTMLDivElement>(null)
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!text.trim() || !currentUser) return
+    setIsSending(true)
+    const res = await addComment(text.trim(), {
+      id: currentUser.id,
+      name: currentUser.name,
+      avatarUrl: currentUser.avatarUrl,
+    })
+    setIsSending(false)
+    if (res.success) {
+      setText("")
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
+    } else {
+      onToast?.("error", res.error || "Gagal mengirim komentar.")
+    }
+  }
+
+  if (tableMissing) return null
+
+  return (
+    <div className="bg-white border border-[#95A5B5] rounded-[3px] p-3 space-y-3">
+      {/* Header */}
+      <div className="font-mono text-[11px] font-bold text-[#14253D] flex items-center gap-1.5 pb-1 border-b border-[#E2E8F0]">
+        <MessageSquare className="size-3.5 text-[#1E4E8C]" />
+        KOMENTAR {comments.length > 0 && `(${comments.length})`}
+      </div>
+
+      {/* Comments list */}
+      {isLoading ? (
+        <div className="py-3 text-center font-mono text-[10px] text-gray-400 flex items-center justify-center gap-1.5">
+          <RotateCw className="size-3 animate-spin" /> Memuat komentar...
+        </div>
+      ) : comments.length === 0 ? (
+        <div className="py-4 text-center font-mono text-[10px] text-gray-400">
+          Belum ada komentar. Jadilah yang pertama! 💬
+        </div>
+      ) : (
+        <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+          {comments.map((c) => {
+            const canDelete = Boolean(currentUser && (c.userId === currentUser.id || isAdmin))
+            return (
+              <div key={c.id} className="flex items-start gap-2 group/comment">
+                <UserAvatar src={c.userAvatar} name={c.userName} size="size-5" textClass="text-[8px]" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-bold font-mono text-[#14253D]">{c.userName.split(" ")[0]}</span>
+                    <span className="text-[9px] font-mono text-gray-400">{formatTimeAgo(c.createdAt)}</span>
+                    {canDelete && (
+                      <button
+                        type="button"
+                        onClick={() => deleteComment(c.id)}
+                        title="Hapus komentar"
+                        className="opacity-0 group-hover/comment:opacity-100 transition-opacity p-0.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 cursor-pointer"
+                      >
+                        <Trash2 className="size-2.5" />
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-gray-700 leading-relaxed break-words">{c.content}</p>
+                </div>
+              </div>
+            )
+          })}
+          <div ref={bottomRef} />
+        </div>
+      )}
+
+      {/* Input */}
+      {currentUser && (
+        isGuest ? (
+          <div className="flex items-center gap-1.5 text-[10px] font-mono text-amber-800 bg-amber-50/90 p-2 rounded-[2px] border border-amber-200">
+            <Eye className="size-3.5 shrink-0 text-amber-600" />
+            <span>Mode Tamu: Masuk dengan Google untuk berkomentar.</span>
+          </div>
+        ) : (
+          <form onSubmit={handleSend} className="flex items-end gap-2 pt-1 border-t border-[#E2E8F0]">
+            <UserAvatar src={currentUser.avatarUrl} name={currentUser.name} size="size-5" textClass="text-[8px]" />
+            <textarea
+              rows={2}
+              placeholder="Tulis komentar... (maks. 500 karakter)"
+              value={text}
+              onChange={(e) => setText(e.target.value.slice(0, 500))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault()
+                  handleSend(e as unknown as React.FormEvent)
+                }
+              }}
+              className="flex-1 px-2 py-1.5 border border-[#95A5B5] rounded-[2px] bg-[#FAFBFD] text-xs font-mono resize-none focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
+            />
+            <button
+              type="submit"
+              disabled={isSending || !text.trim()}
+              title="Kirim (Enter)"
+              className="h-8 px-2.5 bg-[#1E4E8C] hover:bg-[#153A6B] disabled:opacity-40 text-white font-mono text-xs font-bold rounded-[2px] flex items-center gap-1 border border-[#102A45] shrink-0 cursor-pointer self-end"
+            >
+              <Send className="size-3" />
+              <span className="hidden sm:inline">{isSending ? "..." : "Kirim"}</span>
+            </button>
+          </form>
+        )
+      )}
+    </div>
+  )
+}
+
 // ─── Group Card ──────────────────────────────────────────────
 function GroupCard({
   group,
@@ -410,6 +553,7 @@ function GroupCard({
 function GroupDetail({
   group,
   currentUserId,
+  currentUser,
   isAdmin,
   isGuest = false,
   onBack,
@@ -423,6 +567,7 @@ function GroupDetail({
 }: {
   group: VoteGroup
   currentUserId: string | null
+  currentUser: { id: string; name: string; avatarUrl?: string | null } | null
   isAdmin: boolean
   isGuest?: boolean
   onBack: () => void
@@ -930,6 +1075,16 @@ function GroupDetail({
           </div>
         </div>
       )}
+
+      {/* Komentar */}
+      <VoteCommentSection
+        groupId={group.id}
+        currentUser={currentUser}
+        isGuest={isGuest}
+        isAdmin={isAdmin}
+        onToast={onToast}
+      />
+
       {/* Confirm Delete Group Dialog */}
       <ConfirmDialog
         isOpen={showDeleteGroupDialog}
@@ -1213,6 +1368,7 @@ export function VoteApp() {
         <GroupDetail
           group={selectedGroup}
           currentUserId={user?.id || null}
+          currentUser={user ? { id: user.id, name: user.name, avatarUrl: user.avatarUrl } : null}
           isAdmin={isAdmin}
           isGuest={isGuest}
           onBack={handleBackToList}

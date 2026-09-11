@@ -19,6 +19,8 @@ interface NotificationContextType {
   isMuted: boolean
   unreadChatCount: number
   activeVoteCount: number
+  activePantryCount: number
+  alertFridgeCount: number
   activeToast: NotificationToast | null
   toggleMute: () => void
   dismissToast: () => void
@@ -38,6 +40,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [isMuted, setIsMuted] = React.useState<boolean>(false)
   const [unreadChatCount, setUnreadChatCount] = React.useState<number>(0)
   const [activeVoteCount, setActiveVoteCount] = React.useState<number>(0)
+  const [activePantryCount, setActivePantryCount] = React.useState<number>(0)
+  const [alertFridgeCount, setAlertFridgeCount] = React.useState<number>(0)
   const [activeToast, setActiveToast] = React.useState<NotificationToast | null>(null)
   const [browserPermission, setBrowserPermission] = React.useState<NotificationPermission | "unsupported">("default")
   const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
@@ -58,6 +62,46 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       }
     } catch (err) {
       console.warn("fetchActiveVoteCount error:", err)
+    }
+  }, [])
+
+  // ─── Fetch Active Pantry Count ──────────────────────────────
+  const fetchActivePantryCount = React.useCallback(async () => {
+    if (!isSupabaseConfigured || !supabase) return
+    try {
+      const { data, error } = await supabase
+        .from("pantry_items")
+        .select("id, is_active")
+        .eq("is_active", true)
+
+      if (!error && data) {
+        setActivePantryCount(data.length)
+      }
+    } catch (err) {
+      console.warn("fetchActivePantryCount error:", err)
+    }
+  }, [])
+
+  // ─── Fetch Fridge Alert Count (expired + expiring soon) ────
+  const fetchAlertFridgeCount = React.useCallback(async () => {
+    if (!isSupabaseConfigured || !supabase) return
+    try {
+      const todayStr = new Date().toISOString().split("T")[0]
+      const threeDaysLater = new Date()
+      threeDaysLater.setDate(threeDaysLater.getDate() + 3)
+      const soonStr = threeDaysLater.toISOString().split("T")[0]
+
+      const { data, error } = await supabase
+        .from("fridge_items")
+        .select("id, expired_at")
+        .not("expired_at", "is", null)
+        .lte("expired_at", soonStr)
+
+      if (!error && data) {
+        setAlertFridgeCount(data.length)
+      }
+    } catch (err) {
+      console.warn("fetchAlertFridgeCount error:", err)
     }
   }, [])
 
@@ -113,22 +157,34 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [])
 
-  // Sync active votes and initial unread on mount
+  // Sync active votes, pantry, fridge alerts, and initial unread on mount
   React.useEffect(() => {
     fetchActiveVoteCount()
+    fetchActivePantryCount()
+    fetchAlertFridgeCount()
     fetchInitialUnreadChat()
 
     const handleVoteChanged = () => {
       fetchActiveVoteCount()
     }
+    const handlePantryChanged = () => {
+      fetchActivePantryCount()
+    }
+    const handleFridgeChanged = () => {
+      fetchAlertFridgeCount()
+    }
     if (typeof window !== "undefined") {
       window.addEventListener("vote-changed", handleVoteChanged)
+      window.addEventListener("pantry-changed", handlePantryChanged)
+      window.addEventListener("fridge-changed", handleFridgeChanged)
     }
 
     if (!isSupabaseConfigured || !supabase) {
       return () => {
         if (typeof window !== "undefined") {
           window.removeEventListener("vote-changed", handleVoteChanged)
+          window.removeEventListener("pantry-changed", handlePantryChanged)
+          window.removeEventListener("fridge-changed", handleFridgeChanged)
         }
       }
     }
@@ -144,15 +200,41 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       )
       .subscribe()
 
+    const pantryChannel = supabase
+      .channel("global-pantry-badges")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "pantry_items" },
+        () => {
+          fetchActivePantryCount()
+        }
+      )
+      .subscribe()
+
+    const fridgeChannel = supabase
+      .channel("global-fridge-badges")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "fridge_items" },
+        () => {
+          fetchAlertFridgeCount()
+        }
+      )
+      .subscribe()
+
     return () => {
       if (supabase) {
         supabase.removeChannel(voteChannel)
+        supabase.removeChannel(pantryChannel)
+        supabase.removeChannel(fridgeChannel)
       }
       if (typeof window !== "undefined") {
         window.removeEventListener("vote-changed", handleVoteChanged)
+        window.removeEventListener("pantry-changed", handlePantryChanged)
+        window.removeEventListener("fridge-changed", handleFridgeChanged)
       }
     }
-  }, [fetchActiveVoteCount, fetchInitialUnreadChat])
+  }, [fetchActiveVoteCount, fetchActivePantryCount, fetchAlertFridgeCount, fetchInitialUnreadChat])
 
   const isMutedRef = React.useRef(isMuted)
   React.useEffect(() => {
@@ -402,6 +484,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         isMuted,
         unreadChatCount,
         activeVoteCount,
+        activePantryCount,
+        alertFridgeCount,
         activeToast,
         toggleMute,
         dismissToast,

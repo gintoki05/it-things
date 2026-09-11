@@ -53,6 +53,17 @@ CREATE TABLE IF NOT EXISTS public.vote_records (
     UNIQUE(option_id, user_id)
 );
 
+-- 4b. Table: vote_comments (Komentar per vote group)
+CREATE TABLE IF NOT EXISTS public.vote_comments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    group_id UUID NOT NULL REFERENCES public.vote_groups(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL,
+    user_name TEXT NOT NULL,
+    user_avatar TEXT,
+    content TEXT NOT NULL CHECK (char_length(trim(content)) > 0 AND char_length(content) <= 500),
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- 4. Table: wheel_places (Rekomendasi tempat makan bersama)
 CREATE TABLE IF NOT EXISTS public.wheel_places (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -250,6 +261,7 @@ ALTER TABLE public.team_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vote_groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vote_options ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vote_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vote_comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.wheel_places ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.wheel_spins ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.split_bills ENABLE ROW LEVEL SECURITY;
@@ -541,6 +553,24 @@ CREATE POLICY "vote_records_delete" ON public.vote_records
   FOR DELETE USING (
     auth.uid() IS NOT NULL
     AND user_id = auth.uid()::text
+  );
+
+-- ============================================================
+-- 4b. VOTE COMMENTS POLICIES
+-- ============================================================
+CREATE POLICY "vote_comments_select" ON public.vote_comments
+  FOR SELECT USING (true);
+
+CREATE POLICY "vote_comments_insert" ON public.vote_comments
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL
+    AND user_id = auth.uid()::text
+  );
+
+CREATE POLICY "vote_comments_delete" ON public.vote_comments
+  FOR DELETE USING (
+    auth.uid() IS NOT NULL
+    AND (user_id = auth.uid()::text OR public.is_admin())
   );
 
 -- ============================================================
@@ -901,6 +931,7 @@ CREATE INDEX IF NOT EXISTS idx_vote_groups_expires ON public.vote_groups(expires
 CREATE INDEX IF NOT EXISTS idx_vote_options_group ON public.vote_options(group_id);
 CREATE INDEX IF NOT EXISTS idx_vote_records_option ON public.vote_records(option_id);
 CREATE INDEX IF NOT EXISTS idx_vote_records_group_user ON public.vote_records(group_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_vote_comments_group ON public.vote_comments(group_id, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_wheel_places_category ON public.wheel_places(category);
 CREATE INDEX IF NOT EXISTS idx_wheel_spins_created ON public.wheel_spins(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_split_bills_created ON public.split_bills(created_at DESC);
@@ -989,6 +1020,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.team_members;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.vote_groups;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.vote_options;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.vote_records;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.vote_comments;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.wheel_places;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.wheel_spins;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.split_bills;
@@ -1025,4 +1057,56 @@ SELECT
   'Admin IT'
 WHERE NOT EXISTS (SELECT 1 FROM public.desktop_memos LIMIT 1);
 
+-- ============================================================
+-- Table: fridge_items (Kulkas Virtual Kantor)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.fridge_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL CHECK (char_length(trim(name)) > 0 AND char_length(name) <= 100),
+    category TEXT NOT NULL DEFAULT 'makanan', -- 'makanan' | 'minuman' | 'bumbu' | 'lainnya'
+    notes TEXT CHECK (notes IS NULL OR char_length(notes) <= 300),
+    expired_at DATE, -- nullable: tidak semua item punya tanggal expired
+    slot TEXT NOT NULL DEFAULT 'main_upper', -- 'freezer' | 'chiller' | 'main_upper' | 'main_lower' | 'crisper' | 'door'
+    owner_id TEXT NOT NULL,
+    owner_name TEXT NOT NULL,
+    owner_avatar TEXT,
+    created_by_id TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
 
+ALTER TABLE public.fridge_items ENABLE ROW LEVEL SECURITY;
+
+-- SELECT: semua authenticated user bisa lihat (data internal tim)
+CREATE POLICY "fridge_items_select" ON public.fridge_items
+    FOR SELECT USING (true);
+
+-- INSERT: hanya user login, owner harus diri sendiri
+CREATE POLICY "fridge_items_insert" ON public.fridge_items
+    FOR INSERT WITH CHECK (
+        auth.uid() IS NOT NULL
+        AND owner_id = auth.uid()::text
+        AND created_by_id = auth.uid()::text
+    );
+
+-- UPDATE: hanya owner atau admin
+CREATE POLICY "fridge_items_update" ON public.fridge_items
+    FOR UPDATE USING (
+        owner_id = auth.uid()::text OR public.is_admin()
+    );
+
+-- DELETE: hanya owner atau admin
+CREATE POLICY "fridge_items_delete" ON public.fridge_items
+    FOR DELETE USING (
+        owner_id = auth.uid()::text OR public.is_admin()
+    );
+
+-- Index
+CREATE INDEX IF NOT EXISTS idx_fridge_items_owner_id ON public.fridge_items (owner_id);
+CREATE INDEX IF NOT EXISTS idx_fridge_items_expired_at ON public.fridge_items (expired_at);
+CREATE INDEX IF NOT EXISTS idx_fridge_items_created_at ON public.fridge_items (created_at DESC);
+
+-- Grant access
+GRANT ALL ON public.fridge_items TO anon, authenticated, service_role;
+
+-- Realtime
+ALTER PUBLICATION supabase_realtime ADD TABLE public.fridge_items;

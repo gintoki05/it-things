@@ -51,6 +51,16 @@ export interface VoteGroup {
   options: VoteOption[]
 }
 
+export interface VoteComment {
+  id: string
+  groupId: string
+  userId: string
+  userName: string
+  userAvatar?: string | null
+  content: string
+  createdAt: string
+}
+
 // A group is "archived" if manually closed OR past expires_at
 export function isGroupArchived(group: VoteGroup): boolean {
   return group.isClosed || new Date(group.expiresAt) <= new Date()
@@ -597,4 +607,146 @@ export function useVoteStore() {
     castVote,
     refresh: fetchData,
   }
+}
+
+// ============================================================
+// useVoteComments hook (komentar per vote group)
+// ============================================================
+
+export function useVoteComments(groupId: string | null) {
+  const [comments, setComments] = React.useState<VoteComment[]>([])
+  const [isLoading, setIsLoading] = React.useState(false)
+  const [tableMissing, setTableMissing] = React.useState(false)
+
+  const isTableMissingError = (err: { code?: string; message?: string }) =>
+    err?.code === "PGRST205" ||
+    err?.code === "PGRST204" ||
+    err?.code === "42P01" ||
+    err?.message?.includes("schema cache") ||
+    err?.message?.includes("does not exist")
+
+  const fetchComments = React.useCallback(async () => {
+    if (!groupId || !isSupabaseConfigured || !supabase) return
+
+    setIsLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from("vote_comments")
+        .select("*")
+        .eq("group_id", groupId)
+        .order("created_at", { ascending: true })
+
+      if (error) {
+        if (isTableMissingError(error)) { setTableMissing(true); return }
+        throw error
+      }
+
+      setTableMissing(false)
+      setComments(
+        (data || []).map((c) => ({
+          id: c.id,
+          groupId: c.group_id,
+          userId: c.user_id,
+          userName: c.user_name,
+          userAvatar: c.user_avatar,
+          content: c.content,
+          createdAt: c.created_at,
+        }))
+      )
+    } catch (err) {
+      if (isTableMissingError(err as { code?: string; message?: string })) {
+        setTableMissing(true)
+      } else {
+        console.warn("vote-comments fetchComments error:", err)
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }, [groupId])
+
+  React.useEffect(() => {
+    if (!groupId) { setComments([]); return }
+
+    fetchComments()
+
+    if (!isSupabaseConfigured || !supabase) return
+
+    const channelName = `vote-comments-${groupId}-${Math.random().toString(36).substring(2, 8)}`
+    const channel = supabase
+      .channel(channelName)
+      .on("postgres_changes", { event: "*", schema: "public", table: "vote_comments", filter: `group_id=eq.${groupId}` }, () => fetchComments())
+      .subscribe()
+
+    return () => { if (supabase) supabase.removeChannel(channel) }
+  }, [groupId, fetchComments])
+
+  const addComment = async (
+    content: string,
+    user: Voter
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (!groupId) return { success: false, error: "Group ID tidak ada." }
+    if (user.id === "guest-user") return { success: false, error: "Tamu tidak dapat berkomentar." }
+    if (!content.trim()) return { success: false, error: "Komentar tidak boleh kosong." }
+
+    const tempId = crypto.randomUUID()
+    const optimistic: VoteComment = {
+      id: tempId,
+      groupId,
+      userId: user.id,
+      userName: user.name,
+      userAvatar: user.avatarUrl,
+      content: content.trim(),
+      createdAt: new Date().toISOString(),
+    }
+
+    setComments((prev) => [...prev, optimistic])
+
+    if (!isSupabaseConfigured || !supabase) return { success: true }
+
+    try {
+      const { data, error } = await supabase
+        .from("vote_comments")
+        .insert({
+          group_id: groupId,
+          user_id: user.id,
+          user_name: user.name,
+          user_avatar: user.avatarUrl || null,
+          content: content.trim(),
+        })
+        .select()
+        .single()
+
+      if (error) {
+        setComments((prev) => prev.filter((c) => c.id !== tempId))
+        return { success: false, error: error.message }
+      }
+
+      setComments((prev) =>
+        prev.map((c) => (c.id === tempId ? { ...c, id: data.id, createdAt: data.created_at } : c))
+      )
+      return { success: true }
+    } catch (err) {
+      setComments((prev) => prev.filter((c) => c.id !== tempId))
+      return { success: false, error: err instanceof Error ? err.message : "Gagal mengirim komentar." }
+    }
+  }
+
+  const deleteComment = async (
+    commentId: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    setComments((prev) => prev.filter((c) => c.id !== commentId))
+
+    if (!isSupabaseConfigured || !supabase) return { success: true }
+
+    try {
+      const { error } = await supabase.from("vote_comments").delete().eq("id", commentId)
+      if (error) { await fetchComments(); return { success: false, error: error.message } }
+      return { success: true }
+    } catch (err) {
+      await fetchComments()
+      return { success: false, error: err instanceof Error ? err.message : "Gagal menghapus komentar." }
+    }
+  }
+
+  return { comments, isLoading, tableMissing, addComment, deleteComment, refresh: fetchComments }
 }

@@ -23,7 +23,8 @@ import {
   Edit3,
   Info,
   Volume2,
-  VolumeX
+  VolumeX,
+  Monitor
 } from "lucide-react"
 import { EditProfileModal } from "@/components/auth/edit-profile-modal"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -32,6 +33,7 @@ import { useNotification } from "@/lib/notification-store"
 import { RetroNotificationToast } from "@/components/desktop/retro-notification-toast"
 import { TaskbarTicker } from "@/components/desktop/taskbar-ticker"
 import { usePicStore } from "@/lib/pic-store"
+import { useWallpaper } from "@/lib/wallpaper-store"
 
 interface TaskbarProps {
   onOpenLoginModal?: () => void
@@ -39,6 +41,7 @@ interface TaskbarProps {
 
 export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
   const { windows, activeWindowId, openWindow, toggleWindow, openAboutDialog } = useDesktop()
+  const { openDialog: openWallpaperDialog } = useWallpaper()
   const { user, isAdmin, isTreasurer, isGuest, isSupabaseConnected, signOut, setDemoUserRole, lockApp, canSwitchRole } = useAuth()
   const { isKasPic, isPantryPic } = usePicStore()
   const {
@@ -322,6 +325,18 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
               >
                 <Edit3 className="size-3.5 text-[#1E4E8C]" />
                 <span>Edit Profil & Nama...</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsStartOpen(false)
+                  openWallpaperDialog()
+                }}
+                className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[#A4B5C6]/30 text-[#14253D] rounded-[2px] transition-colors text-left font-semibold text-[11px]"
+              >
+                <Monitor className="size-3.5 text-[#1E4E8C]" />
+                <span>Pengaturan Tampilan (Wallpaper)...</span>
               </button>
 
               {isGuest ? (

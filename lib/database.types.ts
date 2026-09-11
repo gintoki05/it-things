@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      fridge_items: {
+        Row: {
+          category: string
+          created_at: string
+          created_by_id: string
+          expired_at: string | null
+          id: string
+          name: string
+          notes: string | null
+          owner_avatar: string | null
+          owner_id: string
+          owner_name: string
+          slot: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by_id: string
+          expired_at?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          owner_avatar?: string | null
+          owner_id: string
+          owner_name: string
+          slot?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by_id?: string
+          expired_at?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          owner_avatar?: string | null
+          owner_id?: string
+          owner_name?: string
+          slot?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           created_at: string
@@ -270,34 +312,34 @@ export type Database = {
       }
       module_pics: {
         Row: {
-          id: string
-          module: string
-          user_id: string
-          user_name: string
-          user_avatar: string | null
           assigned_by_id: string | null
           assigned_by_name: string | null
-          updated_at: string
-        }
-        Insert: {
-          id?: string
+          id: string
           module: string
+          updated_at: string
+          user_avatar: string | null
           user_id: string
           user_name: string
-          user_avatar?: string | null
+        }
+        Insert: {
           assigned_by_id?: string | null
           assigned_by_name?: string | null
+          id?: string
+          module: string
           updated_at?: string
+          user_avatar?: string | null
+          user_id: string
+          user_name: string
         }
         Update: {
-          id?: string
-          module?: string
-          user_id?: string
-          user_name?: string
-          user_avatar?: string | null
           assigned_by_id?: string | null
           assigned_by_name?: string | null
+          id?: string
+          module?: string
           updated_at?: string
+          user_avatar?: string | null
+          user_id?: string
+          user_name?: string
         }
         Relationships: []
       }
@@ -570,6 +612,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      vote_comments: {
+        Row: {
+          content: string
+          created_at: string
+          group_id: string
+          id: string
+          user_avatar: string | null
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          group_id: string
+          id?: string
+          user_avatar?: string | null
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          group_id?: string
+          id?: string
+          user_avatar?: string | null
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vote_comments_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "vote_groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vote_groups: {
         Row: {
@@ -922,3 +1002,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+

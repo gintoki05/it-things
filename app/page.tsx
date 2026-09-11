@@ -14,6 +14,9 @@ import { AboutDialog } from "@/components/desktop/about-dialog"
 import { TeamWidget } from "@/components/desktop/team-widget"
 import { StickyNoteWidget } from "@/components/desktop/sticky-note-widget"
 import { APP_VERSION } from "@/lib/version"
+import { WallpaperProvider, useWallpaper } from "@/lib/wallpaper-store"
+import { DisplayPropertiesDialog } from "@/components/desktop/display-properties-dialog"
+import { DesktopContextMenu } from "@/components/desktop/desktop-context-menu"
 
 // Apps
 import { VoteApp } from "@/components/apps/vote-app"
@@ -25,6 +28,7 @@ import { ChatApp } from "@/components/apps/chat-app"
 import { ReadmeApp } from "@/components/apps/readme-app"
 import { PantryApp } from "@/components/apps/pantry-app"
 import { LapakApp } from "@/components/apps/lapak-app"
+import { FridgeApp } from "@/components/apps/fridge-app"
 
 const MemoizedReadmeApp = React.memo(ReadmeApp)
 const MemoizedVoteApp = React.memo(VoteApp)
@@ -38,11 +42,29 @@ const MemoizedChatApp = React.memo(ChatApp)
 const MemoizedDesktopIcons = React.memo(DesktopIcons)
 const MemoizedTeamWidget = React.memo(TeamWidget)
 const MemoizedStickyNoteWidget = React.memo(StickyNoteWidget)
+const MemoizedFridgeApp = React.memo(FridgeApp)
 
 function DesktopWorkspace() {
   const { isPasscodeVerified, isPasscodeLoading, isGuest, isAdmin, isRecoveryMode } = useAuth()
   const { comingSoonApp, closeComingSoonDialog, isAboutOpen, closeAboutDialog } = useDesktop()
+  const { wallpaper, getBackgroundStyle } = useWallpaper()
   const [showLoginModal, setShowLoginModal] = React.useState(false)
+  const [contextMenuPos, setContextMenuPos] = React.useState<{ x: number; y: number } | null>(null)
+
+  const handleDesktopContextMenu = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement
+    if (
+      target.closest(".retro-window-frame") ||
+      target.closest(".taskbar-container") ||
+      target.closest("button") ||
+      target.closest("input") ||
+      target.closest("a")
+    ) {
+      return
+    }
+    e.preventDefault()
+    setContextMenuPos({ x: e.clientX, y: e.clientY })
+  }
 
   // Saat pertama kali memuat / reload, tunggu pengecekan storage selesai
   if (isPasscodeLoading) {
@@ -60,15 +82,22 @@ function DesktopWorkspace() {
   }
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden select-none bg-[#1A365D]">
+    <div
+      className="relative w-screen h-screen overflow-hidden select-none transition-all duration-300"
+      style={getBackgroundStyle()}
+      onContextMenu={handleDesktopContextMenu}
+      onClick={() => setContextMenuPos(null)}
+    >
       {/* Retro Wallpaper Texture */}
-      <div 
-        className="absolute inset-0 opacity-20 pointer-events-none"
-        style={{
-          backgroundImage: `radial-gradient(#FFFFFF 1px, transparent 1px)`,
-          backgroundSize: "24px 24px"
-        }}
-      />
+      {wallpaper.showGridTexture && (
+        <div 
+          className="absolute inset-0 opacity-20 pointer-events-none"
+          style={{
+            backgroundImage: `radial-gradient(#FFFFFF 1px, transparent 1px)`,
+            backgroundSize: "24px 24px"
+          }}
+        />
+      )}
 
       {/* Guest Mode Warning Banner Bar */}
       {isGuest && (
@@ -95,17 +124,19 @@ function DesktopWorkspace() {
       )}
 
       {/* Decorative Retro Desktop Branding in Center/Bottom-Right */}
-      <div className="absolute right-6 bottom-16 pointer-events-none select-none text-right opacity-25 hidden sm:block">
-        <div className="font-mono text-4xl sm:text-6xl font-black text-white tracking-widest">
-          IT-THINGS
+      {wallpaper.showWatermark && (
+        <div className="absolute right-6 bottom-16 pointer-events-none select-none text-right opacity-25 hidden sm:block">
+          <div className="font-mono text-4xl sm:text-6xl font-black text-white tracking-widest">
+            IT-THINGS
+          </div>
+          <div className="font-mono text-xs text-blue-200 tracking-wider">
+            {isGuest ? "GUEST MODE // READ-ONLY ACCESS" : `INTERNAL TEAM SUITE 98 • DAILY UTILITIES // ${APP_VERSION}`}
+          </div>
+          <div className="font-mono text-[10px] text-blue-300 tracking-wide mt-0.5">
+            Portal Santai & Utilitas Harian Tim IT
+          </div>
         </div>
-        <div className="font-mono text-xs text-blue-200 tracking-wider">
-          {isGuest ? "GUEST MODE // READ-ONLY ACCESS" : `INTERNAL TEAM SUITE 98 • DAILY UTILITIES // ${APP_VERSION}`}
-        </div>
-        <div className="font-mono text-[10px] text-blue-300 tracking-wide mt-0.5">
-          Portal Santai & Utilitas Harian Tim IT
-        </div>
-      </div>
+      )}
 
       {/* Desktop Icons on Wallpaper */}
       <MemoizedDesktopIcons />
@@ -155,6 +186,11 @@ function DesktopWorkspace() {
         <MemoizedChatApp />
       </DesktopWindow>
 
+      {/* Retro Window: Kulkas.exe (Kulkas Virtual) */}
+      <DesktopWindow id="fridge">
+        <MemoizedFridgeApp />
+      </DesktopWindow>
+
       {/* Floating Retro Team Widget */}
       <MemoizedTeamWidget />
 
@@ -181,6 +217,18 @@ function DesktopWorkspace() {
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
       />
+
+      {/* Desktop Right Click Context Menu */}
+      {contextMenuPos && (
+        <DesktopContextMenu
+          x={contextMenuPos.x}
+          y={contextMenuPos.y}
+          onClose={() => setContextMenuPos(null)}
+        />
+      )}
+
+      {/* Retro Display Properties / Wallpaper Dialog */}
+      <DisplayPropertiesDialog />
     </div>
   )
 }
@@ -190,7 +238,9 @@ export default function Page() {
     <AuthProvider>
       <NotificationProvider>
         <DesktopProvider>
-          <DesktopWorkspace />
+          <WallpaperProvider>
+            <DesktopWorkspace />
+          </WallpaperProvider>
         </DesktopProvider>
       </NotificationProvider>
     </AuthProvider>

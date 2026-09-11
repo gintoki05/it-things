@@ -5,12 +5,25 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.2"
+export const APP_VERSION = "v2.3.3"
 export const APP_BUILD = "2026.09.11"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.3",
+    date: "11 Sep 2026",
+    codename: "Display Properties & Custom Wallpaper Suite",
+    changes: [
+      "Fitur kustomisasi wallpaper desktop ala Windows 98 (Display Properties / desk.cpl).",
+      "Preview visual monitor CRT tabung interaktif real-time dengan efek scanline dan simulasi ikon desktop.",
+      "Koleksi preset retro legendaris (Windows 98 Classic Teal, Windows 2000 Pro Blue, Matrix Terminal, XP Bliss, Synthwave, dll).",
+      "Dukungan kustomisasi lengkap: upload berkas gambar lokal otomatis kompresi, URL gambar web, dan palet warna solid hex.",
+      "Menu klik kanan retro (Context Menu) pada area desktop kosong untuk akses instan ke Properti Tampilan.",
+      "Penyimpanan preferensi persisten di browser (localStorage) dengan mode tampilan (Fill, Fit, Tile, Center) serta toggle efek tekstur & watermark.",
+    ],
+  },
   {
     version: "v2.3.2",
     date: "11 Sep 2026",

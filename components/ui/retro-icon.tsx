@@ -13,6 +13,7 @@ export const RETRO_ICON_NAMES = [
   "delete",
   "edit",
   "favorite",
+  "fridge",
   "game",
   "gift",
   "grid",

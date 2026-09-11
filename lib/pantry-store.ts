@@ -232,6 +232,9 @@ export function usePantryStore() {
         { event: "*", schema: "public", table: "pantry_items" },
         () => {
           fetchItems()
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("pantry-changed"))
+          }
         }
       )
       .on(
@@ -519,6 +522,9 @@ export function usePantryStore() {
         ])
       }
 
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("pantry-changed"))
+      }
       return { success: true }
     } catch (err) {
       return { success: false, error: (err as Error).message }
@@ -577,6 +583,9 @@ export function usePantryStore() {
             : i
         )
       )
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("pantry-changed"))
+      }
       return { success: true }
     } catch (err) {
       return { success: false, error: (err as Error).message }
@@ -595,6 +604,9 @@ export function usePantryStore() {
 
       setItems((prev) => prev.filter((i) => i.id !== itemId))
       setLogs((prev) => prev.filter((l) => l.itemId !== itemId))
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("pantry-changed"))
+      }
       return { success: true }
     } catch (err) {
       return { success: false, error: (err as Error).message }
