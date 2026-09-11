@@ -149,9 +149,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // 4. Tangani saat window kembali fokus / aktif
-    const handleVisibilityChange = () => {
+    const handleVisibilityChange = async () => {
       if (document.visibilityState === "visible") {
         checkPasscodeStorage()
+        if (isSupabaseConfigured && supabase) {
+          try {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (session?.expires_at && session.expires_at * 1000 < Date.now() + 120000) {
+              await supabase.auth.refreshSession()
+            }
+          } catch (err) {
+            console.warn("Visibility session refresh error:", err)
+          }
+        }
       }
     }
 

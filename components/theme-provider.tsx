@@ -16,6 +16,7 @@ function ThemeProvider({
       {...props}
     >
       <ThemeHotkey />
+      <DisableContextMenu />
       {children}
     </NextThemesProvider>
   )
@@ -64,6 +65,22 @@ function ThemeHotkey() {
       window.removeEventListener("keydown", onKeyDown)
     }
   }, [resolvedTheme, setTheme])
+
+  return null
+}
+
+function DisableContextMenu() {
+  React.useEffect(() => {
+    function handleContextMenu(event: MouseEvent) {
+      event.preventDefault()
+    }
+
+    window.addEventListener("contextmenu", handleContextMenu)
+
+    return () => {
+      window.removeEventListener("contextmenu", handleContextMenu)
+    }
+  }, [])
 
   return null
 }

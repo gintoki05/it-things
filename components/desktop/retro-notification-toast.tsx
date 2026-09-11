@@ -17,6 +17,9 @@ export function RetroNotificationToast() {
     bringToFront("chat")
     dismissToast()
     clearUnreadChat()
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("chat-focused"))
+    }
   }
 
   return (

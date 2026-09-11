@@ -154,9 +154,20 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [fetchActiveVoteCount, fetchInitialUnreadChat])
 
+  const isMutedRef = React.useRef(isMuted)
+  React.useEffect(() => {
+    isMutedRef.current = isMuted
+  }, [isMuted])
+
+  const userRef = React.useRef(user)
+  React.useEffect(() => {
+    userRef.current = user
+  }, [user])
+
   const toggleMute = React.useCallback(() => {
     setIsMuted((prev) => {
       const next = !prev
+      isMutedRef.current = next
       if (typeof window !== "undefined") {
         try {
           localStorage.setItem(MUTED_STORAGE_KEY, String(next))
@@ -231,22 +242,31 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       message: string
       mentions?: string[] | null
     }) => {
+      const currentUser = userRef.current
       // Don't notify self
-      if (user && user.id === msg.user_id) return
+      if (currentUser && currentUser.id === msg.user_id) return
+
+      // Unread counter tetap di-increment agar badge taskbar terupdate
+      setUnreadChatCount((prev) => prev + 1)
+
+      const muted = isMutedRef.current
+
+      // Jika dibisukan (muted): JANGAN bunyikan audio dan JANGAN munculkan notifikasi pop-up apapun
+      if (muted) {
+        return
+      }
 
       const mentions = Array.isArray(msg.mentions) ? msg.mentions : []
       const isMention =
-        Boolean(user) &&
+        Boolean(currentUser) &&
         (mentions.includes("all") ||
-          mentions.includes(user?.id || "") ||
-          msg.message.toLowerCase().includes(`@${(user?.name || "").toLowerCase()}`) ||
+          mentions.includes(currentUser?.id || "") ||
+          msg.message.toLowerCase().includes(`@${(currentUser?.name || "").toLowerCase()}`) ||
           msg.message.toLowerCase().includes("@all") ||
           msg.message.toLowerCase().includes("@semua"))
 
-      // 1. Play sound chime if not muted
-      if (!isMuted) {
-        playRetroNotificationSound(0.28)
-      }
+      // 1. Play sound chime (hanya saat tidak dibisukan)
+      playRetroNotificationSound(0.28)
 
       // 2. Set active balloon toast
       const newToast: NotificationToast = {
@@ -269,10 +289,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         toastTimeoutRef.current = null
       }, 5000)
 
-      // 3. Increment unread counter
-      setUnreadChatCount((prev) => prev + 1)
-
-      // 4. Windows OS / Browser Notification (muncul di Action Center Windows)
+      // 3. Windows OS / Browser Notification (muncul di Action Center Windows)
       if (
         typeof window !== "undefined" &&
         "Notification" in window &&
@@ -283,10 +300,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             ? `[IT-THINGS] ${msg.user_name} menyebut Anda!`
             : `[IT-THINGS] Pesan dari ${msg.user_name}`
 
+          // silent: true agar tidak membunyikan chime native Windows bawaan OS yang menimpa suara retro
           const notif = new Notification(title, {
             body: msg.message,
             icon: "/IT-THINGS-icon-pack/it-things-icon-pack/png-128/chat.png",
             tag: `it-things-${msg.id}`,
+            silent: true,
           })
 
           notif.onclick = () => {
@@ -299,7 +318,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         }
       }
     },
-    [isMuted, user]
+    []
   )
 
   // Subscribe to Supabase Realtime chat messages globally
@@ -322,10 +341,42 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           }
           if (raw) {
             handleIncomingChatMessage(raw)
+            // Forward event ke seluruh window agar store chat langsung tersinkron
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(
+                new CustomEvent("chat-message-received", { detail: payload.new })
+              )
+            }
           }
         }
       )
-      .subscribe()
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "chat_messages" },
+        (payload) => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("chat-message-updated", { detail: payload.new })
+            )
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "chat_messages" },
+        (payload) => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("chat-message-deleted", { detail: payload.old })
+            )
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (status === "TIMED_OUT" || status === "CHANNEL_ERROR") {
+          console.warn(`[notification-store] Realtime channel status: ${status}`)
+        }
+      })
 
     return () => {
       if (supabase) {

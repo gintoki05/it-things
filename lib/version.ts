@@ -5,12 +5,23 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.0"
+export const APP_VERSION = "v2.3.1"
 export const APP_BUILD = "2026.09.11"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.1",
+    date: "11 Sep 2026",
+    codename: "Chat Realtime Resilience & Mute Protocol",
+    changes: [
+      "Sinkronisasi otomatis obrolan chat lintas perangkat saat tab aktif kembali, bangun dari sleep, dan online (visibilitychange/focus).",
+      "Bridge event realtime dari channel notifikasi global ke store obrolan untuk mencegah chat out-of-sync.",
+      "Penanganan sesi token Supabase kedaluwarsa dengan auto-refresh & auto-retry otomatis pada pengiriman pesan.",
+      "Perbaikan fitur mode Bisu: menonaktifkan suara retro, menyenyapkan suara native Windows OS (silent: true), dan menahan pop-up notifikasi.",
+    ],
+  },
   {
     version: "v2.3.0",
     date: "11 Sep 2026",

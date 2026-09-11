@@ -330,138 +330,241 @@ export function useChatStore() {
     }
   }, [hasMore, isLoadingMore, messages, fetchReactionsForMessages])
 
-  // ─── Realtime Subscription ─────────────────────────────────
+  // ─── Realtime Subscription & Background Sync ───────────────
   React.useEffect(() => {
     fetchMessages()
+
+    // 1. Throttled refetch saat perangkat bangun dari sleep / tab aktif kembali / online
+    let lastFetchTime = Date.now()
+    const handleReactivation = () => {
+      const now = Date.now()
+      if (now - lastFetchTime > 2500) {
+        lastFetchTime = now
+        fetchMessages()
+      }
+    }
+
+    const handleVisibilityChange = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        handleReactivation()
+      }
+    }
 
     const handleProfileUpdated = () => {
       fetchMessages()
     }
-    if (typeof window !== "undefined") {
-      window.addEventListener("profile-updated", handleProfileUpdated)
-    }
 
-    if (isSupabaseConfigured && supabase) {
-      const channel = supabase
-        .channel("chat-realtime")
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "chat_messages" },
-          (payload) => {
-            const newMsg = mapDbMessage(payload.new as DbChatMessage)
-            setMessages((prev) => {
-              if (prev.some((m) => m.id === newMsg.id)) return prev
-              return [...prev, newMsg]
-            })
-          }
-        )
-        .on(
-          "postgres_changes",
-          { event: "UPDATE", schema: "public", table: "chat_messages" },
-          (payload) => {
-            const updatedMsg = mapDbMessage(payload.new as DbChatMessage)
-            setMessages((prev) =>
-              prev.map((m) => (m.id === updatedMsg.id ? updatedMsg : m))
-            )
-          }
-        )
-        .on(
-          "postgres_changes",
-          { event: "DELETE", schema: "public", table: "chat_messages" },
-          (payload) => {
-            const deletedId = (payload.old as { id?: string })?.id
-            if (deletedId) {
-              setMessages((prev) => prev.filter((m) => m.id !== deletedId))
-            }
-          }
-        )
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "chat_reactions" },
-          (payload) => {
-            const newRx = mapDbReaction(payload.new as DbChatReaction)
-            setReactions((prev) => {
-              const list = prev[newRx.messageId] || []
-              const existingIdx = list.findIndex(
-                (r) => r.id === newRx.id || r.userId === newRx.userId
-              )
-              if (existingIdx >= 0) {
-                const nextList = [...list]
-                nextList[existingIdx] = newRx
-                return {
-                  ...prev,
-                  [newRx.messageId]: nextList,
-                }
-              }
-              return {
-                ...prev,
-                [newRx.messageId]: [...list, newRx],
-              }
-            })
-          }
-        )
-        .on(
-          "postgres_changes",
-          { event: "UPDATE", schema: "public", table: "chat_reactions" },
-          (payload) => {
-            const updatedRx = mapDbReaction(payload.new as DbChatReaction)
-            setReactions((prev) => {
-              const list = prev[updatedRx.messageId] || []
-              const existingIdx = list.findIndex(
-                (r) => r.id === updatedRx.id || r.userId === updatedRx.userId
-              )
-              if (existingIdx >= 0) {
-                const nextList = [...list]
-                nextList[existingIdx] = updatedRx
-                return {
-                  ...prev,
-                  [updatedRx.messageId]: nextList,
-                }
-              }
-              return {
-                ...prev,
-                [updatedRx.messageId]: [...list, updatedRx],
-              }
-            })
-          }
-        )
-        .on(
-          "postgres_changes",
-          { event: "DELETE", schema: "public", table: "chat_reactions" },
-          (payload) => {
-            const oldRx = payload.old as { id?: string }
-            if (oldRx?.id) {
-              setReactions((prev) => {
-                let changed = false
-                const next: Record<string, ChatReaction[]> = {}
-                for (const [mId, list] of Object.entries(prev)) {
-                  const filtered = list.filter((r) => r.id !== oldRx.id)
-                  if (filtered.length !== list.length) changed = true
-                  next[mId] = filtered
-                }
-                return changed ? next : prev
-              })
-            }
-          }
-        )
-        .subscribe()
-
-      return () => {
-        if (supabase) {
-          supabase.removeChannel(channel)
-        }
-        if (typeof window !== "undefined") {
-          window.removeEventListener("profile-updated", handleProfileUpdated)
-        }
+    // 2. Bridge pesan dari channel global (NotificationProvider)
+    // Memastikan jika channel notifikasi berhasil menangkap pesan, chat langsung tersinkron
+    const handleExternalMessage = (e: Event) => {
+      const customEvent = e as CustomEvent<DbChatMessage>
+      if (customEvent.detail) {
+        const newMsg = mapDbMessage(customEvent.detail)
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === newMsg.id)) return prev
+          return [...prev, newMsg]
+        })
       }
     }
 
+    const handleExternalUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent<DbChatMessage>
+      if (customEvent.detail) {
+        const updatedMsg = mapDbMessage(customEvent.detail)
+        setMessages((prev) =>
+          prev.map((m) => (m.id === updatedMsg.id ? updatedMsg : m))
+        )
+      }
+    }
+
+    const handleExternalDelete = (e: Event) => {
+      const customEvent = e as CustomEvent<{ id?: string }>
+      const deletedId = customEvent.detail?.id
+      if (deletedId) {
+        setMessages((prev) => prev.filter((m) => m.id !== deletedId))
+      }
+    }
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("profile-updated", handleProfileUpdated)
+      window.addEventListener("focus", handleReactivation)
+      window.addEventListener("online", handleReactivation)
+      window.addEventListener("chat-focused", handleReactivation)
+      window.addEventListener("chat-message-received", handleExternalMessage)
+      window.addEventListener("chat-message-updated", handleExternalUpdate)
+      window.addEventListener("chat-message-deleted", handleExternalDelete)
+      document.addEventListener("visibilitychange", handleVisibilityChange)
+    }
+
+    // 3. Supabase Realtime Channel khusus instance ini (menghindari topic collision di Supabase JS)
+    const channelName = `chat-realtime-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    const channel = isSupabaseConfigured && supabase
+      ? supabase
+          .channel(channelName)
+          .on(
+            "postgres_changes",
+            { event: "INSERT", schema: "public", table: "chat_messages" },
+            (payload) => {
+              const newMsg = mapDbMessage(payload.new as DbChatMessage)
+              setMessages((prev) => {
+                if (prev.some((m) => m.id === newMsg.id)) return prev
+                return [...prev, newMsg]
+              })
+            }
+          )
+          .on(
+            "postgres_changes",
+            { event: "UPDATE", schema: "public", table: "chat_messages" },
+            (payload) => {
+              const updatedMsg = mapDbMessage(payload.new as DbChatMessage)
+              setMessages((prev) =>
+                prev.map((m) => (m.id === updatedMsg.id ? updatedMsg : m))
+              )
+            }
+          )
+          .on(
+            "postgres_changes",
+            { event: "DELETE", schema: "public", table: "chat_messages" },
+            (payload) => {
+              const deletedId = (payload.old as { id?: string })?.id
+              if (deletedId) {
+                setMessages((prev) => prev.filter((m) => m.id !== deletedId))
+              }
+            }
+          )
+          .on(
+            "postgres_changes",
+            { event: "INSERT", schema: "public", table: "chat_reactions" },
+            (payload) => {
+              const newRx = mapDbReaction(payload.new as DbChatReaction)
+              setReactions((prev) => {
+                const list = prev[newRx.messageId] || []
+                const existingIdx = list.findIndex(
+                  (r) => r.id === newRx.id || r.userId === newRx.userId
+                )
+                if (existingIdx >= 0) {
+                  const nextList = [...list]
+                  nextList[existingIdx] = newRx
+                  return {
+                    ...prev,
+                    [newRx.messageId]: nextList,
+                  }
+                }
+                return {
+                  ...prev,
+                  [newRx.messageId]: [...list, newRx],
+                }
+              })
+            }
+          )
+          .on(
+            "postgres_changes",
+            { event: "UPDATE", schema: "public", table: "chat_reactions" },
+            (payload) => {
+              const updatedRx = mapDbReaction(payload.new as DbChatReaction)
+              setReactions((prev) => {
+                const list = prev[updatedRx.messageId] || []
+                const existingIdx = list.findIndex(
+                  (r) => r.id === updatedRx.id || r.userId === updatedRx.userId
+                )
+                if (existingIdx >= 0) {
+                  const nextList = [...list]
+                  nextList[existingIdx] = updatedRx
+                  return {
+                    ...prev,
+                    [updatedRx.messageId]: nextList,
+                  }
+                }
+                return {
+                  ...prev,
+                  [updatedRx.messageId]: [...list, updatedRx],
+                }
+              })
+            }
+          )
+          .on(
+            "postgres_changes",
+            { event: "DELETE", schema: "public", table: "chat_reactions" },
+            (payload) => {
+              const oldRx = payload.old as { id?: string }
+              if (oldRx?.id) {
+                setReactions((prev) => {
+                  let changed = false
+                  const next: Record<string, ChatReaction[]> = {}
+                  for (const [mId, list] of Object.entries(prev)) {
+                    const filtered = list.filter((r) => r.id !== oldRx.id)
+                    if (filtered.length !== list.length) changed = true
+                    next[mId] = filtered
+                  }
+                  return changed ? next : prev
+                })
+              }
+            }
+          )
+          .subscribe((status) => {
+            if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+              console.warn(`[chat-store] Chat realtime status: ${status}, resyncing messages...`)
+              handleReactivation()
+            }
+          })
+      : null
+
     return () => {
+      if (supabase && channel) {
+        supabase.removeChannel(channel)
+      }
       if (typeof window !== "undefined") {
         window.removeEventListener("profile-updated", handleProfileUpdated)
+        window.removeEventListener("focus", handleReactivation)
+        window.removeEventListener("online", handleReactivation)
+        window.removeEventListener("chat-focused", handleReactivation)
+        window.removeEventListener("chat-message-received", handleExternalMessage)
+        window.removeEventListener("chat-message-updated", handleExternalUpdate)
+        window.removeEventListener("chat-message-deleted", handleExternalDelete)
+        document.removeEventListener("visibilitychange", handleVisibilityChange)
       }
     }
   }, [fetchMessages])
+
+  // ─── Helpers: Session Verification & Error Sanitizer ────────
+  const ensureFreshSession = async () => {
+    if (!isSupabaseConfigured || !supabase) return null
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) {
+        const refreshed = await supabase.auth.refreshSession()
+        return refreshed.data.session || null
+      }
+      if (session.expires_at && session.expires_at * 1000 < Date.now() + 120000) {
+        const refreshed = await supabase.auth.refreshSession()
+        return refreshed.data.session || session
+      }
+      return session
+    } catch {
+      return null
+    }
+  }
+
+  const formatChatErrorMessage = (err: unknown): string => {
+    if (!err) return "Terjadi kesalahan yang tidak diketahui."
+    const msg =
+      typeof err === "object" && err !== null && "message" in err
+        ? String((err as { message: string }).message)
+        : String(err)
+    const code =
+      typeof err === "object" && err !== null && "code" in err
+        ? String((err as { code: string }).code)
+        : ""
+    if (
+      code === "42501" ||
+      msg.toLowerCase().includes("row-level security") ||
+      msg.toLowerCase().includes("jwt") ||
+      msg.toLowerCase().includes("not authenticated")
+    ) {
+      return "Sesi login telah kedaluwarsa. Silakan refresh halaman atau login ulang akun Google Anda."
+    }
+    return msg
+  }
 
   // ─── Send Message ──────────────────────────────────────────
   const sendMessage = async (
@@ -489,6 +592,10 @@ export function useChatStore() {
       return { success: false, error: "Supabase belum terkonfigurasi." }
     }
 
+    // Pastikan session auth segar dan ambil user id yang valid dari auth.uid()
+    const activeSession = await ensureFreshSession()
+    const verifiedUserId = activeSession?.user?.id || currentUser.id
+
     // Sanitize mentions (max 20 entries, alphanumeric/uuid/all)
     const cleanMentions = Array.isArray(mentions)
       ? mentions
@@ -504,7 +611,7 @@ export function useChatStore() {
       id: tempId,
       message: sanitized,
       mentions: cleanMentions,
-      userId: currentUser.id,
+      userId: verifiedUserId,
       userName: currentUser.name,
       userAvatar: currentUser.avatarUrl || null,
       userRole: currentUser.role || "member",
@@ -517,11 +624,11 @@ export function useChatStore() {
     setIsSending(true)
 
     try {
-      const { error } = await supabase.from("chat_messages").insert({
+      let { error } = await supabase.from("chat_messages").insert({
         id: tempId,
         message: sanitized,
         mentions: cleanMentions,
-        user_id: currentUser.id,
+        user_id: verifiedUserId,
         user_name: currentUser.name,
         user_avatar: currentUser.avatarUrl || null,
         user_role: currentUser.role || "member",
@@ -530,16 +637,39 @@ export function useChatStore() {
         created_at: nowIso,
       })
 
+      // Jika gagal karena RLS / token kedaluwarsa, paksa refresh session dan coba kirim ulang sekali
+      if (error && (error.code === "42501" || error.message?.toLowerCase().includes("row-level security"))) {
+        try {
+          const refreshed = await supabase.auth.refreshSession()
+          if (refreshed.data.session?.user) {
+            const retryRes = await supabase.from("chat_messages").insert({
+              id: tempId,
+              message: sanitized,
+              mentions: cleanMentions,
+              user_id: refreshed.data.session.user.id,
+              user_name: currentUser.name,
+              user_avatar: currentUser.avatarUrl || null,
+              user_role: currentUser.role || "member",
+              is_edited: false,
+              is_deleted: false,
+              created_at: nowIso,
+            })
+            error = retryRes.error
+          }
+        } catch {
+          // ignore refresh error
+        }
+      }
+
       if (error) {
         setMessages((prev) => prev.filter((m) => m.id !== tempId))
-        return { success: false, error: error.message }
+        return { success: false, error: formatChatErrorMessage(error) }
       }
 
       return { success: true }
     } catch (err: unknown) {
       setMessages((prev) => prev.filter((m) => m.id !== tempId))
-      const msg = err instanceof Error ? err.message : "Gagal mengirim pesan"
-      return { success: false, error: msg }
+      return { success: false, error: formatChatErrorMessage(err) }
     } finally {
       setIsSending(false)
     }
@@ -603,14 +733,13 @@ export function useChatStore() {
 
       if (error) {
         setMessages(previousMessages)
-        return { success: false, error: error.message }
+        return { success: false, error: formatChatErrorMessage(error) }
       }
 
       return { success: true }
     } catch (err: unknown) {
       setMessages(previousMessages)
-      const msg = err instanceof Error ? err.message : "Gagal mengedit pesan"
-      return { success: false, error: msg }
+      return { success: false, error: formatChatErrorMessage(err) }
     }
   }
 
@@ -665,14 +794,13 @@ export function useChatStore() {
 
       if (error) {
         setMessages(previousMessages)
-        return { success: false, error: error.message }
+        return { success: false, error: formatChatErrorMessage(error) }
       }
 
       return { success: true }
     } catch (err: unknown) {
       setMessages(previousMessages)
-      const msg = err instanceof Error ? err.message : "Gagal menghapus pesan"
-      return { success: false, error: msg }
+      return { success: false, error: formatChatErrorMessage(err) }
     }
   }
 
@@ -698,8 +826,11 @@ export function useChatStore() {
       return { success: false, error: "Supabase belum terkonfigurasi." }
     }
 
+    const session = await ensureFreshSession()
+    const verifiedUserId = session?.user?.id || currentUser.id
+
     const currentList = reactions[messageId] || []
-    const existingRx = currentList.find((r) => r.userId === currentUser.id)
+    const existingRx = currentList.find((r) => r.userId === verifiedUserId || r.userId === currentUser.id)
 
     const previousReactions = { ...reactions }
 
@@ -719,13 +850,12 @@ export function useChatStore() {
 
           if (error) {
             setReactions(previousReactions)
-            return { success: false, error: error.message }
+            return { success: false, error: formatChatErrorMessage(error) }
           }
           return { success: true }
         } catch (err) {
           setReactions(previousReactions)
-          const msg = err instanceof Error ? err.message : "Gagal menghapus reaksi"
-          return { success: false, error: msg }
+          return { success: false, error: formatChatErrorMessage(err) }
         }
       } else {
         // Ganti reaksi: user mengklik emoji berbeda -> update reaksi sebelumnya
@@ -756,13 +886,12 @@ export function useChatStore() {
 
           if (error) {
             setReactions(previousReactions)
-            return { success: false, error: error.message }
+            return { success: false, error: formatChatErrorMessage(error) }
           }
           return { success: true }
         } catch (err) {
           setReactions(previousReactions)
-          const msg = err instanceof Error ? err.message : "Gagal mengganti reaksi"
-          return { success: false, error: msg }
+          return { success: false, error: formatChatErrorMessage(err) }
         }
       }
     } else {
@@ -773,7 +902,7 @@ export function useChatStore() {
         id: tempId,
         messageId,
         emoji: cleanEmoji,
-        userId: currentUser.id,
+        userId: verifiedUserId,
         userName: currentUser.name,
         createdAt: nowIso,
       }
@@ -788,20 +917,19 @@ export function useChatStore() {
           id: tempId,
           message_id: messageId,
           emoji: cleanEmoji,
-          user_id: currentUser.id,
+          user_id: verifiedUserId,
           user_name: currentUser.name,
           created_at: nowIso,
         })
 
         if (error) {
           setReactions(previousReactions)
-          return { success: false, error: error.message }
+          return { success: false, error: formatChatErrorMessage(error) }
         }
         return { success: true }
       } catch (err) {
         setReactions(previousReactions)
-        const msg = err instanceof Error ? err.message : "Gagal menambahkan reaksi"
-        return { success: false, error: msg }
+        return { success: false, error: formatChatErrorMessage(err) }
       }
     }
   }

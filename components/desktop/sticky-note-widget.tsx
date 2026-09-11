@@ -592,7 +592,7 @@ export function StickyNoteWidget() {
                 )}
                 {currentLapak.priceRange && (
                   <div className="mt-1 text-[10px] font-bold text-emerald-800 font-mono">
-                    💰 {currentLapak.priceRange}
+                    🏷️ {currentLapak.priceRange}
                   </div>
                 )}
                 <div className="mt-1 flex items-center gap-1 text-[9px] text-gray-600">

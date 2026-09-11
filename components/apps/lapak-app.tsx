@@ -23,7 +23,6 @@ import {
   Tag,
   Sparkles,
   Phone,
-  DollarSign,
   Info,
   X,
   Check,
@@ -407,8 +406,8 @@ export function LapakApp() {
 
                     {/* Price Range */}
                     {item.priceRange && (
-                      <div className="mt-2 flex items-center gap-1 text-xs font-mono font-bold text-emerald-700">
-                        <DollarSign className="size-3 text-emerald-600 shrink-0" />
+                      <div className="mt-2 flex items-center gap-1.5 text-xs font-mono font-bold text-emerald-700">
+                        <Tag className="size-3 text-emerald-600 shrink-0" />
                         <span>{item.priceRange}</span>
                       </div>
                     )}
