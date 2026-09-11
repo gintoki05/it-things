@@ -2,12 +2,15 @@
 
 import * as React from "react"
 import { useTeamStore } from "@/lib/team-store"
+import { usePicStore } from "@/lib/pic-store"
 import { useDesktop } from "./desktop-context"
 import { UserAvatar } from "@/components/retro/user-avatar"
-import { Users, ChevronDown, ChevronUp, Shield, Crown, User, ExternalLink, MessageSquare } from "lucide-react"
+import { Users, ChevronDown, ChevronUp, Shield, User, ExternalLink, MessageSquare } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 export function TeamWidget() {
   const { members } = useTeamStore()
+  const { getUserPicTags } = usePicStore()
   const { openWindow } = useDesktop()
   const [isMinimized, setIsMinimized] = React.useState(false)
 
@@ -113,7 +116,6 @@ export function TeamWidget() {
         ) : (
           members.map((member) => {
             const isAdminRole = member.role === "admin"
-            const isTreasurerRole = member.role === "treasurer"
 
             return (
               <button
@@ -137,17 +139,12 @@ export function TeamWidget() {
                   </div>
                 </div>
 
-                {/* Role Badge */}
-                <div className="shrink-0">
+                {/* Role & PIC Badges */}
+                <div className="shrink-0 flex items-center gap-1">
                   {isAdminRole ? (
                     <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 text-purple-900 border border-purple-300">
                       <Shield className="size-2.5 text-purple-700" />
                       <span>Admin</span>
-                    </span>
-                  ) : isTreasurerRole ? (
-                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                      <Crown className="size-2.5 text-amber-700" />
-                      <span>Bendahara</span>
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-100 text-slate-700 border border-slate-300">
@@ -155,6 +152,19 @@ export function TeamWidget() {
                       <span>Member</span>
                     </span>
                   )}
+
+                  {getUserPicTags(member.user_id || member.id).map((tag) => (
+                    <span
+                      key={tag.module}
+                      className={cn(
+                        "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold border shadow-2xs",
+                        tag.color
+                      )}
+                    >
+                      <span>{tag.icon}</span>
+                      <span>{tag.label}</span>
+                    </span>
+                  ))}
                 </div>
               </button>
             )

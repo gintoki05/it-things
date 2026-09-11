@@ -4,6 +4,7 @@ import * as React from "react"
 import type { RealtimeChannel } from "@supabase/supabase-js"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth"
+import { usePicStore } from "@/lib/pic-store"
 import { playRetroNotificationSound } from "@/lib/sound-effects"
 
 export interface DesktopMemo {
@@ -37,12 +38,13 @@ const DEFAULT_MEMO: DesktopMemo = normalizeMemo({
 })
 
 export function useMemoStore() {
-  const { user, isGuest, isAdmin, isTreasurer } = useAuth()
+  const { user, isGuest, isAdmin } = useAuth()
+  const { isKasPic, isPantryPic } = usePicStore()
   const [memo, setMemo] = React.useState<DesktopMemo>(DEFAULT_MEMO)
   const [isLoading, setIsLoading] = React.useState(true)
   const [isSaving, setIsSaving] = React.useState(false)
 
-  const canManageMemo = Boolean(isAdmin || isTreasurer)
+  const canManageMemo = Boolean(!isGuest && (isAdmin || isKasPic || isPantryPic))
 
   // 1. Fetch memo from Supabase or localStorage
   const loadMemo = React.useCallback(async () => {

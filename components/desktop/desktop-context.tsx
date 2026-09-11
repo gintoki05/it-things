@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
 
-export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry"
+export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak"
 
 export interface WindowState {
   id: AppId
@@ -20,6 +20,7 @@ export interface WindowState {
   defaultPos: { x: number; y: number }
   isComingSoon?: boolean
   adminOnly?: boolean
+  isHidden?: boolean
 }
 
 interface DesktopContextType {
@@ -85,6 +86,7 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     defaultSize: { width: 720, height: 580 },
     defaultPos: { x: 220, y: 44 },
     isComingSoon: true,
+    isHidden: true,
   },
   splitbill: {
     id: "splitbill",
@@ -129,6 +131,20 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 780, height: 580 },
     defaultSize: { width: 780, height: 580 },
     defaultPos: { x: 215, y: 40 },
+  },
+  lapak: {
+    id: "lapak",
+    title: "Lapak_Teman.exe - Etalase & Iklan Usaha Teman",
+    icon: "gift",
+    filename: "lapak.exe",
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    zIndex: 16,
+    position: { x: 235, y: 55 },
+    size: { width: 780, height: 580 },
+    defaultSize: { width: 780, height: 580 },
+    defaultPos: { x: 235, y: 55 },
   },
   team: {
     id: "team",
@@ -185,7 +201,7 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
       requestedApp = "splitbill"
     }
 
-    const validApps: AppId[] = ["vote", "wheel", "splitbill", "kas", "team", "chat", "readme", "pantry"]
+    const validApps: AppId[] = ["vote", "splitbill", "kas", "team", "chat", "readme", "pantry", "lapak"]
     const targetApp = requestedApp && validApps.includes(requestedApp) ? requestedApp : null
 
     if (targetApp) {
@@ -309,7 +325,7 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
   const openWindow = React.useCallback(
     (id: AppId) => {
       const target = windows[id]
-      if (!target) return
+      if (!target || target.isHidden) return
       if (target.adminOnly && !isAdmin) return
       if (target.isComingSoon) {
         setComingSoonApp(target)

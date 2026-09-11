@@ -4,7 +4,7 @@ import * as React from "react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import type { User } from "@supabase/supabase-js"
 
-export type UserRole = "guest" | "member" | "treasurer" | "admin"
+export type UserRole = "guest" | "member" | "admin"
 
 export interface AuthUser {
   id: string
@@ -390,7 +390,7 @@ const ROOT_ADMIN_EMAILS = [
   const realRole: UserRole = user?.realRole || (isRootAdmin ? "admin" : (user?.role || "member"))
   const canSwitchRole = !isGuest && (isRootAdmin || realRole === "admin")
   const isAdmin = !isGuest && (user?.role === "admin" || (!user?.role && isRootAdmin))
-  const isTreasurer = !isGuest && (user?.role === "treasurer" || isAdmin)
+  const isTreasurer = isAdmin
 
   const setDemoUserRole = async (role: UserRole) => {
     if (isGuest || !canSwitchRole) return

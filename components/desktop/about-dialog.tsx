@@ -5,6 +5,7 @@ import { X, Info, Monitor, History, ShieldCheck, User, Database } from "lucide-r
 import { RetroIcon } from "@/components/ui/retro-icon"
 import { APP_VERSION, APP_BUILD, APP_NAME, APP_EDITION, APP_CHANGELOG } from "@/lib/version"
 import { useAuth } from "@/lib/auth"
+import { usePicStore } from "@/lib/pic-store"
 
 interface AboutDialogProps {
   isOpen: boolean
@@ -12,7 +13,8 @@ interface AboutDialogProps {
 }
 
 export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
-  const { user, isAdmin, isTreasurer, isGuest, isSupabaseConnected } = useAuth()
+  const { user, isAdmin, isGuest, isSupabaseConnected } = useAuth()
+  const { isKasPic, isPantryPic } = usePicStore()
   const [activeTab, setActiveTab] = React.useState<"info" | "changelog">("changelog")
   const okButtonRef = React.useRef<HTMLButtonElement>(null)
 
@@ -162,9 +164,13 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
                         <span className="text-purple-700 font-semibold flex items-center gap-0.5">
                           <ShieldCheck className="size-3" /> Administrator
                         </span>
-                      ) : isTreasurer ? (
+                      ) : isKasPic ? (
                         <span className="text-amber-700 font-semibold flex items-center gap-0.5">
-                          <ShieldCheck className="size-3" /> Bendahara
+                          <span>💰</span> PIC Kas
+                        </span>
+                      ) : isPantryPic ? (
+                        <span className="text-sky-700 font-semibold flex items-center gap-0.5">
+                          <span>☕</span> PIC Pantry
                         </span>
                       ) : isGuest ? (
                         <span className="text-amber-800 font-semibold">Tamu (Read-Only)</span>

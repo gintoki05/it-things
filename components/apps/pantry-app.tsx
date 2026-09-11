@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
 import { useTeamStore } from "@/lib/team-store"
+import { usePicStore } from "@/lib/pic-store"
 import {
   usePantryStore,
   PantryItem,
@@ -32,11 +33,15 @@ import {
   ShieldAlert,
   Info,
   Undo2,
+  ShieldCheck,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function PantryApp() {
   const { user, isAdmin, isGuest } = useAuth()
+  const { isPantryPic, getPicNames } = usePicStore()
+  const canManagePantry = Boolean(!isGuest && (isAdmin || isPantryPic))
+
   const { members: teamMembers } = useTeamStore()
 
   const {
@@ -191,7 +196,7 @@ export function PantryApp() {
     let targetName = user?.name || "User"
     let targetAvatar = user?.avatarUrl || null
 
-    if (isAdmin && takeTargetUserId && takeTargetUserId !== currentUserId) {
+    if ((isAdmin || canManagePantry) && takeTargetUserId && takeTargetUserId !== currentUserId) {
       const foundMember = teamMembers.find((m) => m.user_id === takeTargetUserId || m.id === takeTargetUserId)
       if (foundMember) {
         targetId = foundMember.user_id || foundMember.id
@@ -400,10 +405,20 @@ export function PantryApp() {
         </div>
 
         {/* Global Summary */}
-        <div className="flex items-center gap-3 text-[11px]">
+        <div className="flex flex-wrap items-center gap-2.5 text-[11px]">
+          <div className="flex items-center gap-1 bg-sky-50 px-2 py-1 rounded border border-sky-200 text-sky-900">
+            <span className="text-xs">☕</span>
+            <span className="text-[10px] font-mono">PIC Pantry:</span>
+            <strong>{getPicNames("pantry")}</strong>
+            {isPantryPic && (
+              <span className="ml-1 text-[9px] font-mono font-bold bg-sky-200 text-sky-900 px-1 py-0.2 rounded">
+                Anda
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded border border-[#CBD5E1]">
             <Boxes className="size-3.5 text-blue-600" />
-            <span>Sisa Stok Fisik:</span>
+            <span>Sisa Stok:</span>
             <strong className="text-blue-700">{totalStockCount}</strong>
           </div>
           <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded border border-[#CBD5E1]">
@@ -519,7 +534,7 @@ export function PantryApp() {
           </button>
         </div>
 
-        {isAdmin && (
+        {canManagePantry && (
           <button
             type="button"
             onClick={() => setActiveTab("admin")}
@@ -531,7 +546,7 @@ export function PantryApp() {
             )}
           >
             <Sparkles className="size-3 text-amber-500" />
-            <span>Admin Stok</span>
+            <span>Kelola Stok & PIC</span>
           </button>
         )}
       </div>
@@ -585,7 +600,7 @@ export function PantryApp() {
                                 Batas: {item.monthlyQuota} {item.unit} / orang / bln
                               </span>
                             </div>
-                            {isAdmin && (
+                            {canManagePantry && (
                               <RetroActionButton
                                 action="edit"
                                 visual="icon"
@@ -870,7 +885,7 @@ export function PantryApp() {
                   {logs.map((log) => {
                     const item = items.find((i) => i.id === log.itemId)
                     const canDelete =
-                      isAdmin || log.loggedById === currentUserId || log.userId === currentUserId
+                      canManagePantry || log.loggedById === currentUserId || log.userId === currentUserId
 
                     const dateObj = new Date(log.createdAt)
                     const timeStr = dateObj.toLocaleDateString("id-ID", {
@@ -927,9 +942,9 @@ export function PantryApp() {
       )}
 
       {/* ============================================================ */}
-      {/* TAB 4: ADMIN STOK & RESTOCK */}
+      {/* TAB 4: KELOLA STOK & PIC PANTRY */}
       {/* ============================================================ */}
-      {activeTab === "admin" && isAdmin && (
+      {activeTab === "admin" && canManagePantry && (
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Quick Restock Card */}
@@ -1146,7 +1161,7 @@ export function PantryApp() {
               </div>
 
               {/* Admin target user picker */}
-              {isAdmin && teamMembers.length > 0 && (
+              {canManagePantry && teamMembers.length > 0 && (
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">
                     Ambilkan Untuk:
@@ -1221,9 +1236,9 @@ export function PantryApp() {
       )}
 
       {/* ============================================================ */}
-      {/* MODAL: RESTOCK (ADMIN ONLY) */}
+      {/* MODAL: RESTOCK (ADMIN / PIC PANTRY) */}
       {/* ============================================================ */}
-      {showRestockModal && isAdmin && (
+      {showRestockModal && canManagePantry && (
         <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-[1px] flex items-center justify-center p-4 select-none animate-in fade-in duration-150">
           <div className="retro-window-frame max-w-sm w-full rounded-[4px] overflow-hidden shadow-[6px_6px_0px_rgba(0,0,0,0.35)] bg-white flex flex-col">
             <div className="bg-gradient-to-r from-[#1E4E8C] to-[#2E5AA8] text-white px-3 py-1.5 flex items-center justify-between font-mono text-xs font-bold">
@@ -1306,9 +1321,9 @@ export function PantryApp() {
       )}
 
       {/* ============================================================ */}
-      {/* MODAL: TAMBAH ITEM BARU (ADMIN ONLY) */}
+      {/* MODAL: TAMBAH ITEM BARU (ADMIN / PIC PANTRY) */}
       {/* ============================================================ */}
-      {showAddItemModal && isAdmin && (
+      {showAddItemModal && canManagePantry && (
         <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-[1px] flex items-center justify-center p-4 select-none animate-in fade-in duration-150">
           <div className="retro-window-frame max-w-sm w-full rounded-[4px] overflow-hidden shadow-[6px_6px_0px_rgba(0,0,0,0.35)] bg-white flex flex-col">
             <div className="bg-gradient-to-r from-amber-700 to-amber-900 text-white px-3 py-1.5 flex items-center justify-between font-mono text-xs font-bold">
@@ -1425,9 +1440,9 @@ export function PantryApp() {
       )}
 
       {/* ============================================================ */}
-      {/* MODAL: EDIT ITEM & BATASAN KUOTA (ADMIN ONLY) */}
+      {/* MODAL: EDIT ITEM & BATASAN KUOTA (ADMIN / PIC PANTRY) */}
       {/* ============================================================ */}
-      {editItemModal && isAdmin && (
+      {editItemModal && canManagePantry && (
         <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-[1px] flex items-center justify-center p-4 select-none animate-in fade-in duration-150">
           <div className="retro-window-frame max-w-sm w-full rounded-[4px] overflow-hidden shadow-[6px_6px_0px_rgba(0,0,0,0.35)] bg-white flex flex-col">
             <div className="bg-gradient-to-r from-amber-700 to-amber-900 text-white px-3 py-1.5 flex items-center justify-between font-mono text-xs font-bold">

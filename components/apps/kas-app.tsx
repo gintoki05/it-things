@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
 import { useTeamStore } from "@/lib/team-store"
+import { usePicStore } from "@/lib/pic-store"
 import { useDesktop } from "@/components/desktop/desktop-context"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import {
@@ -19,7 +20,8 @@ import {
   Lock,
   RotateCw,
   Users,
-  Eye
+  Eye,
+  Coins
 } from "lucide-react"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { RetroActionButton } from "@/components/ui/retro-action-button"
@@ -50,26 +52,17 @@ const INITIAL_TRANSACTIONS: KasTransaction[] = [
     type: "in",
     amount: 100000,
     category: "iuran",
-    description: "Iuran kas awal bulan September (5 orang)",
-    created_by_name: "Bendahara",
-    created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
-  },
-  {
-    id: "tx-2",
-    type: "in",
-    amount: 8250,
-    category: "split_bill_sisa",
-    description: "Sisa pembulatan patungan makan siang",
-    created_by_name: "Ajie",
+    description: "Setoran iuran kas bulanan September",
+    created_by_name: "Ajie Saputra",
     created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
   },
   {
-    id: "tx-3",
+    id: "tx-2",
     type: "out",
     amount: 35000,
     category: "konsumsi",
     description: "Beli gorengan & es teh sore tim IT",
-    created_by_name: "Bendahara",
+    created_by_name: "PIC Kas",
     created_at: new Date(Date.now() - 86400000).toISOString(),
   },
 ]
@@ -83,7 +76,11 @@ const DEFAULT_MEMBERS: KasDueMember[] = [
 ]
 
 export function KasApp() {
-  const { user, isTreasurer, isGuest } = useAuth()
+  const { user, isAdmin, isGuest } = useAuth()
+  const { isKasPic, pics, getPicNames } = usePicStore()
+  const kasPics = pics.kas || []
+  const canManageKas = Boolean(!isGuest && (isAdmin || isKasPic))
+
   const { members: teamMembers } = useTeamStore()
   const { openWindow } = useDesktop()
 
@@ -170,9 +167,9 @@ export function KasApp() {
     const amountNum = parseFloat(txAmount.replace(/\D/g, ""))
     if (!amountNum || amountNum <= 0 || !txDesc.trim()) return
 
-    // Role check: Only Treasurer can record OUT transactions
-    if (txType === "out" && !isTreasurer) {
-      setPermError("Perhatian: Hanya anggota dengan peran 'Bendahara' yang dapat mencatat pengeluaran resmi kas.")
+    // Role check: Only PIC Kas / Admin can record OUT transactions
+    if (txType === "out" && !canManageKas) {
+      setPermError("Perhatian: Hanya PIC Kas atau Admin yang dapat mencatat pengeluaran resmi kas.")
       return
     }
 
@@ -210,15 +207,15 @@ export function KasApp() {
     }
   }
 
-  // Toggle Due Paid (Only Treasurer)
+  // Toggle Due Paid (Only PIC Kas / Admin)
   const handleToggleDue = async (userId: string) => {
     if (isGuest) {
       setPermError("Akses Ditolak: Tamu hanya memiliki izin melihat data (Read-Only).")
       setTimeout(() => setPermError(null), 3000)
       return
     }
-    if (!isTreasurer) {
-      setPermError("Konfirmasi pembayaran iuran hanya dapat dilakukan oleh Bendahara.")
+    if (!canManageKas) {
+      setPermError("Konfirmasi pembayaran iuran hanya dapat dilakukan oleh PIC Kas atau Admin.")
       setTimeout(() => setPermError(null), 3000)
       return
     }
@@ -232,9 +229,9 @@ export function KasApp() {
     )
   }
 
-  // Delete Transaction (Only Treasurer)
+  // Delete Transaction (Only PIC Kas / Admin)
   const handleDeleteTransaction = async (id: string) => {
-    if (!isTreasurer) return
+    if (!canManageKas) return
     setTransactions((prev) => prev.filter((t) => t.id !== id))
     if (isSupabaseConfigured && supabase && user && !isGuest && user.id !== "guest-user") {
       try {
@@ -321,17 +318,23 @@ export function KasApp() {
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="text-[11px] font-mono flex items-center gap-1 text-gray-700">
+          <div className="text-[11px] font-mono flex items-center gap-1.5 text-gray-700">
             {isGuest ? (
               <span className="text-amber-800 font-bold flex items-center gap-1 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">
                 <Eye className="size-3 text-amber-700" /> Mode Tamu (Read-Only)
               </span>
-            ) : isTreasurer ? (
-              <span className="text-amber-800 font-bold flex items-center gap-1">
-                <ShieldCheck className="size-3.5 text-amber-600" /> Anda: Bendahara
+            ) : isKasPic ? (
+              <span className="text-amber-900 font-bold flex items-center gap-1 bg-amber-100 px-2 py-0.5 rounded border border-amber-300">
+                <ShieldCheck className="size-3.5 text-amber-700" /> Anda: PIC Kas
+              </span>
+            ) : isAdmin ? (
+              <span className="text-purple-900 font-bold flex items-center gap-1 bg-purple-100 px-2 py-0.5 rounded border border-purple-300">
+                <ShieldCheck className="size-3.5 text-purple-700" /> Anda: Admin
               </span>
             ) : (
-              <span className="text-gray-500">Peran: Anggota</span>
+              <span className="text-gray-600 bg-white/70 px-1.5 py-0.5 rounded border border-[#CBD5E1]">
+                PIC Kas: <strong className="text-[#14253D]">{getPicNames("kas")}</strong>
+              </span>
             )}
           </div>
 
@@ -366,9 +369,9 @@ export function KasApp() {
         >
           <div className="font-bold text-[#14253D] flex items-center justify-between">
             <span>FORM PENCATATAN TRANSAKSI KAS</span>
-            {txType === "out" && !isTreasurer && (
+            {txType === "out" && !canManageKas && (
               <span className="text-red-600 text-[10px] flex items-center gap-1">
-                <Lock className="size-3" /> Memerlukan peran Bendahara
+                <Lock className="size-3" /> Memerlukan akses PIC Kas / Admin
               </span>
             )}
           </div>
@@ -500,7 +503,7 @@ export function KasApp() {
                       {t.type === "in" ? "+" : "-"} Rp {t.amount.toLocaleString("id-ID")}
                     </span>
                   </div>
-                  {isTreasurer && (
+                  {canManageKas && (
                     <RetroActionButton
                       action="delete"
                       visual="icon"
@@ -559,7 +562,7 @@ export function KasApp() {
                 <button
                   type="button"
                   onClick={() => handleToggleDue(m.userId)}
-                  title={isTreasurer ? "Klik untuk ubah status lunas" : "Perhatian: Hanya Bendahara yang dapat mengubah status iuran"}
+                  title={canManageKas ? "Klik untuk ubah status lunas" : "Perhatian: Hanya PIC Kas atau Admin yang dapat mengubah status iuran"}
                   className={`h-7 px-3 text-xs font-mono font-bold rounded-[2px] border transition-colors flex items-center gap-1.5 ${
                     m.isPaid
                       ? "bg-emerald-100 text-emerald-800 border-emerald-400 hover:bg-emerald-200"

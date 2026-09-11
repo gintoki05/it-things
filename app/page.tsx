@@ -24,6 +24,7 @@ import { TeamApp } from "@/components/apps/team-app"
 import { ChatApp } from "@/components/apps/chat-app"
 import { ReadmeApp } from "@/components/apps/readme-app"
 import { PantryApp } from "@/components/apps/pantry-app"
+import { LapakApp } from "@/components/apps/lapak-app"
 
 const MemoizedReadmeApp = React.memo(ReadmeApp)
 const MemoizedVoteApp = React.memo(VoteApp)
@@ -31,6 +32,7 @@ const MemoizedWheelApp = React.memo(WheelApp)
 const MemoizedSplitBillApp = React.memo(SplitBillApp)
 const MemoizedKasApp = React.memo(KasApp)
 const MemoizedPantryApp = React.memo(PantryApp)
+const MemoizedLapakApp = React.memo(LapakApp)
 const MemoizedTeamApp = React.memo(TeamApp)
 const MemoizedChatApp = React.memo(ChatApp)
 const MemoizedDesktopIcons = React.memo(DesktopIcons)
@@ -136,6 +138,11 @@ function DesktopWorkspace() {
       {/* Retro Window: Pantry.exe */}
       <DesktopWindow id="pantry">
         <MemoizedPantryApp />
+      </DesktopWindow>
+
+      {/* Retro Window: Lapak_Teman.exe (Etalase Usaha Teman) */}
+      <DesktopWindow id="lapak">
+        <MemoizedLapakApp />
       </DesktopWindow>
 
       {/* Retro Window: Team.exe (Direktori Tim) */}

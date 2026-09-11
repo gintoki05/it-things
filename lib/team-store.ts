@@ -184,8 +184,7 @@ export function useTeamStore() {
     avatar_url?: string
   }) => {
     const newId = `tm-${Date.now()}`
-    const defaultAvatar =
-      memberData.role === "admin" ? "🛡️" : memberData.role === "treasurer" ? "👑" : "👤"
+    const defaultAvatar = memberData.role === "admin" ? "🛡️" : "👤"
     const newMember: TeamMember = {
       id: newId,
       user_id: `user-${Date.now()}`,
@@ -265,16 +264,15 @@ export function useTeamStore() {
 
   // Set member role explicitly
   const setMemberRole = async (id: string, role: UserRole) => {
-    const avatar = role === "admin" ? "🛡️" : role === "treasurer" ? "👑" : "👤"
+    const avatar = role === "admin" ? "🛡️" : "👤"
     await updateMember(id, { role, avatar_url: avatar })
   }
 
-  // Toggle role between 'member', 'treasurer', and 'admin'
+  // Toggle role between 'member' and 'admin'
   const toggleMemberRole = async (id: string) => {
     const target = members.find((m) => m.id === id)
     if (!target) return
-    const nextRole: UserRole =
-      target.role === "member" ? "treasurer" : target.role === "treasurer" ? "admin" : "member"
+    const nextRole: UserRole = target.role === "member" ? "admin" : "member"
     await setMemberRole(id, nextRole)
   }
 

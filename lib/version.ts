@@ -5,12 +5,23 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.2.6"
+export const APP_VERSION = "v2.3.0"
 export const APP_BUILD = "2026.09.11"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.0",
+    date: "11 Sep 2026",
+    codename: "Dynamic Multi-PIC & Lapak Usaha Suite",
+    changes: [
+      "Sistem penunjukan Dynamic Multi-PIC (PIC Kas & PIC Pantry) dengan delegasi realtime langsung dari antarmuka Team App.",
+      "Penghapusan static role Bendahara (treasurer) dan standarisasi ke peran bersih Admin & Member berdasar hak akses PIC dinamis.",
+      "Modul Lapak Teman (lapak.exe) untuk etalase dan promosi usaha kuliner/jasa internal tim dengan taskbar running ticker.",
+      "Optimasi responsive layout form penunjukan PIC dan perbaikan batas overflow pada elemen retro Windows 98.",
+    ],
+  },
   {
     version: "v2.2.6",
     date: "11 Sep 2026",

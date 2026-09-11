@@ -208,6 +208,99 @@ export type Database = {
         }
         Relationships: []
       }
+      lapak_items: {
+        Row: {
+          badge: string | null
+          category: string
+          contact_link: string | null
+          contact_name: string
+          contact_wa: string | null
+          created_at: string
+          created_by_avatar: string | null
+          created_by_id: string
+          created_by_name: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          price_range: string | null
+          tagline: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          badge?: string | null
+          category?: string
+          contact_link?: string | null
+          contact_name: string
+          contact_wa?: string | null
+          created_at?: string
+          created_by_avatar?: string | null
+          created_by_id: string
+          created_by_name: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          price_range?: string | null
+          tagline?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          badge?: string | null
+          category?: string
+          contact_link?: string | null
+          contact_name?: string
+          contact_wa?: string | null
+          created_at?: string
+          created_by_avatar?: string | null
+          created_by_id?: string
+          created_by_name?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          price_range?: string | null
+          tagline?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      module_pics: {
+        Row: {
+          id: string
+          module: string
+          user_id: string
+          user_name: string
+          user_avatar: string | null
+          assigned_by_id: string | null
+          assigned_by_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          module: string
+          user_id: string
+          user_name: string
+          user_avatar?: string | null
+          assigned_by_id?: string | null
+          assigned_by_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          module?: string
+          user_id?: string
+          user_name?: string
+          user_avatar?: string | null
+          assigned_by_id?: string | null
+          assigned_by_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pantry_items: {
         Row: {
           category: string | null
@@ -689,6 +782,9 @@ export type Database = {
     }
     Functions: {
       is_admin: { Args: never; Returns: boolean }
+      is_kas_pic: { Args: never; Returns: boolean }
+      is_module_pic: { Args: { p_module: string }; Returns: boolean }
+      is_pantry_pic: { Args: never; Returns: boolean }
       is_treasurer: { Args: never; Returns: boolean }
       sync_user_profile_name: {
         Args: { new_avatar?: string; new_name: string }

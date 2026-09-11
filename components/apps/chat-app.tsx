@@ -642,7 +642,7 @@ export function ChatApp() {
                         <span className="text-[11px] font-medium text-[#14253D] truncate">{m.name}</span>
                       </div>
                       <span className="text-[9px] font-mono text-gray-500 shrink-0">
-                        {m.role === "admin" ? "🛡️" : m.role === "treasurer" ? "👑" : "👤"}
+                        {m.role === "admin" ? "🛡️" : "👤"}
                       </span>
                     </button>
                   ))}
@@ -985,7 +985,7 @@ export function ChatApp() {
                     </button>
 
                     <div className="max-w-[85%] sm:max-w-[76%] flex flex-col items-start">
-                      {/* Name & Role Header */}
+                      {/* Name Header */}
                       <div className="flex items-center gap-1.5 mb-0.5 ml-1">
                         <button
                           type="button"
@@ -1002,16 +1002,6 @@ export function ChatApp() {
                         >
                           {authorName}
                         </button>
-                        {authorRole === "admin" && (
-                          <span className="flex items-center gap-0.5 text-[9px] font-bold font-mono px-1 py-0.2 rounded bg-purple-100 text-purple-800 border border-purple-300">
-                            <ShieldCheck className="size-2.5" /> Admin
-                          </span>
-                        )}
-                        {authorRole === "treasurer" && (
-                          <span className="flex items-center gap-0.5 text-[9px] font-bold font-mono px-1 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-300">
-                            <Crown className="size-2.5" /> Bendahara
-                          </span>
-                        )}
                         {isMentioned && (
                           <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-[#FEF08A] text-[#854D0E] border border-[#FACC15]">
                             Mentioned
@@ -1362,11 +1352,6 @@ export function ChatApp() {
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-900 border border-purple-300">
                     <ShieldCheck className="size-3 text-purple-700" />
                     <span>Administrator</span>
-                  </span>
-                ) : activeProfileMember.role === "treasurer" ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                    <Crown className="size-3 text-amber-700" />
-                    <span>Bendahara</span>
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-300">

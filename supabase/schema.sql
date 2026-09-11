@@ -230,6 +230,19 @@ CREATE TABLE IF NOT EXISTS public.desktop_memos (
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- 16. Table: module_pics (Penunjukan Multi-PIC per Modul seperti Kas & Pantry)
+CREATE TABLE IF NOT EXISTS public.module_pics (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    module TEXT NOT NULL, -- 'kas' | 'pantry'
+    user_id TEXT NOT NULL,
+    user_name TEXT NOT NULL,
+    user_avatar TEXT,
+    assigned_by_id TEXT,
+    assigned_by_name TEXT,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    UNIQUE(module, user_id)
+);
+
 -- ============================================================
 -- ROW LEVEL SECURITY (RLS) & POLICIES
 -- ============================================================
@@ -248,9 +261,10 @@ ALTER TABLE public.chat_reactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pantry_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pantry_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.desktop_memos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.module_pics ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
--- HELPER FUNCTIONS: is_admin() & is_treasurer()
+-- HELPER FUNCTIONS: is_admin(), is_module_pic(), is_kas_pic(), is_pantry_pic(), is_treasurer()
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN
@@ -270,7 +284,7 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated, anon;
 
-CREATE OR REPLACE FUNCTION public.is_treasurer()
+CREATE OR REPLACE FUNCTION public.is_module_pic(p_module TEXT)
 RETURNS BOOLEAN
 LANGUAGE sql
 SECURITY DEFINER
@@ -280,12 +294,45 @@ AS $$
   SELECT 
     public.is_admin()
     OR EXISTS (
-      SELECT 1 FROM public.team_members
-      WHERE user_id = (auth.uid())::text
-        AND role IN ('treasurer', 'admin')
+      SELECT 1 FROM public.module_pics
+      WHERE module = p_module
+        AND user_id = (auth.uid())::text
     );
 $$;
 
+CREATE OR REPLACE FUNCTION public.is_kas_pic()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = ''
+AS $$
+  SELECT public.is_module_pic('kas');
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_pantry_pic()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = ''
+AS $$
+  SELECT public.is_module_pic('pantry');
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_treasurer()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = ''
+AS $$
+  SELECT public.is_module_pic('kas');
+$$;
+
+GRANT EXECUTE ON FUNCTION public.is_module_pic(TEXT) TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION public.is_kas_pic() TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION public.is_pantry_pic() TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION public.is_treasurer() TO authenticated, anon;
 
 -- ============================================================
@@ -311,7 +358,13 @@ BEGIN
       avatar_url = COALESCE(new_avatar, avatar_url)
   WHERE user_id = v_uid;
 
-  -- 2. vote_groups (created_by)
+  -- 2. module_pics
+  UPDATE public.module_pics
+  SET user_name = new_name,
+      user_avatar = COALESCE(new_avatar, user_avatar)
+  WHERE user_id = v_uid;
+
+  -- 3. vote_groups (created_by)
   UPDATE public.vote_groups
   SET created_by_name = new_name,
       created_by_avatar = COALESCE(new_avatar, created_by_avatar)
@@ -387,7 +440,7 @@ CREATE POLICY "team_members_insert" ON public.team_members
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL 
     AND (
-      (user_id = auth.uid()::text AND (role = 'member' OR public.is_admin() OR public.is_treasurer()))
+      (user_id = auth.uid()::text AND (role = 'member' OR public.is_admin()))
       OR public.is_admin()
     )
   );
@@ -395,13 +448,12 @@ CREATE POLICY "team_members_insert" ON public.team_members
 CREATE POLICY "team_members_update" ON public.team_members
   FOR UPDATE USING (
     auth.uid() IS NOT NULL 
-    AND (user_id = auth.uid()::text OR public.is_admin() OR public.is_treasurer())
+    AND (user_id = auth.uid()::text OR public.is_admin())
   ) WITH CHECK (
     auth.uid() IS NOT NULL 
     AND (
       (user_id = auth.uid()::text AND role = 'member')
       OR public.is_admin()
-      OR (public.is_treasurer() AND role IN ('member', 'treasurer'))
     )
   );
 
@@ -606,17 +658,17 @@ CREATE POLICY "kas_transactions_insert" ON public.kas_transactions
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL 
     AND created_by_id = auth.uid()::text
-    AND (type = 'in' OR public.is_treasurer())
+    AND (type = 'in' OR public.is_kas_pic())
   );
 
 CREATE POLICY "kas_transactions_update" ON public.kas_transactions
   FOR UPDATE USING (
-    auth.uid() IS NOT NULL AND public.is_treasurer()
+    auth.uid() IS NOT NULL AND public.is_kas_pic()
   );
 
 CREATE POLICY "kas_transactions_delete" ON public.kas_transactions
   FOR DELETE USING (
-    auth.uid() IS NOT NULL AND public.is_treasurer()
+    auth.uid() IS NOT NULL AND public.is_kas_pic()
   );
 
 -- ============================================================
@@ -627,17 +679,17 @@ CREATE POLICY "kas_dues_select" ON public.kas_dues
 
 CREATE POLICY "kas_dues_insert" ON public.kas_dues
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND public.is_treasurer()
+    auth.uid() IS NOT NULL AND public.is_kas_pic()
   );
 
 CREATE POLICY "kas_dues_update" ON public.kas_dues
   FOR UPDATE USING (
-    auth.uid() IS NOT NULL AND public.is_treasurer()
+    auth.uid() IS NOT NULL AND public.is_kas_pic()
   );
 
 CREATE POLICY "kas_dues_delete" ON public.kas_dues
   FOR DELETE USING (
-    auth.uid() IS NOT NULL AND public.is_treasurer()
+    auth.uid() IS NOT NULL AND public.is_kas_pic()
   );
 
 -- ============================================================
@@ -719,12 +771,12 @@ CREATE POLICY "chat_reactions_update" ON public.chat_reactions
 -- ============================================================
 CREATE POLICY "pantry_items_select" ON public.pantry_items FOR SELECT USING (true);
 CREATE POLICY "pantry_items_insert" ON public.pantry_items FOR INSERT WITH CHECK (
-  auth.uid() IS NOT NULL AND (public.is_admin() OR created_by_id = auth.uid()::text)
+  auth.uid() IS NOT NULL AND (public.is_pantry_pic() OR created_by_id = auth.uid()::text)
 );
 CREATE POLICY "pantry_items_update" ON public.pantry_items FOR UPDATE USING (
-  auth.uid() IS NOT NULL AND (public.is_admin() OR created_by_id = auth.uid()::text)
+  auth.uid() IS NOT NULL AND (public.is_pantry_pic() OR created_by_id = auth.uid()::text)
 );
-CREATE POLICY "pantry_items_delete" ON public.pantry_items FOR DELETE USING (public.is_admin());
+CREATE POLICY "pantry_items_delete" ON public.pantry_items FOR DELETE USING (public.is_pantry_pic());
 
 CREATE POLICY "pantry_logs_select" ON public.pantry_logs FOR SELECT USING (true);
 CREATE POLICY "pantry_logs_insert" ON public.pantry_logs FOR INSERT WITH CHECK (
@@ -736,10 +788,10 @@ CREATE POLICY "pantry_logs_delete" ON public.pantry_logs FOR DELETE USING (
 
 CREATE POLICY "pantry_restocks_select" ON public.pantry_restocks FOR SELECT USING (true);
 CREATE POLICY "pantry_restocks_insert" ON public.pantry_restocks FOR INSERT WITH CHECK (
-  auth.uid() IS NOT NULL AND public.is_admin()
+  auth.uid() IS NOT NULL AND public.is_pantry_pic()
 );
 CREATE POLICY "pantry_restocks_delete" ON public.pantry_restocks FOR DELETE USING (
-  public.is_admin()
+  public.is_pantry_pic()
 );
 
 -- ============================================================
@@ -747,15 +799,41 @@ CREATE POLICY "pantry_restocks_delete" ON public.pantry_restocks FOR DELETE USIN
 -- ============================================================
 CREATE POLICY "desktop_memos_select" ON public.desktop_memos FOR SELECT USING (true);
 CREATE POLICY "desktop_memos_insert" ON public.desktop_memos FOR INSERT WITH CHECK (
-  auth.uid() IS NOT NULL AND (public.is_admin() OR public.is_treasurer())
+  auth.uid() IS NOT NULL AND (public.is_admin() OR public.is_kas_pic() OR public.is_pantry_pic())
 );
 CREATE POLICY "desktop_memos_update" ON public.desktop_memos FOR UPDATE USING (
-  auth.uid() IS NOT NULL AND (public.is_admin() OR public.is_treasurer())
+  auth.uid() IS NOT NULL AND (public.is_admin() OR public.is_kas_pic() OR public.is_pantry_pic())
 ) WITH CHECK (
-  auth.uid() IS NOT NULL AND (public.is_admin() OR public.is_treasurer())
+  auth.uid() IS NOT NULL AND (public.is_admin() OR public.is_kas_pic() OR public.is_pantry_pic())
 );
 CREATE POLICY "desktop_memos_delete" ON public.desktop_memos FOR DELETE USING (
   auth.uid() IS NOT NULL AND public.is_admin()
+);
+
+-- ============================================================
+-- 14. MODULE PICS POLICIES
+-- ============================================================
+CREATE POLICY "module_pics_select" ON public.module_pics FOR SELECT USING (true);
+CREATE POLICY "module_pics_insert" ON public.module_pics FOR INSERT WITH CHECK (
+  auth.uid() IS NOT NULL
+  AND (
+    public.is_admin()
+    OR public.is_module_pic(module)
+  )
+);
+CREATE POLICY "module_pics_update" ON public.module_pics FOR UPDATE USING (
+  auth.uid() IS NOT NULL
+  AND (
+    public.is_admin()
+    OR public.is_module_pic(module)
+  )
+);
+CREATE POLICY "module_pics_delete" ON public.module_pics FOR DELETE USING (
+  auth.uid() IS NOT NULL
+  AND (
+    public.is_admin()
+    OR public.is_module_pic(module)
+  )
 );
 
 
@@ -832,9 +910,77 @@ CREATE INDEX IF NOT EXISTS idx_kas_dues_period ON public.kas_dues(month_period);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_created ON public.chat_messages(created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_chat_reactions_message ON public.chat_reactions(message_id);
 CREATE INDEX IF NOT EXISTS idx_pantry_logs_item_period ON public.pantry_logs(item_id, period_month);
+-- 15. Table: lapak_items (Etalase & Iklan Usaha Teman / Tim)
+CREATE TABLE IF NOT EXISTS public.lapak_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    tagline TEXT,
+    description TEXT,
+    category TEXT NOT NULL DEFAULT 'Kuliner',
+    price_range TEXT,
+    contact_name TEXT NOT NULL,
+    contact_wa TEXT,
+    contact_link TEXT,
+    badge TEXT DEFAULT 'PROMO',
+    image_url TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_by_id TEXT NOT NULL,
+    created_by_name TEXT NOT NULL,
+    created_by_avatar TEXT,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.lapak_items ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "lapak_items_select" ON public.lapak_items;
+CREATE POLICY "lapak_items_select" ON public.lapak_items
+    FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "lapak_items_insert" ON public.lapak_items;
+CREATE POLICY "lapak_items_insert" ON public.lapak_items
+    FOR INSERT WITH CHECK (
+        auth.uid() IS NOT NULL AND
+        created_by_id = auth.uid()::text
+    );
+
+DROP POLICY IF EXISTS "lapak_items_update" ON public.lapak_items;
+CREATE POLICY "lapak_items_update" ON public.lapak_items
+    FOR UPDATE USING (
+        created_by_id = auth.uid()::text OR
+        public.is_admin()
+    );
+
+DROP POLICY IF EXISTS "lapak_items_delete" ON public.lapak_items;
+CREATE POLICY "lapak_items_delete" ON public.lapak_items
+    FOR DELETE USING (
+        created_by_id = auth.uid()::text OR
+        public.is_admin()
+    );
+
+-- ============================================================
+-- INDEXES FOR SPEED
+-- ============================================================
+CREATE INDEX IF NOT EXISTS idx_vote_groups_created ON public.vote_groups(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_vote_groups_expires ON public.vote_groups(expires_at);
+CREATE INDEX IF NOT EXISTS idx_vote_options_group ON public.vote_options(group_id);
+CREATE INDEX IF NOT EXISTS idx_vote_records_option ON public.vote_records(option_id);
+CREATE INDEX IF NOT EXISTS idx_vote_records_group_user ON public.vote_records(group_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_wheel_places_category ON public.wheel_places(category);
+CREATE INDEX IF NOT EXISTS idx_wheel_spins_created ON public.wheel_spins(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_split_bills_created ON public.split_bills(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_split_bill_participants_bill ON public.split_bill_participants(bill_id);
+CREATE INDEX IF NOT EXISTS idx_kas_transactions_created ON public.kas_transactions(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_kas_dues_period ON public.kas_dues(month_period);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_created ON public.chat_messages(created_at ASC);
+CREATE INDEX IF NOT EXISTS idx_chat_reactions_message ON public.chat_reactions(message_id);
+CREATE INDEX IF NOT EXISTS idx_pantry_logs_item_period ON public.pantry_logs(item_id, period_month);
 CREATE INDEX IF NOT EXISTS idx_pantry_logs_user_period ON public.pantry_logs(user_id, period_month);
 CREATE INDEX IF NOT EXISTS idx_pantry_logs_created ON public.pantry_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_pantry_restocks_item ON public.pantry_restocks(item_id);
+CREATE INDEX IF NOT EXISTS idx_lapak_items_created ON public.lapak_items(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_lapak_items_active ON public.lapak_items(is_active);
+CREATE INDEX IF NOT EXISTS idx_lapak_items_category ON public.lapak_items(category);
 
 -- ============================================================
 -- REALTIME PUBLICATION
@@ -855,6 +1001,8 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.pantry_items;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.pantry_logs;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.pantry_restocks;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.desktop_memos;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.lapak_items;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.module_pics;
 
 -- ============================================================
 -- GRANTS FOR CLIENT ACCESS (ANON, AUTHENTICATED)
@@ -876,4 +1024,5 @@ SELECT
   'system',
   'Admin IT'
 WHERE NOT EXISTS (SELECT 1 FROM public.desktop_memos LIMIT 1);
+
 

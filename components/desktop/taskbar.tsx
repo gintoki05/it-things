@@ -30,6 +30,8 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { APP_VERSION, APP_BUILD } from "@/lib/version"
 import { useNotification } from "@/lib/notification-store"
 import { RetroNotificationToast } from "@/components/desktop/retro-notification-toast"
+import { TaskbarTicker } from "@/components/desktop/taskbar-ticker"
+import { usePicStore } from "@/lib/pic-store"
 
 interface TaskbarProps {
   onOpenLoginModal?: () => void
@@ -38,6 +40,7 @@ interface TaskbarProps {
 export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
   const { windows, activeWindowId, openWindow, toggleWindow, openAboutDialog } = useDesktop()
   const { user, isAdmin, isTreasurer, isGuest, isSupabaseConnected, signOut, setDemoUserRole, lockApp, canSwitchRole } = useAuth()
+  const { isKasPic, isPantryPic } = usePicStore()
   const {
     isMuted,
     unreadChatCount,
@@ -98,8 +101,8 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
     }
   }, [isStartOpen])
 
-  const openWindows = Object.values(windows).filter((w) => w.isOpen && (!w.adminOnly || isAdmin))
-  const programItems = Object.values(windows).filter((item) => !item.adminOnly || isAdmin)
+  const openWindows = Object.values(windows).filter((w) => w.isOpen && !w.isHidden && (!w.adminOnly || isAdmin))
+  const programItems = Object.values(windows).filter((item) => !item.isHidden && (!item.adminOnly || isAdmin))
 
   return (
     <>
@@ -140,10 +143,6 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                     ) : isAdmin ? (
                       <span className="text-purple-700 font-semibold flex items-center gap-0.5">
                         <ShieldCheck className="size-3" /> Administrator
-                      </span>
-                    ) : isTreasurer ? (
-                      <span className="text-amber-700 font-semibold flex items-center gap-0.5">
-                        <ShieldCheck className="size-3" /> Bendahara
                       </span>
                     ) : (
                       <span>Anggota Tim</span>
@@ -225,18 +224,12 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                     className={
                       isAdmin
                         ? "text-purple-700 font-bold flex items-center gap-1"
-                        : isTreasurer
-                        ? "text-amber-700 font-bold flex items-center gap-1"
                         : "text-gray-600 font-bold flex items-center gap-1"
                     }
                   >
                     {isAdmin ? (
                       <>
                         <ShieldCheck className="size-3 text-purple-700" /> Admin
-                      </>
-                    ) : isTreasurer ? (
-                      <>
-                        <Crown className="size-3 text-amber-700" /> Bendahara
                       </>
                     ) : (
                       <>
@@ -245,7 +238,7 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                     )}
                   </span>
                 </div>
-                <div className="grid grid-cols-3 gap-1">
+                <div className="grid grid-cols-2 gap-1">
                   <button
                     type="button"
                     onClick={() => setDemoUserRole && setDemoUserRole("member")}
@@ -256,17 +249,6 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                     }`}
                   >
                     Member
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDemoUserRole && setDemoUserRole("treasurer")}
-                    className={`py-0.5 px-1 border rounded text-[9px] font-mono text-center transition-colors ${
-                      user?.role === "treasurer"
-                        ? "bg-amber-600 text-white font-bold border-amber-800"
-                        : "bg-white text-gray-700 hover:bg-gray-100 border-[#7D8E9E]"
-                    }`}
-                  >
-                    Bendahara
                   </button>
                   <button
                     type="button"
@@ -288,18 +270,12 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                   className={
                     isAdmin
                       ? "text-purple-700 font-bold flex items-center gap-1"
-                      : isTreasurer
-                      ? "text-amber-700 font-bold flex items-center gap-1"
                       : "text-[#1E4E8C] font-bold flex items-center gap-1"
                   }
                 >
                   {isAdmin ? (
                     <>
                       <ShieldCheck className="size-3 text-purple-700" /> Admin
-                    </>
-                  ) : isTreasurer ? (
-                    <>
-                      <Crown className="size-3 text-amber-700" /> Bendahara
                     </>
                   ) : (
                     <>
@@ -459,6 +435,9 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
           })}
         </div>
 
+        {/* Running Ticker Marquee for Lapak Teman / Promosi */}
+        <TaskbarTicker />
+
         {/* System Tray */}
         <div className="h-7 px-2 bg-[#CBD5E1] border border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] flex items-center gap-1.5 shrink-0 text-xs font-mono text-[#14253D]">
           {/* Notification Mute / Sound Toggle in Tray */}
@@ -498,7 +477,7 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
             title={
               isGuest
                 ? "Mode Tamu (Read-Only) - Klik untuk Masuk dengan Google"
-                : `Login sebagai: ${user?.name || "User"} (${isAdmin ? "Administrator" : isTreasurer ? "Bendahara" : "Anggota Tim"}) - Klik untuk edit profil`
+                : `Login sebagai: ${user?.name || "User"} (${isAdmin ? "Administrator" : isKasPic ? "PIC Kas" : isPantryPic ? "PIC Pantry" : "Anggota Tim"}) - Klik untuk edit profil`
             }
             className={cn(
               "h-5.5 px-1.5 rounded-[2px] border transition-colors cursor-pointer flex items-center gap-1.5 active:translate-y-px text-[11px] font-sans select-none",
@@ -527,10 +506,15 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                 <ShieldCheck className="size-2.5 shrink-0 text-purple-700" />
                 <span className="hidden sm:inline">Admin</span>
               </span>
-            ) : isTreasurer ? (
-              <span className="flex items-center gap-0.5 text-amber-700 text-[9px] font-bold">
-                <Crown className="size-2.5 shrink-0 text-amber-600" />
-                <span className="hidden sm:inline">Bendahara</span>
+            ) : isKasPic ? (
+              <span className="flex items-center gap-0.5 text-amber-800 text-[9px] font-bold">
+                <span>💰</span>
+                <span className="hidden sm:inline">PIC Kas</span>
+              </span>
+            ) : isPantryPic ? (
+              <span className="flex items-center gap-0.5 text-sky-800 text-[9px] font-bold">
+                <span>☕</span>
+                <span className="hidden sm:inline">PIC Pantry</span>
               </span>
             ) : (
               <span className="flex items-center gap-0.5 text-slate-600 text-[9px] font-semibold">

@@ -4,6 +4,7 @@ import * as React from "react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import type { Database } from "@/lib/database.types"
 import { useAuth } from "@/lib/auth"
+import { usePicStore } from "@/lib/pic-store"
 
 export interface PantryItem {
   id: string
@@ -68,7 +69,10 @@ export function formatPeriodMonthDisplay(period: string): string {
 }
 
 export function usePantryStore() {
-  const { user, isAdmin } = useAuth()
+  const { user, isAdmin, isGuest } = useAuth()
+  const { isPantryPic } = usePicStore()
+  const canManagePantry = Boolean(!isGuest && (isAdmin || isPantryPic))
+
   const [items, setItems] = React.useState<PantryItem[]>([])
   const [logs, setLogs] = React.useState<PantryLog[]>([])
   const [restocks, setRestocks] = React.useState<PantryRestock[]>([])
@@ -410,7 +414,7 @@ export function usePantryStore() {
     }
   }
 
-  // Restock Stok Fisik (Admin Only)
+  // Restock Stok Fisik (Admin / PIC Pantry Only)
   const restockItem = async ({
     itemId,
     quantity,
@@ -420,12 +424,12 @@ export function usePantryStore() {
     quantity: number
     notes?: string
   }) => {
-    if (!user || !isAdmin || !supabase) {
-      return { success: false, error: "Hanya Admin yang dapat menambah stok." }
+    if (!user || !canManagePantry || !supabase) {
+      return { success: false, error: "Hanya Admin atau PIC Pantry yang dapat menambah stok." }
     }
 
     const currentUserId = user.id
-    const currentUserName = user.name || "Admin"
+    const currentUserName = user.name || "Admin/PIC"
 
     // Optimistic
     setItems((prev) =>
@@ -465,7 +469,7 @@ export function usePantryStore() {
     }
   }
 
-  // Tambah Item Baru (Admin Only)
+  // Tambah Item Baru (Admin / PIC Pantry Only)
   const createItem = async (newItem: {
     name: string
     category: string
@@ -474,8 +478,8 @@ export function usePantryStore() {
     stockQty: number
     unit: string
   }) => {
-    if (!user || !isAdmin || !supabase) {
-      return { success: false, error: "Hanya Admin yang dapat menambah item." }
+    if (!user || !canManagePantry || !supabase) {
+      return { success: false, error: "Hanya Admin atau PIC Pantry yang dapat menambah item." }
     }
 
     try {
@@ -520,7 +524,7 @@ export function usePantryStore() {
     }
   }
 
-  // Update Item (Admin Only)
+  // Update Item (Admin / PIC Pantry Only)
   const updateItem = async (
     itemId: string,
     updates: Partial<{
@@ -533,8 +537,8 @@ export function usePantryStore() {
       isActive: boolean
     }>
   ) => {
-    if (!user || !isAdmin || !supabase) {
-      return { success: false, error: "Hanya Admin yang dapat mengubah item." }
+    if (!user || !canManagePantry || !supabase) {
+      return { success: false, error: "Hanya Admin atau PIC Pantry yang dapat mengubah item." }
     }
 
     const payload: Database["public"]["Tables"]["pantry_items"]["Update"] = {
@@ -578,10 +582,10 @@ export function usePantryStore() {
     }
   }
 
-  // Hapus Item (Admin Only)
+  // Hapus Item (Admin / PIC Pantry Only)
   const deleteItem = async (itemId: string) => {
-    if (!user || !isAdmin || !supabase) {
-      return { success: false, error: "Hanya Admin yang dapat menghapus item." }
+    if (!user || !canManagePantry || !supabase) {
+      return { success: false, error: "Hanya Admin atau PIC Pantry yang dapat menghapus item." }
     }
 
     try {
@@ -715,6 +719,7 @@ export function usePantryStore() {
     deleteItem,
     getUserQuotaInfo,
     getMemberConsumptions,
+    canManagePantry,
     refresh: async () => {
       await Promise.all([fetchItems(), fetchLogs(selectedPeriod), fetchRestocks()])
     },

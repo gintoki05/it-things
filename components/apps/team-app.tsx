@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useAuth, UserRole } from "@/lib/auth"
 import { useTeamStore, TeamMember } from "@/lib/team-store"
+import { usePicStore } from "@/lib/pic-store"
 import { UserAvatar } from "@/components/retro/user-avatar"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { RetroActionButton } from "@/components/ui/retro-action-button"
@@ -21,6 +22,10 @@ import {
   Eye,
   Search,
   Check,
+  Coffee,
+  Coins,
+  ArrowRightLeft,
+  Sparkles,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -28,7 +33,7 @@ export function TeamApp() {
   const { user, isAdmin, isTreasurer, isGuest } = useAuth()
   const {
     members,
-    isLoading,
+    isLoading: isTeamLoading,
     loadMembers,
     addMember,
     updateMember,
@@ -36,9 +41,24 @@ export function TeamApp() {
     deleteMember,
   } = useTeamStore()
 
+  const {
+    pics,
+    isLoading: isPicsLoading,
+    addPic,
+    removePic,
+    canAssignModulePic,
+    getUserPicTags,
+  } = usePicStore()
+
+  const isLoading = isTeamLoading || isPicsLoading
+
   // Filter & Search states
   const [searchQuery, setSearchQuery] = React.useState("")
   const [roleFilter, setRoleFilter] = React.useState<"all" | UserRole>("all")
+
+  // Multi-PIC local states
+  const [selectedKasUser, setSelectedKasUser] = React.useState("")
+  const [selectedPantryUser, setSelectedPantryUser] = React.useState("")
 
   // Modal form states
   const [showModal, setShowModal] = React.useState(false)
@@ -54,7 +74,6 @@ export function TeamApp() {
   const [isDeleting, setIsDeleting] = React.useState(false)
 
   const adminCount = members.filter((m) => m.role === "admin").length
-  const treasurerCount = members.filter((m) => m.role === "treasurer").length
   const memberCount = members.filter((m) => m.role === "member").length
 
   // Filtered members list
@@ -85,8 +104,7 @@ export function TeamApp() {
     setFormEmail(member.email)
     setFormRole(member.role)
     setFormEmoji(
-      member.avatar_url ||
-        (member.role === "admin" ? "🛡️" : member.role === "treasurer" ? "👑" : "👤")
+      member.avatar_url || (member.role === "admin" ? "🛡️" : "👤")
     )
     setShowModal(true)
   }
@@ -95,8 +113,7 @@ export function TeamApp() {
     e.preventDefault()
     if (!formName.trim()) return
 
-    const defaultAvatar =
-      formEmoji || (formRole === "admin" ? "🛡️" : formRole === "treasurer" ? "👑" : "👤")
+    const defaultAvatar = formEmoji || (formRole === "admin" ? "🛡️" : "👤")
 
     if (editingMember) {
       await updateMember(editingMember.id, {
@@ -136,13 +153,57 @@ export function TeamApp() {
     await setMemberRole(memberId, role)
     const roleLabels: Record<UserRole, string> = {
       admin: "Administrator",
-      treasurer: "Bendahara",
       member: "Anggota",
       guest: "Tamu",
     }
     setStatusMessage(`Peran berhasil diubah ke: ${roleLabels[role]}`)
     setTimeout(() => setStatusMessage(null), 3000)
   }
+
+  const handleAddPic = async (module: "kas" | "pantry", targetMemberId: string) => {
+    if (!targetMemberId) return
+    const targetMember = members.find((m) => m.id === targetMemberId || m.user_id === targetMemberId)
+    if (!targetMember) return
+    const res = await addPic(module, {
+      id: targetMember.id,
+      user_id: targetMember.user_id || targetMember.id,
+      name: targetMember.name,
+      avatar_url: targetMember.avatar_url,
+    })
+    if (res.success) {
+      const moduleName = module === "kas" ? "Buku Kas" : "Pantry"
+      setStatusMessage(`"${targetMember.name}" berhasil ditambahkan sebagai PIC ${moduleName}.`)
+      if (module === "kas") setSelectedKasUser("")
+      if (module === "pantry") setSelectedPantryUser("")
+      setTimeout(() => setStatusMessage(null), 3500)
+    } else {
+      setStatusMessage(`Gagal menambah PIC: ${res.error}`)
+      setTimeout(() => setStatusMessage(null), 4000)
+    }
+  }
+
+  const handleRemovePic = async (module: "kas" | "pantry", targetUserId: string, targetName: string) => {
+    const res = await removePic(module, targetUserId)
+    if (res.success) {
+      const moduleName = module === "kas" ? "Buku Kas" : "Pantry"
+      setStatusMessage(`"${targetName}" dicopot dari PIC ${moduleName}.`)
+      setTimeout(() => setStatusMessage(null), 3500)
+    } else {
+      setStatusMessage(`Gagal mencopot PIC: ${res.error}`)
+      setTimeout(() => setStatusMessage(null), 4000)
+    }
+  }
+
+  const kasPics = pics.kas || []
+  const pantryPics = pics.pantry || []
+
+  // Filter members who are not yet PICs for the dropdowns
+  const availableKasMembers = members.filter(
+    (m) => !kasPics.some((p) => p.user_id === m.id || p.user_id === m.user_id)
+  )
+  const availablePantryMembers = members.filter(
+    (m) => !pantryPics.some((p) => p.user_id === m.id || p.user_id === m.user_id)
+  )
 
   return (
     <div className="flex flex-col gap-3 min-h-full font-sans select-none text-[#14253D]">
@@ -161,8 +222,6 @@ export function TeamApp() {
             </div>
             <div className="flex items-center gap-1.5 mt-1 font-mono text-[10px] text-gray-500">
               <span className="text-purple-700 font-semibold">{adminCount} Admin</span>
-              <span>·</span>
-              <span className="text-amber-700 font-semibold">{treasurerCount} Bendahara</span>
               <span>·</span>
               <span className="text-slate-600 font-semibold">{memberCount} Member</span>
             </div>
@@ -190,15 +249,188 @@ export function TeamApp() {
             <span className="inline-flex items-center gap-0.5 text-purple-700 font-bold text-[9px]">
               <ShieldCheck className="size-2.5" /> Admin
             </span>
-          ) : isTreasurer ? (
-            <span className="inline-flex items-center gap-0.5 text-amber-700 font-bold text-[9px]">
-              <Crown className="size-2.5" /> Bendahara
-            </span>
           ) : (
             <span className="inline-flex items-center gap-0.5 text-slate-600 font-medium text-[9px]">
               <User className="size-2.5" /> Member
             </span>
           )}
+        </div>
+      </div>
+
+      {/* 2. PIC ASSIGNMENT PANEL (PENUNJUKAN MULTI-PIC MODUL) */}
+      <div className="bg-[#EBF2FA] border-2 border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] rounded-[3px] p-2.5 shadow-xs">
+        <div className="flex items-center justify-between gap-2 mb-2 pb-1 border-b border-[#CBD5E1]">
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="size-3.5 text-amber-600" />
+            <h3 className="font-mono font-bold text-xs text-[#102A45] tracking-tight">
+              PENUNJUKAN PIC MODUL (MULTI-PIC ACCESS CONTROL)
+            </h3>
+          </div>
+          <span className="font-mono text-[10px] text-gray-500">
+            {isAdmin ? "Mode Kelola PIC (Admin)" : "PIC Modul Aktif"}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+          {/* PIC KAS */}
+          <div className="bg-white border border-[#CBD5E1] rounded-[2px] p-2.5 flex flex-col justify-between shadow-2xs gap-2 min-w-0 overflow-hidden">
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="p-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-[2px] text-xs shrink-0">
+                    💰
+                  </span>
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-mono text-gray-500 block leading-tight truncate">
+                      MODUL KAS & IURAN
+                    </span>
+                    <span className="text-[10px] font-bold text-amber-800 truncate block">
+                      PIC Kas ({kasPics.length} orang)
+                    </span>
+                  </div>
+                </div>
+                <span className="px-1.5 py-0.5 bg-[#FEF3C7] text-[#92400E] border border-[#F59E0B] rounded-[2px] text-[9px] font-mono font-bold shrink-0">
+                  PIC KAS
+                </span>
+              </div>
+
+              {/* List of PIC Kas Badges */}
+              <div className="flex flex-wrap gap-1 min-h-[28px] p-1 bg-gray-50 border border-dashed border-gray-200 rounded items-center">
+                {kasPics.length === 0 ? (
+                  <span className="text-[10px] font-mono text-gray-400 italic">
+                    Belum ada PIC ditunjuk
+                  </span>
+                ) : (
+                  kasPics.map((p) => (
+                    <span
+                      key={p.user_id}
+                      className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[#FEF3C7] text-[#92400E] border border-[#F59E0B] rounded-[2px] text-[10px] font-mono font-bold"
+                    >
+                      <span className="text-xs">{p.user_avatar || "👤"}</span>
+                      <span className="truncate max-w-[100px]">{p.user_name}</span>
+                      {canAssignModulePic("kas") && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePic("kas", p.user_id, p.user_name)}
+                          className="text-[#92400E] hover:text-red-700 hover:bg-amber-200 rounded px-1 text-xs font-bold leading-none cursor-pointer transition-colors"
+                          title={`Hapus ${p.user_name} dari PIC Kas`}
+                        >
+                          ×
+                        </button>
+                      )}
+                    </span>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Add PIC Kas selector */}
+            {canAssignModulePic("kas") && (
+              <div className="flex items-center gap-1.5 pt-1.5 border-t border-gray-100 min-w-0 w-full">
+                <select
+                  title="Pilih anggota untuk ditambahkan sebagai PIC Kas"
+                  value={selectedKasUser}
+                  onChange={(e) => setSelectedKasUser(e.target.value)}
+                  className="bg-white border border-[#CBD5E1] rounded px-1.5 py-1 text-[10px] font-mono font-semibold text-gray-800 outline-none focus:border-[#1E4E8C] min-w-0 flex-1 truncate cursor-pointer"
+                >
+                  <option value="">+ Pilih Member PIC Kas...</option>
+                  {availableKasMembers.map((m) => (
+                    <option key={m.id} value={m.user_id || m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  disabled={!selectedKasUser}
+                  onClick={() => handleAddPic("kas", selectedKasUser)}
+                  className="px-2 py-1 bg-[#1E4E8C] text-white text-[10px] font-mono font-bold rounded border border-[#102A45] hover:bg-[#153A6B] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0 whitespace-nowrap"
+                >
+                  + Tambah
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* PIC PANTRY */}
+          <div className="bg-white border border-[#CBD5E1] rounded-[2px] p-2.5 flex flex-col justify-between shadow-2xs gap-2 min-w-0 overflow-hidden">
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="p-1 bg-sky-50 text-sky-700 border border-sky-200 rounded-[2px] text-xs shrink-0">
+                    ☕
+                  </span>
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-mono text-gray-500 block leading-tight truncate">
+                      MODUL PANTRY & SNACK
+                    </span>
+                    <span className="text-[10px] font-bold text-sky-800 truncate block">
+                      PIC Pantry ({pantryPics.length} orang)
+                    </span>
+                  </div>
+                </div>
+                <span className="px-1.5 py-0.5 bg-[#E0F2FE] text-[#0369A1] border border-[#38BDF8] rounded-[2px] text-[9px] font-mono font-bold shrink-0">
+                  PIC PANTRY
+                </span>
+              </div>
+
+              {/* List of PIC Pantry Badges */}
+              <div className="flex flex-wrap gap-1 min-h-[28px] p-1 bg-gray-50 border border-dashed border-gray-200 rounded items-center">
+                {pantryPics.length === 0 ? (
+                  <span className="text-[10px] font-mono text-gray-400 italic">
+                    Belum ada PIC ditunjuk
+                  </span>
+                ) : (
+                  pantryPics.map((p) => (
+                    <span
+                      key={p.user_id}
+                      className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[#E0F2FE] text-[#0369A1] border border-[#38BDF8] rounded-[2px] text-[10px] font-mono font-bold"
+                    >
+                      <span className="text-xs">{p.user_avatar || "👤"}</span>
+                      <span className="truncate max-w-[100px]">{p.user_name}</span>
+                      {canAssignModulePic("pantry") && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePic("pantry", p.user_id, p.user_name)}
+                          className="text-[#0369A1] hover:text-red-700 hover:bg-sky-200 rounded px-1 text-xs font-bold leading-none cursor-pointer transition-colors"
+                          title={`Hapus ${p.user_name} dari PIC Pantry`}
+                        >
+                          ×
+                        </button>
+                      )}
+                    </span>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Add PIC Pantry selector */}
+            {canAssignModulePic("pantry") && (
+              <div className="flex items-center gap-1.5 pt-1.5 border-t border-gray-100 min-w-0 w-full">
+                <select
+                  title="Pilih anggota untuk ditambahkan sebagai PIC Pantry"
+                  value={selectedPantryUser}
+                  onChange={(e) => setSelectedPantryUser(e.target.value)}
+                  className="bg-white border border-[#CBD5E1] rounded px-1.5 py-1 text-[10px] font-mono font-semibold text-gray-800 outline-none focus:border-[#1E4E8C] min-w-0 flex-1 truncate cursor-pointer"
+                >
+                  <option value="">+ Pilih Member PIC Pantry...</option>
+                  {availablePantryMembers.map((m) => (
+                    <option key={m.id} value={m.user_id || m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  disabled={!selectedPantryUser}
+                  onClick={() => handleAddPic("pantry", selectedPantryUser)}
+                  className="px-2 py-1 bg-[#1E4E8C] text-white text-[10px] font-mono font-bold rounded border border-[#102A45] hover:bg-[#153A6B] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0 whitespace-nowrap"
+                >
+                  + Tambah
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -259,18 +491,6 @@ export function TeamApp() {
               )}
             >
               Admin ({adminCount})
-            </button>
-            <button
-              type="button"
-              onClick={() => setRoleFilter("treasurer")}
-              className={cn(
-                "px-2 py-0.5 rounded-[2px] font-semibold transition-colors cursor-pointer",
-                roleFilter === "treasurer"
-                  ? "bg-amber-100 text-amber-900 border border-amber-300 shadow-xs font-bold"
-                  : "text-gray-600 hover:text-amber-700"
-              )}
-            >
-              Bendahara ({treasurerCount})
             </button>
             <button
               type="button"
@@ -347,8 +567,8 @@ export function TeamApp() {
               ) : (
                 filteredMembers.map((member, idx) => {
                   const isItemAdmin = member.role === "admin"
-                  const isItemTreasurer = member.role === "treasurer"
                   const isMe = user?.id === member.user_id || user?.email === member.email
+                  const picTags = getUserPicTags(member.user_id || member.id)
 
                   return (
                     <tr
@@ -370,14 +590,16 @@ export function TeamApp() {
                             textClass="text-[10px]"
                           />
                           <div className="min-w-0">
-                            <span className="font-semibold text-gray-900 leading-tight truncate">
-                              {member.name}
-                            </span>
-                            {isMe && (
-                              <span className="ml-1.5 text-[9px] font-mono font-bold bg-blue-50 text-blue-700 px-1 py-0.2 rounded border border-blue-200">
-                                Anda
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-semibold text-gray-900 leading-tight truncate">
+                                {member.name}
                               </span>
-                            )}
+                              {isMe && (
+                                <span className="text-[9px] font-mono font-bold bg-blue-50 text-blue-700 px-1 py-0.2 rounded border border-blue-200">
+                                  Anda
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -389,24 +611,34 @@ export function TeamApp() {
                         </td>
                       )}
 
-                      {/* Role Badge */}
+                      {/* Role & PIC Badges */}
                       <td className="p-2 border-r border-gray-100">
-                        {isItemAdmin ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-900 border border-purple-300">
-                            <Shield className="size-3 text-purple-700" />
-                            <span>Administrator</span>
-                          </span>
-                        ) : isItemTreasurer ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                            <Crown className="size-3 text-amber-700" />
-                            <span>Bendahara</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-300">
-                            <User className="size-3 text-slate-500" />
-                            <span>Member</span>
-                          </span>
-                        )}
+                        <div className="flex flex-wrap items-center gap-1">
+                          {isItemAdmin ? (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-900 border border-purple-300">
+                              <Shield className="size-2.5 text-purple-700" />
+                              <span>Admin</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-300">
+                              <User className="size-2.5 text-slate-500" />
+                              <span>Member</span>
+                            </span>
+                          )}
+
+                          {picTags.map((tag) => (
+                            <span
+                              key={tag.module}
+                              className={cn(
+                                "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border shadow-2xs",
+                                tag.color
+                              )}
+                            >
+                              <span>{tag.icon}</span>
+                              <span>{tag.label}</span>
+                            </span>
+                          ))}
+                        </div>
                       </td>
 
                       {/* Actions */}
@@ -427,7 +659,6 @@ export function TeamApp() {
                               className="px-1.5 py-0.5 bg-white text-gray-800 border border-[#CBD5E1] rounded text-[10px] font-mono outline-none cursor-pointer focus:border-[#1E4E8C]"
                             >
                               <option value="admin">🛡️ Admin</option>
-                              <option value="treasurer">👑 Bendahara</option>
                               <option value="member">👤 Member</option>
                             </select>
 
@@ -556,33 +787,6 @@ export function TeamApp() {
                       </strong>
                       <p className="text-[10px] text-gray-500 leading-tight mt-0.5">
                         Akses penuh: kelola anggota tim, pengeluaran kas, serta tagihan.
-                      </p>
-                    </div>
-                  </label>
-
-                  <label
-                    className={cn(
-                      "flex items-start gap-2.5 p-2 rounded border cursor-pointer transition-colors",
-                      formRole === "treasurer"
-                        ? "bg-amber-50 border-amber-300 ring-1 ring-amber-400"
-                        : "bg-gray-50 border-gray-200 hover:bg-gray-100/70"
-                    )}
-                  >
-                    <input
-                      type="radio"
-                      name="role"
-                      value="treasurer"
-                      checked={formRole === "treasurer"}
-                      onChange={() => setFormRole("treasurer")}
-                      className="mt-0.5"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <strong className="text-amber-900 flex items-center gap-1 text-xs">
-                        <Crown className="size-3 text-amber-700" />
-                        Bendahara (Treasurer)
-                      </strong>
-                      <p className="text-[10px] text-gray-500 leading-tight mt-0.5">
-                        Otorisasi kas: catat & hapus pengeluaran serta konfirmasi iuran tim.
                       </p>
                     </div>
                   </label>

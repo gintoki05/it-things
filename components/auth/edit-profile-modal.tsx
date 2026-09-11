@@ -4,8 +4,9 @@ import * as React from "react"
 import { useAuth } from "@/lib/auth"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { UserAvatar } from "@/components/retro/user-avatar"
+import { usePicStore } from "@/lib/pic-store"
 import { RETRO_AVATAR_PRESETS, isRetroAvatarPreset, findRetroAvatarPreset } from "@/lib/avatar-presets"
-import { User, X, Check, AlertCircle, ShieldCheck, Crown, ShieldAlert, Sparkles, Image as ImageIcon } from "lucide-react"
+import { User, X, Check, AlertCircle, ShieldCheck, ShieldAlert, Sparkles, Image as ImageIcon } from "lucide-react"
 
 interface EditProfileModalProps {
   isOpen: boolean
@@ -13,7 +14,8 @@ interface EditProfileModalProps {
 }
 
 export function EditProfileModal({ isOpen, onClose }: EditProfileModalProps) {
-  const { user, isGuest, isAdmin, isTreasurer, updateProfile } = useAuth()
+  const { user, isGuest, isAdmin, updateProfile } = useAuth()
+  const { getUserPicTags } = usePicStore()
 
   const [name, setName] = React.useState("")
   const [selectedAvatar, setSelectedAvatar] = React.useState<string>("")
@@ -150,15 +152,21 @@ export function EditProfileModal({ isOpen, onClose }: EditProfileModalProps) {
                   <span className="inline-flex items-center gap-1 text-[9px] font-mono font-bold bg-purple-100 text-purple-800 border border-purple-300 px-1 py-0.2 rounded">
                     <ShieldCheck className="size-2.5" /> Administrator
                   </span>
-                ) : isTreasurer ? (
-                  <span className="inline-flex items-center gap-1 text-[9px] font-mono font-bold bg-amber-100 text-amber-800 border border-amber-300 px-1 py-0.2 rounded">
-                    <Crown className="size-2.5" /> Bendahara
-                  </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 text-[9px] font-mono font-bold bg-blue-50 text-blue-800 border border-blue-200 px-1 py-0.2 rounded">
                     <User className="size-2.5" /> Anggota Tim
                   </span>
                 )}
+
+                {getUserPicTags(user.id).map((tag) => (
+                  <span
+                    key={tag.module}
+                    className={`inline-flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border shadow-2xs ${tag.color}`}
+                  >
+                    <span>{tag.icon}</span>
+                    <span>{tag.label}</span>
+                  </span>
+                ))}
                 <span className="text-[9px] font-mono text-gray-600 bg-gray-100 border border-gray-300 px-1.5 py-0.2 rounded">
                   {activePreset
                     ? `Avatar: ${activePreset.name}`
@@ -284,7 +292,7 @@ export function EditProfileModal({ isOpen, onClose }: EditProfileModalProps) {
               className="w-full px-2.5 py-1.5 text-xs bg-white text-[#14253D] font-mono border-2 border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
             />
             <span className="text-[10px] text-gray-500 font-mono block">
-              Nama dan avatar ini akan muncul di seluruh fitur (Chat, Vote, Wheel, Team).
+              Nama dan avatar ini akan muncul di seluruh fitur (Chat, Vote, Pantry, Team).
             </span>
           </div>
 

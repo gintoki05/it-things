@@ -25,11 +25,17 @@ MODUL-MODUL UTAMA & FUNGSINYA:
    • Support mention (@nama), reaksi emoji, filter unread,
      serta push notifikasi desktop & audio retro chime.
 
-3. 👥 TEAM.EXE (Direktori Anggota)
+3. 📦 PANTRY.EXE (Snack Bar & Kuota Makanan)
+   • Cek stok camilan/kopi pantry kantor & log pengambilan.
+
+4. 🛍️ LAPAK_TEMAN.EXE (Etalase Usaha Teman)
+   • Promosi usaha sampingan, menu jastip, kuliner, dan jasa IT teman satu tim.
+   • Terhubung langsung ke WhatsApp & running ticker di taskbar.
+
+5. 👥 TEAM.EXE (Direktori Anggota)
    • Direktori kontak, nama panggilan, role, dan akun tim.
 
-4. 🎡 FITUR SEGERA HADIR (COMING SOON):
-   • Wheel.exe    : Rolet putar "Mau Makan Apa?" pas bingung milih.
+6. ⏳ FITUR SEGERA HADIR (COMING SOON):
    • SplitBill.exe: Kalkulator patungan makan/ngopi anti-pusing.
    • Kas.exe      : Buku kas & transparansi uang kas tim.
 

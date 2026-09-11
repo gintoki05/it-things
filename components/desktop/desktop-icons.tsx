@@ -13,9 +13,10 @@ const ITEM_GRID_POSITIONS: Record<AppId, string> = {
   chat: "col-start-1 row-start-3",
   team: "col-start-1 row-start-4",
   wheel: "col-start-2 row-start-1",
-  splitbill: "col-start-2 row-start-2",
-  kas: "col-start-2 row-start-3",
-  pantry: "col-start-2 row-start-4",
+  splitbill: "col-start-2 row-start-1",
+  kas: "col-start-2 row-start-2",
+  pantry: "col-start-2 row-start-3",
+  lapak: "col-start-2 row-start-4",
 }
 
 export function DesktopIcons() {
@@ -24,8 +25,8 @@ export function DesktopIcons() {
   const { unreadChatCount, activeVoteCount, clearUnreadChat } = useNotification()
   const [selectedId, setSelectedId] = React.useState<AppId | null>(null)
 
-  // Hanya tampilkan modul adminOnly jika user adalah admin
-  const items = Object.values(windows).filter((item) => !item.adminOnly || isAdmin)
+  // Hanya tampilkan modul yang tidak disembunyikan dan bukan adminOnly (kecuali admin)
+  const items = Object.values(windows).filter((item) => !item.isHidden && (!item.adminOnly || isAdmin))
 
   const handleOpen = (id: AppId) => {
     if (id === "chat") {
