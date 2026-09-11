@@ -39,6 +39,12 @@ export function UserAvatar({
     )
   }, [src])
 
+  const isEmoji = React.useMemo(() => {
+    if (!src) return false
+    const s = src.trim()
+    return !isSafeSrc && s.length <= 4
+  }, [src, isSafeSrc])
+
   if (src && isSafeSrc && !hasError) {
     return (
       <img
@@ -48,6 +54,21 @@ export function UserAvatar({
         onError={() => setHasError(true)}
         className={cn(size, "rounded-full border border-white object-cover shrink-0", className)}
       />
+    )
+  }
+
+  if (isEmoji && src) {
+    return (
+      <div
+        className={cn(
+          size,
+          "rounded-full bg-slate-200/80 text-slate-800 flex items-center justify-center border border-white shrink-0 select-none",
+          textClass,
+          className
+        )}
+      >
+        <span className="leading-none">{src.trim()}</span>
+      </div>
     )
   }
 

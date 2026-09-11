@@ -22,6 +22,7 @@ import {
 } from "lucide-react"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { RetroActionButton } from "@/components/ui/retro-action-button"
+import { UserAvatar } from "@/components/retro/user-avatar"
 import { getShareUrl } from "@/lib/utils"
 
 export interface ItemizedOrder {
@@ -546,7 +547,12 @@ export function SplitBillApp() {
                           }`}
                           title={isAlreadyIn ? `${tm.name} sudah masuk tagihan` : `Klik untuk menambahkan ${tm.name}`}
                         >
-                          <span>{tm.avatar_url || "👤"}</span>
+                          <UserAvatar
+                            src={tm.avatar_url}
+                            name={tm.name}
+                            size="size-3.5"
+                            textClass="text-[7px]"
+                          />
                           <span>{tm.name.split(" ")[0]}</span>
                           {!isAlreadyIn && <span className="text-emerald-700 font-bold">+</span>}
                         </button>

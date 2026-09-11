@@ -304,10 +304,15 @@ export function TeamApp() {
                   kasPics.map((p) => (
                     <span
                       key={p.user_id}
-                      className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[#FEF3C7] text-[#92400E] border border-[#F59E0B] rounded-[2px] text-[10px] font-mono font-bold"
+                      className="inline-flex items-center gap-1.5 px-1.5 py-0.5 bg-[#FEF3C7] text-[#92400E] border border-[#F59E0B] rounded-[2px] text-[10px] font-mono font-bold"
                     >
-                      <span className="text-xs">{p.user_avatar || "👤"}</span>
-                      <span className="truncate max-w-[100px]">{p.user_name}</span>
+                      <UserAvatar
+                        src={p.user_avatar}
+                        name={p.user_name}
+                        size="size-4"
+                        textClass="text-[8px]"
+                      />
+                      <span className="truncate max-w-[110px]">{p.user_name}</span>
                       {canAssignModulePic("kas") && (
                         <button
                           type="button"
@@ -384,10 +389,15 @@ export function TeamApp() {
                   pantryPics.map((p) => (
                     <span
                       key={p.user_id}
-                      className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[#E0F2FE] text-[#0369A1] border border-[#38BDF8] rounded-[2px] text-[10px] font-mono font-bold"
+                      className="inline-flex items-center gap-1.5 px-1.5 py-0.5 bg-[#E0F2FE] text-[#0369A1] border border-[#38BDF8] rounded-[2px] text-[10px] font-mono font-bold"
                     >
-                      <span className="text-xs">{p.user_avatar || "👤"}</span>
-                      <span className="truncate max-w-[100px]">{p.user_name}</span>
+                      <UserAvatar
+                        src={p.user_avatar}
+                        name={p.user_name}
+                        size="size-4"
+                        textClass="text-[8px]"
+                      />
+                      <span className="truncate max-w-[110px]">{p.user_name}</span>
                       {canAssignModulePic("pantry") && (
                         <button
                           type="button"
