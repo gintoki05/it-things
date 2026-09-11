@@ -21,6 +21,8 @@ import {
   Eye
 } from "lucide-react"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
+import { RetroActionButton } from "@/components/ui/retro-action-button"
+import { getShareUrl } from "@/lib/utils"
 
 export interface ItemizedOrder {
   id: string
@@ -93,15 +95,17 @@ export function SplitBillApp() {
   const [orderItemPrice, setOrderItemPrice] = React.useState("")
   const [orderItemUser, setOrderItemUser] = React.useState("")
 
-  // Load latest bill from Supabase if available
-  const loadBill = React.useCallback(async () => {
+  // Load latest bill or specific bill by ID from Supabase
+  const loadBill = React.useCallback(async (targetId?: string) => {
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data: dbBills } = await supabase
-          .from("split_bills")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(1)
+        let query = supabase.from("split_bills").select("*")
+        if (targetId) {
+          query = query.eq("id", targetId)
+        } else {
+          query = query.order("created_at", { ascending: false }).limit(1)
+        }
+        const { data: dbBills } = await query
 
         if (dbBills && dbBills.length > 0) {
           const currentB = dbBills[0]
@@ -143,7 +147,15 @@ export function SplitBillApp() {
   }, [])
 
   React.useEffect(() => {
-    loadBill()
+    if (typeof window === "undefined") return
+    const params = new URLSearchParams(window.location.search)
+    const appParam = params.get("app")
+    const idParam = params.get("id") || params.get("billId") || params.get("bill_id")
+    if ((!appParam || appParam === "splitbill") && idParam) {
+      loadBill(idParam)
+    } else {
+      loadBill()
+    }
   }, [loadBill])
 
   // Recalculate totals
@@ -305,6 +317,7 @@ export function SplitBillApp() {
 
   // Copy WhatsApp Formatter
   const handleCopyWhatsApp = () => {
+    const shareUrl = getShareUrl({ app: "splitbill", id: bill.id })
     const lines = [
       `🧾 *SPLIT BILL: ${bill.title.toUpperCase()}*`,
       `📅 *Tanggal:* ${new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}`,
@@ -325,6 +338,7 @@ export function SplitBillApp() {
       `No. Rekening: *${bill.account_number}*`,
       `Atas Nama: *${bill.account_holder}*`,
       `---------------------------------`,
+      `🔗 *Link Split Bill:* ${shareUrl}`,
       `_Tolong konfirmasi bukti transfer jika sudah ya! Terima kasih 🙏_`,
     ]
 
@@ -605,14 +619,13 @@ export function SplitBillApp() {
                         </button>
 
                         {/* Remove */}
-                        <button
-                          type="button"
+                        <RetroActionButton
+                          action="delete"
+                          visual="icon"
+                          size="sm"
                           onClick={() => handleRemoveParticipant(p.id)}
-                          title="Hapus dari daftar patungan"
-                          className="p-1 text-gray-400 hover:text-red-600 cursor-pointer"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </button>
+                          tooltip="Hapus dari daftar patungan"
+                        />
                       </>
                     )}
                   </div>

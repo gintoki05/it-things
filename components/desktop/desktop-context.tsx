@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
 
-export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme"
+export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry"
 
 export interface WindowState {
   id: AppId
@@ -116,6 +116,20 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     defaultPos: { x: 270, y: 84 },
     isComingSoon: true,
   },
+  pantry: {
+    id: "pantry",
+    title: "Pantry.exe - Snack Bar & Kuota Makanan",
+    icon: "pantry",
+    filename: "pantry.exe",
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    zIndex: 14,
+    position: { x: 215, y: 40 },
+    size: { width: 780, height: 580 },
+    defaultSize: { width: 780, height: 580 },
+    defaultPos: { x: 215, y: 40 },
+  },
   team: {
     id: "team",
     title: "Team.exe - Direktori & Pengaturan Anggota",
@@ -124,7 +138,7 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     isOpen: false,
     isMinimized: false,
     isMaximized: false,
-    zIndex: 14,
+    zIndex: 15,
     position: { x: 295, y: 104 },
     size: { width: 740, height: 560 },
     defaultSize: { width: 740, height: 560 },
@@ -155,6 +169,7 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
   const [isAboutOpen, setIsAboutOpen] = React.useState(false)
 
   // Tempatkan Chat.exe secara responsif di panel kanan desktop pada layar lebar
+  // Serta tangani Deep Link (?app=... atau ?id=...) saat pertama kali dibuka
   React.useEffect(() => {
     if (typeof window === "undefined") return
 
@@ -162,7 +177,21 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
     const isMobile = window.innerWidth < 768
     const hasSeenReadme = localStorage.getItem("it_things_readme_seen") === "true"
 
-    if (hasSeenReadme) {
+    const urlParams = new URLSearchParams(window.location.search)
+    let requestedApp = urlParams.get("app") as AppId | null
+    if (!requestedApp && (urlParams.get("id") || urlParams.get("voteId") || urlParams.get("vote_id"))) {
+      requestedApp = "vote"
+    } else if (!requestedApp && (urlParams.get("billId") || urlParams.get("bill_id"))) {
+      requestedApp = "splitbill"
+    }
+
+    const validApps: AppId[] = ["vote", "wheel", "splitbill", "kas", "team", "chat", "readme", "pantry"]
+    const targetApp = requestedApp && validApps.includes(requestedApp) ? requestedApp : null
+
+    if (targetApp) {
+      setActiveWindowId(targetApp)
+      setTopZIndex(25)
+    } else if (hasSeenReadme) {
       setActiveWindowId("vote")
     }
 
@@ -174,7 +203,7 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
       let nextChat = chatWin
       let nextReadme = readmeWin
 
-      if (hasSeenReadme && readmeWin) {
+      if ((hasSeenReadme || (targetApp && targetApp !== "readme")) && readmeWin) {
         nextReadme = {
           ...readmeWin,
           isOpen: false,
@@ -200,11 +229,22 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      return {
+      const updated = {
         ...curr,
         chat: nextChat,
         readme: nextReadme || curr.readme,
       }
+
+      if (targetApp && updated[targetApp]) {
+        updated[targetApp] = {
+          ...updated[targetApp],
+          isOpen: true,
+          isMinimized: false,
+          zIndex: 25,
+        }
+      }
+
+      return updated
     })
   }, [])
 

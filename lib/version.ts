@@ -5,12 +5,23 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.2.5"
-export const APP_BUILD = "2026.09.10"
+export const APP_VERSION = "v2.2.6"
+export const APP_BUILD = "2026.09.11"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.2.6",
+    date: "11 Sep 2026",
+    codename: "Desktop Sticky Note Announcement",
+    changes: [
+      "Fitur Desktop Sticky Note (MEMO.TXT) untuk papan pengumuman tim interaktif di wallpaper desktop.",
+      "Dukungan drag & drop bebas dengan penyimpanan posisi koordinat otomatis di browser (localStorage).",
+      "Sinkronisasi realtime via Supabase Realtime dengan proteksi role (hanya Admin dan Bendahara yang dapat mengedit).",
+      "Normalisasi format baris baru (newline) dan tombol reset posisi ke default.",
+    ],
+  },
   {
     version: "v2.2.5",
     date: "10 Sep 2026",

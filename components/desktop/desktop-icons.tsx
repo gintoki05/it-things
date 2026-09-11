@@ -15,6 +15,7 @@ const ITEM_GRID_POSITIONS: Record<AppId, string> = {
   wheel: "col-start-2 row-start-1",
   splitbill: "col-start-2 row-start-2",
   kas: "col-start-2 row-start-3",
+  pantry: "col-start-2 row-start-4",
 }
 
 export function DesktopIcons() {

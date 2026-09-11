@@ -5,6 +5,7 @@ import { useAuth, UserRole } from "@/lib/auth"
 import { useTeamStore, TeamMember } from "@/lib/team-store"
 import { UserAvatar } from "@/components/retro/user-avatar"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { RetroActionButton } from "@/components/ui/retro-action-button"
 import {
   Users,
   UserPlus,
@@ -430,22 +431,20 @@ export function TeamApp() {
                               <option value="member">👤 Member</option>
                             </select>
 
-                            <button
-                              type="button"
+                            <RetroActionButton
+                              action="edit"
+                              visual="icon"
+                              size="sm"
                               onClick={() => openEditModal(member)}
-                              title="Edit anggota"
-                              className="p-1 hover:bg-blue-50 text-blue-700 rounded border border-transparent hover:border-blue-200 transition-colors cursor-pointer"
-                            >
-                              <Edit2 className="size-3.5" />
-                            </button>
-                            <button
-                              type="button"
+                              tooltip="Edit anggota"
+                            />
+                            <RetroActionButton
+                              action="delete"
+                              visual="icon"
+                              size="sm"
                               onClick={() => setMemberToDelete(member)}
-                              title="Hapus anggota"
-                              className="p-1 hover:bg-red-50 text-red-600 rounded border border-transparent hover:border-red-200 transition-colors cursor-pointer"
-                            >
-                              <Trash2 className="size-3.5" />
-                            </button>
+                              tooltip="Hapus anggota"
+                            />
                           </div>
                         )}
                       </td>

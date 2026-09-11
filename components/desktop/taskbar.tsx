@@ -37,7 +37,7 @@ interface TaskbarProps {
 
 export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
   const { windows, activeWindowId, openWindow, toggleWindow, openAboutDialog } = useDesktop()
-  const { user, isAdmin, isTreasurer, isGuest, isSupabaseConnected, signOut, setDemoUserRole, lockApp } = useAuth()
+  const { user, isAdmin, isTreasurer, isGuest, isSupabaseConnected, signOut, setDemoUserRole, lockApp, canSwitchRole } = useAuth()
   const {
     isMuted,
     unreadChatCount,
@@ -207,13 +207,20 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                   <ShieldAlert className="size-3.5 text-amber-700" /> Mode Akses Tamu
                 </div>
                 <p className="text-amber-800 text-[9px] leading-tight">
-                  Status Anda hanya dapat melihat data (Read-Only). Masuk dengan Google untuk berpartisipasi dan mengubah peran.
+                  Status Anda hanya dapat melihat data (Read-Only). Masuk dengan Google untuk berpartisipasi.
                 </p>
               </div>
-            ) : (
+            ) : canSwitchRole ? (
               <div className="p-1.5 bg-[#E8EEF5] border border-[#A4B5C6] rounded text-[10px]">
                 <div className="font-bold flex items-center justify-between mb-1">
-                  <span>Mode Peran:</span>
+                  <div className="flex items-center gap-1">
+                    <span>Mode Peran:</span>
+                    {user?.role !== (user?.realRole || "admin") && (
+                      <span className="text-[8px] bg-amber-100 text-amber-800 border border-amber-300 px-1 rounded font-mono font-normal">
+                        Simulasi
+                      </span>
+                    )}
+                  </div>
                   <span
                     className={
                       isAdmin
@@ -273,6 +280,33 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                     Admin
                   </button>
                 </div>
+              </div>
+            ) : (
+              <div className="p-1.5 bg-[#E8EEF5] border border-[#A4B5C6] rounded text-[10px] flex items-center justify-between">
+                <span className="font-semibold text-gray-700">Peran Akun:</span>
+                <span
+                  className={
+                    isAdmin
+                      ? "text-purple-700 font-bold flex items-center gap-1"
+                      : isTreasurer
+                      ? "text-amber-700 font-bold flex items-center gap-1"
+                      : "text-[#1E4E8C] font-bold flex items-center gap-1"
+                  }
+                >
+                  {isAdmin ? (
+                    <>
+                      <ShieldCheck className="size-3 text-purple-700" /> Admin
+                    </>
+                  ) : isTreasurer ? (
+                    <>
+                      <Crown className="size-3 text-amber-700" /> Bendahara
+                    </>
+                  ) : (
+                    <>
+                      <User className="size-3 text-[#1E4E8C]" /> Anggota Tim
+                    </>
+                  )}
+                </span>
               </div>
             )}
 

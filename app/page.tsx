@@ -12,6 +12,7 @@ import { PasscodeScreen } from "@/components/auth/passcode-screen"
 import { ComingSoonDialog } from "@/components/desktop/coming-soon-dialog"
 import { AboutDialog } from "@/components/desktop/about-dialog"
 import { TeamWidget } from "@/components/desktop/team-widget"
+import { StickyNoteWidget } from "@/components/desktop/sticky-note-widget"
 import { APP_VERSION } from "@/lib/version"
 
 // Apps
@@ -22,16 +23,19 @@ import { KasApp } from "@/components/apps/kas-app"
 import { TeamApp } from "@/components/apps/team-app"
 import { ChatApp } from "@/components/apps/chat-app"
 import { ReadmeApp } from "@/components/apps/readme-app"
+import { PantryApp } from "@/components/apps/pantry-app"
 
 const MemoizedReadmeApp = React.memo(ReadmeApp)
 const MemoizedVoteApp = React.memo(VoteApp)
 const MemoizedWheelApp = React.memo(WheelApp)
 const MemoizedSplitBillApp = React.memo(SplitBillApp)
 const MemoizedKasApp = React.memo(KasApp)
+const MemoizedPantryApp = React.memo(PantryApp)
 const MemoizedTeamApp = React.memo(TeamApp)
 const MemoizedChatApp = React.memo(ChatApp)
 const MemoizedDesktopIcons = React.memo(DesktopIcons)
 const MemoizedTeamWidget = React.memo(TeamWidget)
+const MemoizedStickyNoteWidget = React.memo(StickyNoteWidget)
 
 function DesktopWorkspace() {
   const { isPasscodeVerified, isPasscodeLoading, isGuest, isAdmin, isRecoveryMode } = useAuth()
@@ -129,6 +133,11 @@ function DesktopWorkspace() {
         <MemoizedKasApp />
       </DesktopWindow>
 
+      {/* Retro Window: Pantry.exe */}
+      <DesktopWindow id="pantry">
+        <MemoizedPantryApp />
+      </DesktopWindow>
+
       {/* Retro Window: Team.exe (Direktori Tim) */}
       <DesktopWindow id="team">
         <MemoizedTeamApp />
@@ -141,6 +150,9 @@ function DesktopWorkspace() {
 
       {/* Floating Retro Team Widget */}
       <MemoizedTeamWidget />
+
+      {/* Floating Retro Sticky Note / Pengumuman Tim */}
+      <MemoizedStickyNoteWidget />
 
       {/* Bottom Retro Taskbar */}
       <Taskbar onOpenLoginModal={() => setShowLoginModal(true)} />

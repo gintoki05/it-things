@@ -60,3 +60,32 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - **Sleek & Clean**: Jaga layout tetap lega dan rapi, hindari teks panjang yang bikin komponen sempit atau wrapping berantakan.
 <!-- END:communication-rules -->
 
+<!-- BEGIN:ui-dialog-rules -->
+# Standar Modal & Dialog (Anti-Native Alert)
+
+- **DILARANG MENGGUNAKAN NATIVE BROWSER DIALOG** (`window.confirm()`, `window.alert()`, `window.prompt()`):
+  - Browser dialog bawaan merusak tampilan tema retro Windows 98 dan terasa out-of-place.
+- **SELALU GUNAKAN `<ConfirmDialog>`**:
+  - Gunakan komponen terstandarisasi `@/components/ui/confirm-dialog` untuk semua aksi konfirmasi (hapus data, batalkan transaksi, reset).
+  - Beri judul jendela retro yang khas (contoh: `title="HAPUS_ITEM.EXE"`, `title="BATAL_AMBIL.EXE"`).
+  - Gunakan `variant="destructive"` untuk aksi penghapusan permanen, dan `variant="warning"` untuk pembatalan/undo.
+- **Untuk Notifikasi Ringan**:
+  - Gunakan banner status inline dengan feedback suara retro (`playRetroNotificationSound()`), jangan pernah memanggil `alert()`.
+<!-- BEGIN:ui-action-buttons-rules -->
+# Standar Button & Icon Aksi (Konsistensi Antar Menu)
+
+- **SELALU GUNAKAN `<RetroActionButton>`**:
+  - Gunakan komponen terstandarisasi `@/components/ui/retro-action-button` untuk semua tombol aksi (edit, delete, undo/batal, add/tambah, refresh, restock).
+  - DILARANG membuat button/icon manual dengan styling ad-hoc yang bikin UI antar modul belang-belang.
+- **Daftar Action & Standar Visual**:
+  - `action="edit"`: Icon `Edit3`, aksen amber/kuning hangat. Tooltip default "Ubah / Edit data".
+  - `action="delete"`: Icon `Trash2`, aksen merah/destructive. Tooltip default "Hapus data". Selalu hubungkan dengan `<ConfirmDialog>` jika ada konfirmasi.
+  - `action="undo"`: Icon `Undo2`, aksen netral/amber. Digunakan untuk batal ambil, rollback, undo aksi.
+  - `action="add"`: Icon `Plus`, tombol retro biru tua Win98 dengan border khas.
+  - `action="refresh"`: Icon `RotateCw`, abu-abu netral. Otomatis berputar (`animate-spin`) saat `isLoading={true}`.
+  - `action="restock"`: Icon `PlusCircle`, aksen biru muda/stok.
+- **Mode Tampilan (`visual`)**:
+  - `visual="icon"`: Khusus aksi di dalam row tabel, card action corner, atau tempat compact lainnya.
+  - `visual="button"`: Untuk tombol aksi utama dengan label teks dan bevel retro Windows 98 yang konsisten.
+<!-- END:ui-action-buttons-rules -->
+

@@ -13,6 +13,7 @@ export interface AuthUser {
   avatarUrl?: string
   googleAvatarUrl?: string
   role?: UserRole
+  realRole?: UserRole
   isGuest?: boolean
 }
 
@@ -23,6 +24,8 @@ interface AuthContextType {
   isAdmin: boolean
   isTreasurer: boolean
   isGuest: boolean
+  isRootAdmin: boolean
+  canSwitchRole: boolean
   isPasscodeVerified: boolean
   isPasscodeLoading: boolean
   verifyPasscode: (pin: string) => boolean
@@ -300,7 +303,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-const ROOT_ADMIN_EMAILS = ["ajieprastyo@gmail.com"]
+const ROOT_ADMIN_EMAILS = [
+  "ajieprastyo@gmail.com",
+  ...(process.env.NEXT_PUBLIC_ADMIN_EMAILS || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean),
+]
 
   const mapAndSetSupabaseUser = async (sbUser: User) => {
     const meta = sbUser.user_metadata || {}
@@ -370,35 +379,26 @@ const ROOT_ADMIN_EMAILS = ["ajieprastyo@gmail.com"]
       avatarUrl,
       googleAvatarUrl,
       role,
+      realRole: role,
       isGuest: false,
     }
     setUser(authUser)
   }
 
-  const setDemoUserRole = async (role: UserRole) => {
-    if (isGuest) return
-    setUser((prev) => (prev ? { ...prev, role } : prev))
-    if (isSupabaseConfigured && supabase && user && user.id !== "guest-user") {
-      try {
-        const { error } = await supabase
-          .from("team_members")
-          .update({ role })
-          .eq("user_id", user.id)
-        if (error) {
-          console.error("Could not update role in Supabase:", error.message)
-        } else if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("profile-updated"))
-        }
-      } catch (e) {
-        console.warn("Could not update role in Supabase:", e)
-      }
-    }
-  }
-
   const isGuest = !!user?.isGuest || user?.id === "guest-user" || user?.role === "guest"
   const isRootAdmin = !!(user?.email && ROOT_ADMIN_EMAILS.includes(user.email.toLowerCase()))
+  const realRole: UserRole = user?.realRole || (isRootAdmin ? "admin" : (user?.role || "member"))
+  const canSwitchRole = !isGuest && (isRootAdmin || realRole === "admin")
   const isAdmin = !isGuest && (user?.role === "admin" || (!user?.role && isRootAdmin))
   const isTreasurer = !isGuest && (user?.role === "treasurer" || isAdmin)
+
+  const setDemoUserRole = async (role: UserRole) => {
+    if (isGuest || !canSwitchRole) return
+    setUser((prev) => (prev ? { ...prev, role } : prev))
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("profile-updated"))
+    }
+  }
 
   const signInWithGoogle = async () => {
     if (!isSupabaseConfigured || !supabase) {
@@ -655,7 +655,7 @@ const ROOT_ADMIN_EMAILS = ["ajieprastyo@gmail.com"]
     // Jika user Google / Email & Supabase terhubung
     if (isSupabaseConfigured && supabase && user) {
       try {
-        const newAvatarParam = updates.avatarUrl !== undefined ? updates.avatarUrl : null
+        const newAvatarParam = updates.avatarUrl !== undefined ? updates.avatarUrl : undefined
 
         // 1. Eksekusi cascading sync ke database dulu (team_members, vote, chat, dll)
         const { error: rpcError } = await supabase.rpc("sync_user_profile_name", {
@@ -786,6 +786,8 @@ const ROOT_ADMIN_EMAILS = ["ajieprastyo@gmail.com"]
         isAdmin,
         isTreasurer,
         isGuest,
+        isRootAdmin,
+        canSwitchRole,
         isPasscodeVerified,
         isPasscodeLoading,
         verifyPasscode,

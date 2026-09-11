@@ -22,6 +22,7 @@ import {
   Eye
 } from "lucide-react"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
+import { RetroActionButton } from "@/components/ui/retro-action-button"
 
 export interface KasTransaction {
   id: string
@@ -500,14 +501,13 @@ export function KasApp() {
                     </span>
                   </div>
                   {isTreasurer && (
-                    <button
-                      type="button"
+                    <RetroActionButton
+                      action="delete"
+                      visual="icon"
+                      size="sm"
                       onClick={() => handleDeleteTransaction(t.id)}
-                      title="Hapus transaksi kas"
-                      className="text-gray-400 hover:text-red-600 p-1 transition-colors rounded"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
+                      tooltip="Hapus transaksi kas"
+                    />
                   )}
                 </div>
               </div>

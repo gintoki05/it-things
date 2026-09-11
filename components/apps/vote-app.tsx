@@ -11,6 +11,7 @@ import {
   daysRemaining,
 } from "@/lib/vote-store"
 import { RetroIcon } from "@/components/ui/retro-icon"
+import { RetroActionButton } from "@/components/ui/retro-action-button"
 import {
   Plus,
   RotateCw,
@@ -36,6 +37,7 @@ import {
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { UserAvatar } from "@/components/retro/user-avatar"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { getShareUrl } from "@/lib/utils"
 
 // ─── Helpers ─────────────────────────────────────────────────
 function formatDateTime(dateStr?: string) {
@@ -282,20 +284,82 @@ function CreateGroupModal({
   )
 }
 
+// ─── Format Pesan WhatsApp Vote ───────────────────────────────
+function formatVoteWhatsAppText(group: VoteGroup): string {
+  const archived = isGroupArchived(group)
+  const totalVotes = group.options.reduce((acc, o) => acc + o.voters.length, 0)
+  const uniqueVoters = new Set(group.options.flatMap((o) => o.voters.map((v) => v.id))).size
+  const statusStr = archived ? "🔒 Selesai (Arsip)" : "🟢 Masih Aktif"
+  const typeStr = group.voteType === "single" ? "Single Vote (1 Suara/Orang)" : "Multiple Vote (Boleh Banyak Pilihan)"
+
+  const medals = ["🥇", "🥈", "🥉"]
+
+  const now = new Date()
+  const dateTimeStr = `${now.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  })} pukul ${now.toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+  })} WIB`
+
+  const sortedOptions = [...group.options].sort((a, b) => b.voters.length - a.voters.length)
+  const shareUrl = getShareUrl({ app: "vote", id: group.id })
+
+  const lines = [
+    `🗳️ *HASIL VOTING: ${group.title.toUpperCase()}*`,
+    ...(group.description ? [`_${group.description}_`] : []),
+    `📅 *Waktu:* ${dateTimeStr}`,
+    `---------------------------------`,
+    `📊 *Status:* ${statusStr}`,
+    `⚙️ *Tipe:* ${typeStr}`,
+    `👥 *Partisipan:* ${uniqueVoters} orang · ${totalVotes} total suara`,
+    `---------------------------------`,
+    `🏆 *KLASEMEN / HASIL VOTING:*`,
+    ...sortedOptions.map((opt, idx) => {
+      const medal = idx < 3 && opt.voters.length > 0 ? `${medals[idx]} ` : `${idx + 1}. `
+      const pct = totalVotes > 0 ? Math.round((opt.voters.length / totalVotes) * 100) : 0
+      return `${medal}*${opt.name}*: ${opt.voters.length} suara (${pct}%)`
+    }),
+    `---------------------------------`,
+    `🔗 *Link Vote Langsung:* ${shareUrl}`,
+    `_Akses & tentukan pilihanmu langsung lewat link di atas! 🚀_`,
+  ]
+
+  return lines.join("\n")
+}
+
 // ─── Group Card ──────────────────────────────────────────────
-function GroupCard({ group, onClick }: { group: VoteGroup; onClick: () => void }) {
+function GroupCard({
+  group,
+  onClick,
+  onShareWhatsApp,
+  isCopiedWA,
+}: {
+  group: VoteGroup
+  onClick: () => void
+  onShareWhatsApp?: (e: React.MouseEvent, group: VoteGroup) => void
+  isCopiedWA?: boolean
+}) {
   const archived = isGroupArchived(group)
   const days = daysRemaining(group)
   const totalVotes = group.options.reduce((acc, o) => acc + o.voters.length, 0)
-  const uniqueVoters = new Set(group.options.flatMap((o) => o.voters.map((v) => v.id))).size
 
   return (
-    <button
-      type="button"
+    <div
       onClick={onClick}
-      className="w-full text-left p-3 bg-white border border-[#CBD5E1] rounded-[3px] hover:border-[#7D8E9E] hover:bg-[#F8FAFC] transition-all group cursor-pointer"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          onClick()
+        }
+      }}
+      className="w-full text-left p-3 bg-white border border-[#CBD5E1] rounded-[3px] hover:border-[#7D8E9E] hover:bg-[#F8FAFC] transition-all group cursor-pointer flex items-center justify-between gap-2"
     >
-      <div className="flex items-start gap-2.5">
+      <div className="flex items-start gap-2.5 flex-1 min-w-0">
         <div className="size-9 rounded bg-[#F1F5F9] border border-[#CBD5E1] flex items-center justify-center shrink-0 mt-0.5">
           <RetroIcon name={group.emoji || "vote"} iconSize={32} className="size-6 object-contain" />
         </div>
@@ -322,9 +386,23 @@ function GroupCard({ group, onClick }: { group: VoteGroup; onClick: () => void }
             )}
           </div>
         </div>
-        <span className="text-[#7D8E9E] group-hover:text-[#1E4E8C] text-xs font-mono shrink-0">›</span>
       </div>
-    </button>
+
+      <div className="flex items-center gap-1.5 shrink-0">
+        {onShareWhatsApp && (
+          <button
+            type="button"
+            onClick={(e) => onShareWhatsApp(e, group)}
+            title="Salin pesan WhatsApp dengan link vote langsung"
+            className="h-7 px-2 bg-[#25D366] hover:bg-[#1EBE5D] text-white font-mono text-[10px] font-bold rounded-[2px] flex items-center gap-1 border border-[#128C7E] shadow-sm cursor-pointer transition-colors active:translate-y-px"
+          >
+            {isCopiedWA ? <Check className="size-3" /> : <Share2 className="size-3" />}
+            <span className="hidden sm:inline">{isCopiedWA ? "Disalin!" : "Share WA"}</span>
+          </button>
+        )}
+        <span className="text-[#7D8E9E] group-hover:text-[#1E4E8C] text-xs font-mono ml-1">›</span>
+      </div>
+    </div>
   )
 }
 
@@ -395,49 +473,14 @@ function GroupDetail({
   }, [sortedOptions])
 
   const handleShareWhatsApp = () => {
-    const uniqueVoters = new Set(group.options.flatMap((o) => o.voters.map((v) => v.id))).size
-    const statusStr = archived ? "🔒 Selesai (Arsip)" : "🟢 Masih Aktif"
-    const typeStr = group.voteType === "single" ? "Single Vote (1 Suara/Orang)" : "Multiple Vote (Boleh Banyak Pilihan)"
-
-    const medals = ["🥇", "🥈", "🥉"]
-
-    const now = new Date()
-    const dateTimeStr = `${now.toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    })} pukul ${now.toLocaleTimeString("id-ID", {
-      hour: "2-digit",
-      minute: "2-digit",
-    })} WIB`
-
-    const lines = [
-      `🗳️ *HASIL VOTING: ${group.title.toUpperCase()}*`,
-      ...(group.description ? [`_${group.description}_`] : []),
-      `📅 *Waktu:* ${dateTimeStr}`,
-      `---------------------------------`,
-      `📊 *Status:* ${statusStr}`,
-      `⚙️ *Tipe:* ${typeStr}`,
-      `👥 *Partisipan:* ${uniqueVoters} orang · ${totalVotes} total suara`,
-      `---------------------------------`,
-      `🏆 *KLASEMEN / HASIL VOTING:*`,
-      ...sortedOptions.map((opt, idx) => {
-        const medal = idx < 3 && opt.voters.length > 0 ? `${medals[idx]} ` : `${idx + 1}. `
-        const pct = totalVotes > 0 ? Math.round((opt.voters.length / totalVotes) * 100) : 0
-        return `${medal}*${opt.name}*: ${opt.voters.length} suara (${pct}%)`
-      }),
-      `---------------------------------`,
-      `_Akses & tentukan pilihanmu di it-things! 🚀_`,
-    ]
-
-    const text = lines.join("\n")
+    const text = formatVoteWhatsAppText(group)
     if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(text)
     }
     setCopiedWA(true)
     setTimeout(() => setCopiedWA(false), 2500)
     if (onToast) {
-      onToast("success", "Format WhatsApp berhasil disalin ke clipboard!")
+      onToast("success", "Format WhatsApp & link vote berhasil disalin ke clipboard!")
     }
   }
 
@@ -612,19 +655,18 @@ function GroupDetail({
 
             {canManage && !isEditing && (
               <>
-                <button
-                  type="button"
+                <RetroActionButton
+                  action="edit"
+                  visual="icon"
+                  size="sm"
                   onClick={() => {
                     setEditTitle(group.title)
                     setEditDesc(group.description || "")
                     setEditEmoji(group.emoji || "🗳️")
                     setIsEditing(true)
                   }}
-                  title="Edit judul & deskripsi"
-                  className="p-1.5 hover:bg-[#EEF2F6] rounded text-[#526374] hover:text-[#1E4E8C] transition-colors cursor-pointer"
-                >
-                  <Pencil className="size-3.5" />
-                </button>
+                  tooltip="Edit judul & deskripsi"
+                />
                 {archived ? (
                   <>
                     <button
@@ -635,14 +677,13 @@ function GroupDetail({
                     >
                       <Unlock className="size-3.5 text-emerald-600" />
                     </button>
-                    <button
-                      type="button"
+                    <RetroActionButton
+                      action="delete"
+                      visual="icon"
+                      size="sm"
                       onClick={() => setShowDeleteGroupDialog(true)}
-                      title="Hapus permanen group"
-                      className="p-1.5 hover:bg-red-50 rounded text-red-500 hover:text-red-700 transition-colors cursor-pointer"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
+                      tooltip="Hapus permanen group"
+                    />
                   </>
                 ) : (
                   <button
@@ -787,14 +828,13 @@ function GroupDetail({
                         <span className="text-[9px] font-mono text-[#1E4E8C] font-bold">✓ Voted</span>
                       )}
                       {canDeleteOpt && !archived && (
-                        <button
-                          type="button"
+                        <RetroActionButton
+                          action="delete"
+                          visual="icon"
+                          size="xs"
                           onClick={() => setOptionToDelete(option)}
-                          title="Hapus opsi ini"
-                          className="text-gray-300 hover:text-red-500 transition-colors cursor-pointer p-0.5"
-                        >
-                          <Trash2 className="size-3" />
-                        </button>
+                          tooltip="Hapus opsi ini"
+                        />
                       )}
                     </div>
                       <VoteBar count={option.voters.length} max={maxVotes} />
@@ -990,10 +1030,82 @@ export function VoteApp() {
   const [selectedGroupId, setSelectedGroupId] = React.useState<string | null>(null)
   const [showCreateModal, setShowCreateModal] = React.useState(false)
   const [toast, setToast] = React.useState<{ type: "success" | "error"; msg: string } | null>(null)
+  const [copiedWAId, setCopiedWAId] = React.useState<string | null>(null)
 
   const showToast = (type: "success" | "error", msg: string) => {
     setToast({ type, msg })
     setTimeout(() => setToast(null), 3000)
+  }
+
+  // Cek deep link query parameter (?app=vote&id=... atau ?id=... / ?voteId=...)
+  React.useEffect(() => {
+    if (typeof window === "undefined") return
+    const params = new URLSearchParams(window.location.search)
+    const appParam = params.get("app")
+    const idParam = params.get("id") || params.get("voteId") || params.get("vote_id")
+    if ((!appParam || appParam === "vote") && idParam) {
+      setSelectedGroupId(idParam)
+    }
+
+    const handlePopState = () => {
+      const p = new URLSearchParams(window.location.search)
+      const currentId = p.get("id") || p.get("voteId") || p.get("vote_id")
+      setSelectedGroupId(currentId || null)
+    }
+    window.addEventListener("popstate", handlePopState)
+    return () => window.removeEventListener("popstate", handlePopState)
+  }, [])
+
+  // Validasi ID jika data selesai dimuat tapi ID tidak ditemukan
+  const checkedMissingRef = React.useRef(false)
+  React.useEffect(() => {
+    if (!isLoading && groups.length > 0 && selectedGroupId) {
+      const exists = groups.some((g) => g.id === selectedGroupId)
+      if (!exists && !checkedMissingRef.current) {
+        checkedMissingRef.current = true
+        showToast("error", "Vote group dari tautan tidak ditemukan atau telah dihapus.")
+        setSelectedGroupId(null)
+        if (typeof window !== "undefined") {
+          const url = new URL(window.location.href)
+          url.searchParams.delete("id")
+          url.searchParams.delete("voteId")
+          url.searchParams.delete("vote_id")
+          window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""))
+        }
+      }
+    }
+  }, [isLoading, groups, selectedGroupId])
+
+  const handleSelectGroup = (groupId: string) => {
+    setSelectedGroupId(groupId)
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href)
+      url.searchParams.set("app", "vote")
+      url.searchParams.set("id", groupId)
+      window.history.replaceState({}, "", url.pathname + url.search)
+    }
+  }
+
+  const handleBackToList = () => {
+    setSelectedGroupId(null)
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href)
+      url.searchParams.delete("id")
+      url.searchParams.delete("voteId")
+      url.searchParams.delete("vote_id")
+      window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""))
+    }
+  }
+
+  const handleShareGroupWhatsApp = (e: React.MouseEvent, targetGroup: VoteGroup) => {
+    e.stopPropagation()
+    const text = formatVoteWhatsAppText(targetGroup)
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text)
+    }
+    setCopiedWAId(targetGroup.id)
+    setTimeout(() => setCopiedWAId(null), 2500)
+    showToast("success", "Format WhatsApp & link vote berhasil disalin!")
   }
 
   const selectedGroup = selectedGroupId ? groups.find((g) => g.id === selectedGroupId) : null
@@ -1103,7 +1215,7 @@ export function VoteApp() {
           currentUserId={user?.id || null}
           isAdmin={isAdmin}
           isGuest={isGuest}
-          onBack={() => setSelectedGroupId(null)}
+          onBack={handleBackToList}
           onVote={(optionId) => {
             if (!user || isGuest) return
             castVote(selectedGroup.id, optionId, { id: user.id, name: user.name, avatarUrl: user.avatarUrl }, selectedGroup.voteType)
@@ -1137,7 +1249,7 @@ export function VoteApp() {
               return
             }
             deleteGroup(selectedGroup.id, user, isAdmin)
-            setSelectedGroupId(null)
+            handleBackToList()
             showToast("success", `Group "${selectedGroup.title}" berhasil dihapus permanen.`)
           }}
           onUpdateGroup={async (updates) => {
@@ -1185,7 +1297,13 @@ export function VoteApp() {
       ) : (
         <div className="space-y-2">
           {filtered.map((group) => (
-            <GroupCard key={group.id} group={group} onClick={() => setSelectedGroupId(group.id)} />
+            <GroupCard
+              key={group.id}
+              group={group}
+              onClick={() => handleSelectGroup(group.id)}
+              onShareWhatsApp={handleShareGroupWhatsApp}
+              isCopiedWA={copiedWAId === group.id}
+            />
           ))}
         </div>
       )}

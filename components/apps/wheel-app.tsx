@@ -23,6 +23,8 @@ import {
   Eye
 } from "lucide-react"
 import { RetroIcon } from "@/components/ui/retro-icon"
+import { RetroActionButton } from "@/components/ui/retro-action-button"
+import { getShareUrl } from "@/lib/utils"
 
 export interface PlaceItem {
   id: string
@@ -84,7 +86,8 @@ export function WheelApp() {
     if (!selectedWinner) return
     const budgetText = selectedWinner.budget_level.toUpperCase()
     const notesText = selectedWinner.notes ? `\n💡 Catatan: "${selectedWinner.notes}"` : ""
-    const text = `🎯 KEPUTUSAN MAKAN SIANG:\n🍽️ ${selectedWinner.name} (${selectedWinner.category})\n💰 Budget: ${budgetText}${notesText}`
+    const shareUrl = getShareUrl({ app: "wheel" })
+    const text = `🎯 KEPUTUSAN MAKAN SIANG:\n🍽️ ${selectedWinner.name} (${selectedWinner.category})\n💰 Budget: ${budgetText}${notesText}\n\n🔗 Putar roda makan: ${shareUrl}`
 
     if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(text)
@@ -695,14 +698,13 @@ export function WheelApp() {
                     <div className="text-[9px] text-gray-500">{p.category}</div>
                   </div>
                   {!isGuest && (
-                    <button
-                      type="button"
+                    <RetroActionButton
+                      action="delete"
+                      visual="icon"
+                      size="xs"
                       onClick={() => handleDeletePlace(p.id)}
-                      title="Hapus tempat ini"
-                      className="text-gray-400 hover:text-red-600 p-0.5 cursor-pointer"
-                    >
-                      <Trash2 className="size-3" />
-                    </button>
+                      tooltip="Hapus tempat ini"
+                    />
                   )}
                 </div>
               ))}

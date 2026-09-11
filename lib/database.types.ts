@@ -97,6 +97,39 @@ export type Database = {
           },
         ]
       }
+      desktop_memos: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+          updated_by_avatar: string | null
+          updated_by_id: string
+          updated_by_name: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          updated_by_avatar?: string | null
+          updated_by_id: string
+          updated_by_name: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          updated_by_avatar?: string | null
+          updated_by_id?: string
+          updated_by_name?: string
+        }
+        Relationships: []
+      }
       kas_dues: {
         Row: {
           amount: number
@@ -174,6 +207,136 @@ export type Database = {
           verified_by_treasurer?: boolean
         }
         Relationships: []
+      }
+      pantry_items: {
+        Row: {
+          category: string | null
+          created_at: string
+          created_by_id: string
+          emoji: string | null
+          id: string
+          is_active: boolean
+          monthly_quota: number
+          name: string
+          stock_qty: number
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          created_by_id: string
+          emoji?: string | null
+          id?: string
+          is_active?: boolean
+          monthly_quota?: number
+          name: string
+          stock_qty?: number
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          created_by_id?: string
+          emoji?: string | null
+          id?: string
+          is_active?: boolean
+          monthly_quota?: number
+          name?: string
+          stock_qty?: number
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pantry_logs: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          logged_by_id: string
+          logged_by_name: string
+          notes: string | null
+          period_month: string
+          quantity: number
+          user_avatar: string | null
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          logged_by_id: string
+          logged_by_name: string
+          notes?: string | null
+          period_month: string
+          quantity?: number
+          user_avatar?: string | null
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          logged_by_id?: string
+          logged_by_name?: string
+          notes?: string | null
+          period_month?: string
+          quantity?: number
+          user_avatar?: string | null
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pantry_logs_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "pantry_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pantry_restocks: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          notes: string | null
+          quantity: number
+          restocked_by_id: string
+          restocked_by_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          notes?: string | null
+          quantity: number
+          restocked_by_id: string
+          restocked_by_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          notes?: string | null
+          quantity?: number
+          restocked_by_id?: string
+          restocked_by_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pantry_restocks_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "pantry_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       split_bill_participants: {
         Row: {
@@ -528,10 +691,7 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_treasurer: { Args: never; Returns: boolean }
       sync_user_profile_name: {
-        Args: {
-          new_name: string
-          new_avatar?: string | null
-        }
+        Args: { new_avatar?: string; new_name: string }
         Returns: undefined
       }
     }

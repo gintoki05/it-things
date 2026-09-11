@@ -177,6 +177,59 @@ CREATE TABLE IF NOT EXISTS public.chat_reactions (
     CONSTRAINT chat_reactions_emoji_length_check CHECK (char_length(emoji) > 0 AND char_length(emoji) <= 16)
 );
 
+-- 12. Table: pantry_items (Katalog makanan & kuota bulanan snack bar)
+CREATE TABLE IF NOT EXISTS public.pantry_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    category TEXT DEFAULT 'Mie Instan',
+    emoji TEXT DEFAULT '🍜',
+    monthly_quota INT NOT NULL DEFAULT 2,
+    stock_qty INT NOT NULL DEFAULT 0,
+    unit TEXT DEFAULT 'pcs',
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_by_id TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 13. Table: pantry_logs (Catatan konsumsi/pengambilan snack oleh member)
+CREATE TABLE IF NOT EXISTS public.pantry_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    item_id UUID NOT NULL REFERENCES public.pantry_items(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL,
+    user_name TEXT NOT NULL,
+    user_avatar TEXT,
+    quantity INT NOT NULL DEFAULT 1,
+    period_month TEXT NOT NULL, -- Format: YYYY-MM
+    notes TEXT,
+    logged_by_id TEXT NOT NULL,
+    logged_by_name TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 14. Table: pantry_restocks (Riwayat restock stok gudang/pantry oleh admin)
+CREATE TABLE IF NOT EXISTS public.pantry_restocks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    item_id UUID NOT NULL REFERENCES public.pantry_items(id) ON DELETE CASCADE,
+    quantity INT NOT NULL,
+    notes TEXT,
+    restocked_by_id TEXT NOT NULL,
+    restocked_by_name TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 15. Table: desktop_memos (Papan pengumuman / sticky note memo di wallpaper desktop)
+CREATE TABLE IF NOT EXISTS public.desktop_memos (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL DEFAULT 'MEMO_PENGUMUMAN.TXT',
+    content TEXT NOT NULL,
+    updated_by_id TEXT NOT NULL,
+    updated_by_name TEXT NOT NULL,
+    updated_by_avatar TEXT,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- ============================================================
 -- ROW LEVEL SECURITY (RLS) & POLICIES
 -- ============================================================
@@ -192,6 +245,9 @@ ALTER TABLE public.kas_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kas_dues ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_reactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pantry_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pantry_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.desktop_memos ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
 -- HELPER FUNCTIONS: is_admin() & is_treasurer()
@@ -659,6 +715,107 @@ CREATE POLICY "chat_reactions_update" ON public.chat_reactions
   );
 
 -- ============================================================
+-- 12. PANTRY POLICIES & TRIGGERS
+-- ============================================================
+CREATE POLICY "pantry_items_select" ON public.pantry_items FOR SELECT USING (true);
+CREATE POLICY "pantry_items_insert" ON public.pantry_items FOR INSERT WITH CHECK (
+  auth.uid() IS NOT NULL AND (public.is_admin() OR created_by_id = auth.uid()::text)
+);
+CREATE POLICY "pantry_items_update" ON public.pantry_items FOR UPDATE USING (
+  auth.uid() IS NOT NULL AND (public.is_admin() OR created_by_id = auth.uid()::text)
+);
+CREATE POLICY "pantry_items_delete" ON public.pantry_items FOR DELETE USING (public.is_admin());
+
+CREATE POLICY "pantry_logs_select" ON public.pantry_logs FOR SELECT USING (true);
+CREATE POLICY "pantry_logs_insert" ON public.pantry_logs FOR INSERT WITH CHECK (
+  auth.uid() IS NOT NULL AND (logged_by_id = auth.uid()::text OR public.is_admin())
+);
+CREATE POLICY "pantry_logs_delete" ON public.pantry_logs FOR DELETE USING (
+  public.is_admin() OR logged_by_id = auth.uid()::text OR user_id = auth.uid()::text
+);
+
+CREATE POLICY "pantry_restocks_select" ON public.pantry_restocks FOR SELECT USING (true);
+CREATE POLICY "pantry_restocks_insert" ON public.pantry_restocks FOR INSERT WITH CHECK (
+  auth.uid() IS NOT NULL AND public.is_admin()
+);
+CREATE POLICY "pantry_restocks_delete" ON public.pantry_restocks FOR DELETE USING (
+  public.is_admin()
+);
+
+-- ============================================================
+-- 13. DESKTOP MEMOS POLICIES
+-- ============================================================
+CREATE POLICY "desktop_memos_select" ON public.desktop_memos FOR SELECT USING (true);
+CREATE POLICY "desktop_memos_insert" ON public.desktop_memos FOR INSERT WITH CHECK (
+  auth.uid() IS NOT NULL AND (public.is_admin() OR public.is_treasurer())
+);
+CREATE POLICY "desktop_memos_update" ON public.desktop_memos FOR UPDATE USING (
+  auth.uid() IS NOT NULL AND (public.is_admin() OR public.is_treasurer())
+) WITH CHECK (
+  auth.uid() IS NOT NULL AND (public.is_admin() OR public.is_treasurer())
+);
+CREATE POLICY "desktop_memos_delete" ON public.desktop_memos FOR DELETE USING (
+  auth.uid() IS NOT NULL AND public.is_admin()
+);
+
+
+-- Trigger function for pantry stock adjustments
+CREATE OR REPLACE FUNCTION public.handle_pantry_log_stock()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    UPDATE public.pantry_items
+    SET stock_qty = GREATEST(0, stock_qty - NEW.quantity),
+        updated_at = timezone('utc'::text, now())
+    WHERE id = NEW.item_id;
+    RETURN NEW;
+  ELSIF TG_OP = 'UPDATE' THEN
+    UPDATE public.pantry_items
+    SET stock_qty = GREATEST(0, stock_qty + (OLD.quantity - NEW.quantity)),
+        updated_at = timezone('utc'::text, now())
+    WHERE id = NEW.item_id;
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    UPDATE public.pantry_items
+    SET stock_qty = stock_qty + OLD.quantity,
+        updated_at = timezone('utc'::text, now())
+    WHERE id = OLD.item_id;
+    RETURN OLD;
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_pantry_log_stock ON public.pantry_logs;
+CREATE TRIGGER trg_pantry_log_stock
+AFTER INSERT OR UPDATE OR DELETE ON public.pantry_logs
+FOR EACH ROW EXECUTE FUNCTION public.handle_pantry_log_stock();
+
+CREATE OR REPLACE FUNCTION public.handle_pantry_restock()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  UPDATE public.pantry_items
+  SET stock_qty = stock_qty + NEW.quantity,
+      updated_at = timezone('utc'::text, now())
+  WHERE id = NEW.item_id;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_pantry_restock ON public.pantry_restocks;
+CREATE TRIGGER trg_pantry_restock
+AFTER INSERT ON public.pantry_restocks
+FOR EACH ROW EXECUTE FUNCTION public.handle_pantry_restock();
+
+-- ============================================================
 -- INDEXES FOR SPEED
 -- ============================================================
 CREATE INDEX IF NOT EXISTS idx_vote_groups_created ON public.vote_groups(created_at DESC);
@@ -674,6 +831,10 @@ CREATE INDEX IF NOT EXISTS idx_kas_transactions_created ON public.kas_transactio
 CREATE INDEX IF NOT EXISTS idx_kas_dues_period ON public.kas_dues(month_period);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_created ON public.chat_messages(created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_chat_reactions_message ON public.chat_reactions(message_id);
+CREATE INDEX IF NOT EXISTS idx_pantry_logs_item_period ON public.pantry_logs(item_id, period_month);
+CREATE INDEX IF NOT EXISTS idx_pantry_logs_user_period ON public.pantry_logs(user_id, period_month);
+CREATE INDEX IF NOT EXISTS idx_pantry_logs_created ON public.pantry_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_pantry_restocks_item ON public.pantry_restocks(item_id);
 
 -- ============================================================
 -- REALTIME PUBLICATION
@@ -690,6 +851,10 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.kas_transactions;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.kas_dues;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_messages;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_reactions;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.pantry_items;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.pantry_logs;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.pantry_restocks;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.desktop_memos;
 
 -- ============================================================
 -- GRANTS FOR CLIENT ACCESS (ANON, AUTHENTICATED)
@@ -699,3 +864,16 @@ GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+
+-- Seed default initial memo if none exists
+INSERT INTO public.desktop_memos (id, title, content, updated_by_id, updated_by_name)
+SELECT 
+  '00000000-0000-0000-0000-000000000001'::uuid,
+  'MEMO_PENGUMUMAN.TXT',
+  '• Selamat datang di IT-THINGS 98!
+• Jangan lupa bayar uang kas bulanan rek.
+• Kopi & snack di pantry silakan dinikmati bersama.',
+  'system',
+  'Admin IT'
+WHERE NOT EXISTS (SELECT 1 FROM public.desktop_memos LIMIT 1);
+
