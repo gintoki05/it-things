@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.3"
+export const APP_VERSION = "v2.3.4"
 export const APP_BUILD = "2026.09.11"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.4",
+    date: "11 Sep 2026",
+    codename: "Kas Google Sheets Portal & Dues Mechanism",
+    changes: [
+      "Integrasi portal resmi Google Spreadsheet pada Kas.exe dengan direct launch tab baru dan tombol salin link cepat.",
+      "Pengumuman mekanisme iuran resmi divisi IT dengan tarif berjenjang (TKO: Rp 100.000, TKNO: Rp 50.000) dan jadwal gajian (tgl 8 & 25).",
+      "Pembersihan form transaksi lokal dan dummy ledger agar pencatatan terpusat 100% pada Google Sheets.",
+      "Pelepasan flag isComingSoon pada Kas.exe untuk peluncuran resmi dari Desktop dan Start Menu.",
+      "Perbaikan layout card tarif iuran retro Windows 98 agar rapi, proporsional, dan bebas wrapping teks berlebih.",
+    ],
+  },
   {
     version: "v2.3.3",
     date: "11 Sep 2026",
