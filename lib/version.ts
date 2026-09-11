@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.1"
+export const APP_VERSION = "v2.3.2"
 export const APP_BUILD = "2026.09.11"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.2",
+    date: "11 Sep 2026",
+    codename: "Lapak Teman & Smart Rupiah Price Masking",
+    changes: [
+      "Modul Lapak_Teman.exe untuk katalog promosi usaha, jastip, kuliner, dan jasa IT rekan tim dengan integrasi direct WhatsApp.",
+      "Running Ticker Marquee emas retro (Glowing Gold LED Ticker) di Taskbar dengan highlight promo berputar dan pause-on-hover.",
+      "Tab Lapak Teman pada widget Sticky Note desktop dengan kartu promo mini dan navigasi carousel.",
+      "Input harga cerdas dengan auto-masking titik Rupiah realtime (Harga Pas, Mulai Dari, Rentang Min-Max, Nego/Custom).",
+      "Penyelarasan icon harga netral (Price Tag 🏷️) menggantikan simbol dollar.",
+    ],
+  },
   {
     version: "v2.3.1",
     date: "11 Sep 2026",

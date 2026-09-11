@@ -4,6 +4,25 @@ export function formatRupiah(amount: number): string {
   return "Rp " + Math.round(amount).toLocaleString("id-ID")
 }
 
+/**
+ * Format string angka murni menjadi string berformat titik Rupiah.
+ * Contoh: "20000" -> "20.000", "2000000" -> "2.000.000"
+ */
+export function maskRupiahInput(raw: string): string {
+  const digitsOnly = raw.replace(/\D/g, "")
+  if (!digitsOnly) return ""
+  return Number(digitsOnly).toLocaleString("id-ID")
+}
+
+/**
+ * Mengambil angka murni integer dari string berformat Rupiah.
+ * Contoh: "2.000.000" -> 2000000
+ */
+export function unmaskRupiah(formatted: string): number {
+  const digitsOnly = formatted.replace(/\D/g, "")
+  return digitsOnly ? parseInt(digitsOnly, 10) : 0
+}
+
 export function formatDate(
   date: string | Date,
   options?: Intl.DateTimeFormatOptions

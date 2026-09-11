@@ -14,7 +14,7 @@ import { RetroActionButton } from "@/components/ui/retro-action-button"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { GoogleLoginModal } from "@/components/auth/google-login-modal"
 import { UserAvatar } from "@/components/retro/user-avatar"
-import { cn } from "@/lib/utils"
+import { cn, maskRupiahInput } from "@/lib/utils"
 import {
   Search,
   MessageCircle,
@@ -30,7 +30,126 @@ import {
   Layers,
   ShoppingBag,
   LogIn,
+  Coins,
 } from "lucide-react"
+
+type PriceMode = "fixed" | "start_from" | "range" | "custom"
+
+const PRICE_UNIT_PRESETS = [
+  { value: "", label: "(Tanpa satuan)" },
+  { value: "/ porsi", label: "/ porsi" },
+  { value: "/ botol", label: "/ botol" },
+  { value: "/ cup", label: "/ cup" },
+  { value: "/ paket", label: "/ paket" },
+  { value: "/ pcs", label: "/ pcs" },
+  { value: "/ project", label: "/ project" },
+  { value: "/ jam", label: "/ jam" },
+  { value: "/ hari", label: "/ hari" },
+  { value: "/ bulan", label: "/ bulan" },
+  { value: "/ sesi", label: "/ sesi" },
+]
+
+function buildPriceString(
+  mode: PriceMode,
+  amount: string,
+  min: string,
+  max: string,
+  unit: string,
+  custom: string
+): string {
+  const u = unit ? ` ${unit}` : ""
+  if (mode === "fixed") {
+    if (!amount) return ""
+    return `Rp ${amount}${u}`
+  }
+  if (mode === "start_from") {
+    if (!amount) return ""
+    return `Mulai Rp ${amount}${u}`
+  }
+  if (mode === "range") {
+    if (min && max) return `Rp ${min} - Rp ${max}${u}`
+    if (min) return `Rp ${min}${u}`
+    if (max) return `Rp ${max}${u}`
+    return ""
+  }
+  if (mode === "custom") {
+    return custom.trim()
+  }
+  return ""
+}
+
+function parseExistingPrice(raw: string): {
+  mode: PriceMode
+  amount: string
+  min: string
+  max: string
+  unit: string
+  custom: string
+} {
+  if (!raw) {
+    return { mode: "fixed", amount: "", min: "", max: "", unit: "", custom: "" }
+  }
+
+  // Check unit
+  let unit = ""
+  for (const preset of PRICE_UNIT_PRESETS) {
+    if (preset.value && raw.includes(preset.value)) {
+      unit = preset.value
+      break
+    }
+  }
+
+  // Check Range: e.g. "Rp 100.0000 / Rp. 3.500.000" or "Rp 15.000 - Rp 35.000"
+  if (raw.includes("-") || raw.includes(" - ") || raw.includes(" / Rp") || (raw.includes("/") && /\d/.test(raw.split("/")[1] || ""))) {
+    const rawNoUnit = unit ? raw.replace(unit, "") : raw
+    const parts = rawNoUnit.split(/[-–—/]/).map((p) => p.replace(/\D/g, "")).filter(Boolean)
+    if (parts.length >= 2) {
+      return {
+        mode: "range",
+        amount: "",
+        min: maskRupiahInput(parts[0]),
+        max: maskRupiahInput(parts[1]),
+        unit,
+        custom: "",
+      }
+    }
+  }
+
+  // Check "Mulai"
+  if (/mulai/i.test(raw)) {
+    const digits = raw.replace(/\D/g, "")
+    return {
+      mode: "start_from",
+      amount: maskRupiahInput(digits),
+      min: "",
+      max: "",
+      unit,
+      custom: "",
+    }
+  }
+
+  // Check single amount
+  const digits = raw.replace(/\D/g, "")
+  if (digits) {
+    return {
+      mode: "fixed",
+      amount: maskRupiahInput(digits),
+      min: "",
+      max: "",
+      unit,
+      custom: "",
+    }
+  }
+
+  return {
+    mode: "custom",
+    amount: "",
+    min: "",
+    max: "",
+    unit: "",
+    custom: raw,
+  }
+}
 
 export function LapakApp() {
   const { user, isAdmin, isGuest } = useAuth()
@@ -59,12 +178,24 @@ export function LapakApp() {
   const [formTagline, setFormTagline] = React.useState("")
   const [formDescription, setFormDescription] = React.useState("")
   const [formCategory, setFormCategory] = React.useState("Kuliner")
-  const [formPriceRange, setFormPriceRange] = React.useState("")
   const [formContactName, setFormContactName] = React.useState("")
   const [formContactWa, setFormContactWa] = React.useState("")
   const [formContactLink, setFormContactLink] = React.useState("")
   const [formBadge, setFormBadge] = React.useState("PROMO")
   const [formImageUrl, setFormImageUrl] = React.useState("")
+
+  // Form Price Masking State
+  const [priceMode, setPriceMode] = React.useState<PriceMode>("fixed")
+  const [priceAmount, setPriceAmount] = React.useState("")
+  const [priceMin, setPriceMin] = React.useState("")
+  const [priceMax, setPriceMax] = React.useState("")
+  const [priceUnit, setPriceUnit] = React.useState("")
+  const [priceCustom, setPriceCustom] = React.useState("")
+
+  // Computed formatted price
+  const formattedPricePreview = React.useMemo(() => {
+    return buildPriceString(priceMode, priceAmount, priceMin, priceMax, priceUnit, priceCustom)
+  }, [priceMode, priceAmount, priceMin, priceMax, priceUnit, priceCustom])
 
   // Open modal for Create
   const handleOpenCreateModal = () => {
@@ -77,12 +208,17 @@ export function LapakApp() {
     setFormTagline("")
     setFormDescription("")
     setFormCategory("Kuliner")
-    setFormPriceRange("")
     setFormContactName(user?.name || "")
     setFormContactWa("")
     setFormContactLink("")
     setFormBadge("PROMO")
     setFormImageUrl("")
+    setPriceMode("fixed")
+    setPriceAmount("")
+    setPriceMin("")
+    setPriceMax("")
+    setPriceUnit("")
+    setPriceCustom("")
     setFormError(null)
     setIsModalOpen(true)
   }
@@ -94,12 +230,21 @@ export function LapakApp() {
     setFormTagline(item.tagline)
     setFormDescription(item.description)
     setFormCategory(item.category)
-    setFormPriceRange(item.priceRange)
     setFormContactName(item.contactName)
     setFormContactWa(item.contactWa)
     setFormContactLink(item.contactLink)
     setFormBadge(item.badge)
     setFormImageUrl(item.imageUrl)
+
+    // Parse existing price
+    const parsed = parseExistingPrice(item.priceRange)
+    setPriceMode(parsed.mode)
+    setPriceAmount(parsed.amount)
+    setPriceMin(parsed.min)
+    setPriceMax(parsed.max)
+    setPriceUnit(parsed.unit)
+    setPriceCustom(parsed.custom)
+
     setFormError(null)
     setIsModalOpen(true)
   }
@@ -116,6 +261,15 @@ export function LapakApp() {
       return
     }
 
+    const finalPrice = buildPriceString(
+      priceMode,
+      priceAmount,
+      priceMin,
+      priceMax,
+      priceUnit,
+      priceCustom
+    )
+
     setIsSubmitting(true)
     setFormError(null)
 
@@ -125,7 +279,7 @@ export function LapakApp() {
         tagline: formTagline,
         description: formDescription,
         category: formCategory,
-        priceRange: formPriceRange,
+        priceRange: finalPrice,
         contactName: formContactName,
         contactWa: formContactWa,
         contactLink: formContactLink,
@@ -144,7 +298,7 @@ export function LapakApp() {
         tagline: formTagline,
         description: formDescription,
         category: formCategory,
-        priceRange: formPriceRange,
+        priceRange: finalPrice,
         contactName: formContactName,
         contactWa: formContactWa,
         contactLink: formContactLink,
@@ -551,37 +705,190 @@ export function LapakApp() {
                 />
               </div>
 
-              {/* Row 3: Badge & Kisaran Harga */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-mono font-bold text-gray-800 mb-0.5">
-                    Badge Highlight
+              {/* Row 3: Badge Highlight */}
+              <div>
+                <label className="block text-xs font-mono font-bold text-gray-800 mb-0.5">
+                  Badge Highlight
+                </label>
+                <select
+                  value={formBadge}
+                  onChange={(e) => setFormBadge(e.target.value)}
+                  className="w-full px-2 py-1 text-xs font-mono bg-white border border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] focus:outline-none"
+                >
+                  <option value="">(Tanpa Badge)</option>
+                  {BADGE_OPTIONS.map((b) => (
+                    <option key={b.value} value={b.value}>
+                      {b.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Row 4: Pengaturan Harga & Masking Rupiah */}
+              <div className="p-2.5 bg-[#E2E8F0] border border-[#94A3B8] rounded-[3px] space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-mono font-bold text-gray-800 flex items-center gap-1">
+                    <Tag className="size-3 text-emerald-700 shrink-0" />
+                    <span>Format & Nominal Harga (Rupiah)</span>
                   </label>
-                  <select
-                    value={formBadge}
-                    onChange={(e) => setFormBadge(e.target.value)}
-                    className="w-full px-2 py-1 text-xs font-mono bg-white border border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] focus:outline-none"
-                  >
-                    <option value="">(Tanpa Badge)</option>
-                    {BADGE_OPTIONS.map((b) => (
-                      <option key={b.value} value={b.value}>
-                        {b.label}
-                      </option>
-                    ))}
-                  </select>
+                  {formattedPricePreview && (
+                    <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-1.5 py-0.2 rounded-xs">
+                      🏷️ {formattedPricePreview}
+                    </span>
+                  )}
                 </div>
-                <div>
-                  <label className="block text-xs font-mono font-bold text-gray-800 mb-0.5">
-                    Kisaran Harga / Paket
-                  </label>
-                  <input
-                    type="text"
-                    value={formPriceRange}
-                    onChange={(e) => setFormPriceRange(e.target.value)}
-                    placeholder="Contoh: Rp 15.000 - Rp 35.000"
-                    className="w-full px-2 py-1 text-xs font-mono bg-white border border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
-                  />
+
+                {/* Mode Selector Radio Pills */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 select-none">
+                  {[
+                    { id: "fixed", label: "Harga Pas" },
+                    { id: "start_from", label: "Mulai Dari" },
+                    { id: "range", label: "Rentang (Min - Max)" },
+                    { id: "custom", label: "Nego / Custom" },
+                  ].map((modeOption) => {
+                    const isSelected = priceMode === modeOption.id
+                    return (
+                      <button
+                        key={modeOption.id}
+                        type="button"
+                        onClick={() => setPriceMode(modeOption.id as PriceMode)}
+                        className={cn(
+                          "px-2 py-1 text-[10px] font-mono font-bold rounded-[2px] border transition-colors cursor-pointer text-center",
+                          isSelected
+                            ? "bg-[#1E4E8C] text-white border-[#102A45] shadow-xs"
+                            : "bg-white hover:bg-slate-100 text-gray-700 border-[#CBD5E1]"
+                        )}
+                      >
+                        {modeOption.label}
+                      </button>
+                    )
+                  })}
                 </div>
+
+                {/* Inputs based on Mode */}
+                {priceMode === "fixed" && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div className="sm:col-span-2 relative">
+                      <div className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-gray-600 pointer-events-none">
+                        Rp
+                      </div>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={priceAmount}
+                        onChange={(e) => setPriceAmount(maskRupiahInput(e.target.value))}
+                        placeholder="Contoh: 25.000"
+                        className="w-full pl-8 pr-2 py-1 text-xs font-mono font-bold text-[#14253D] bg-white border border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
+                      />
+                    </div>
+                    <div>
+                      <select
+                        value={priceUnit}
+                        onChange={(e) => setPriceUnit(e.target.value)}
+                        className="w-full px-2 py-1 text-xs font-mono bg-white border border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] focus:outline-none"
+                      >
+                        {PRICE_UNIT_PRESETS.map((p) => (
+                          <option key={p.value} value={p.value}>
+                            {p.label || "Satuan"}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {priceMode === "start_from" && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div className="sm:col-span-2 relative">
+                      <div className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] font-mono font-bold text-gray-600 pointer-events-none">
+                        Mulai Rp
+                      </div>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={priceAmount}
+                        onChange={(e) => setPriceAmount(maskRupiahInput(e.target.value))}
+                        placeholder="Contoh: 15.000"
+                        className="w-full pl-18 pr-2 py-1 text-xs font-mono font-bold text-[#14253D] bg-white border border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
+                      />
+                    </div>
+                    <div>
+                      <select
+                        value={priceUnit}
+                        onChange={(e) => setPriceUnit(e.target.value)}
+                        className="w-full px-2 py-1 text-xs font-mono bg-white border border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] focus:outline-none"
+                      >
+                        {PRICE_UNIT_PRESETS.map((p) => (
+                          <option key={p.value} value={p.value}>
+                            {p.label || "Satuan"}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {priceMode === "range" && (
+                  <div className="space-y-1.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-1.5 items-center">
+                      <div className="sm:col-span-2 relative">
+                        <div className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-gray-600 pointer-events-none">
+                          Min: Rp
+                        </div>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={priceMin}
+                          onChange={(e) => setPriceMin(maskRupiahInput(e.target.value))}
+                          placeholder="100.000"
+                          className="w-full pl-15 pr-2 py-1 text-xs font-mono font-bold text-[#14253D] bg-white border border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
+                        />
+                      </div>
+                      <div className="text-center font-mono text-xs font-bold text-gray-500 hidden sm:block">
+                        s/d
+                      </div>
+                      <div className="sm:col-span-2 relative">
+                        <div className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-gray-600 pointer-events-none">
+                          Max: Rp
+                        </div>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={priceMax}
+                          onChange={(e) => setPriceMax(maskRupiahInput(e.target.value))}
+                          placeholder="3.500.000"
+                          className="w-full pl-15 pr-2 py-1 text-xs font-mono font-bold text-[#14253D] bg-white border border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono text-gray-600 shrink-0">Satuan (Opsional):</span>
+                      <select
+                        value={priceUnit}
+                        onChange={(e) => setPriceUnit(e.target.value)}
+                        className="flex-1 px-2 py-0.5 text-xs font-mono bg-white border border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] focus:outline-none"
+                      >
+                        {PRICE_UNIT_PRESETS.map((p) => (
+                          <option key={p.value} value={p.value}>
+                            {p.label || "Pilih satuan"}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {priceMode === "custom" && (
+                  <div>
+                    <input
+                      type="text"
+                      value={priceCustom}
+                      onChange={(e) => setPriceCustom(e.target.value)}
+                      placeholder="Contoh: Nego / Sesuai Kesepakatan / Gratis Konsultasi"
+                      className="w-full px-2 py-1 text-xs font-mono bg-white border border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Row 4: Contact Name & WhatsApp */}
