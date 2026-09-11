@@ -14,13 +14,14 @@ export const APP_CHANGELOG: VersionRelease[] = [
   {
     version: "v2.3.3",
     date: "11 Sep 2026",
-    codename: "Display Properties & Custom Wallpaper Suite",
+    codename: "Display Properties & Show Desktop Suite",
     changes: [
+      "Fitur Quick Launch toolbar di Taskbar dengan tombol Show Desktop (Minimize & Restore Semua Jendela) otentik Windows 98 serta shortcut Alt+D.",
       "Fitur kustomisasi wallpaper desktop ala Windows 98 (Display Properties / desk.cpl).",
       "Preview visual monitor CRT tabung interaktif real-time dengan efek scanline dan simulasi ikon desktop.",
       "Koleksi preset retro legendaris (Windows 98 Classic Teal, Windows 2000 Pro Blue, Matrix Terminal, XP Bliss, Synthwave, dll).",
       "Dukungan kustomisasi lengkap: upload berkas gambar lokal otomatis kompresi, URL gambar web, dan palet warna solid hex.",
-      "Menu klik kanan retro (Context Menu) pada area desktop kosong untuk akses instan ke Properti Tampilan.",
+      "Menu klik kanan retro (Context Menu) pada area desktop kosong untuk akses instan ke Properti Tampilan dan Show Desktop.",
       "Penyimpanan preferensi persisten di browser (localStorage) dengan mode tampilan (Fill, Fit, Tile, Center) serta toggle efek tekstur & watermark.",
     ],
   },

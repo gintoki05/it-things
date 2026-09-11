@@ -39,6 +39,8 @@ interface DesktopContextType {
   isAboutOpen: boolean
   openAboutDialog: () => void
   closeAboutDialog: () => void
+  toggleShowDesktop: () => void
+  isAllMinimized: boolean
 }
 
 const DesktopContext = React.createContext<DesktopContextType | undefined>(undefined)
@@ -466,6 +468,75 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
     })
   }, [])
 
+  const [minimizedSnapshot, setMinimizedSnapshot] = React.useState<AppId[]>([])
+  const [lastFocusedId, setLastFocusedId] = React.useState<AppId | null>(null)
+
+  // Jendela yang sedang terbuka dan tidak dalam kondisi minimized
+  const visibleWindows = React.useMemo(() => {
+    return Object.values(windows).filter((w) => w.isOpen && !w.isMinimized && !w.isHidden)
+  }, [windows])
+
+  const isAllMinimized = visibleWindows.length === 0
+
+  const toggleShowDesktop = React.useCallback(() => {
+    if (visibleWindows.length > 0) {
+      // CASE 1: Ada jendela yang sedang terlihat -> snapshot lalu minimize semua
+      const currentVisibleIds = visibleWindows.map((w) => w.id)
+      setMinimizedSnapshot(currentVisibleIds)
+      setLastFocusedId(activeWindowId)
+
+      setWindows((curr) => {
+        const next = { ...curr }
+        currentVisibleIds.forEach((id) => {
+          if (next[id]) {
+            next[id] = { ...next[id], isMinimized: true }
+          }
+        })
+        return next
+      })
+      setActiveWindowId(null)
+    } else {
+      // CASE 2: Semua jendela sedang minimize -> restore snapshot atau semua window yang isOpen
+      const targets = minimizedSnapshot.length > 0
+        ? minimizedSnapshot
+        : Object.values(windows).filter((w) => w.isOpen && !w.isHidden).map((w) => w.id)
+
+      if (targets.length === 0) return
+
+      setWindows((curr) => {
+        const next = { ...curr }
+        targets.forEach((id) => {
+          if (next[id]) {
+            next[id] = { ...next[id], isMinimized: false }
+          }
+        })
+        return next
+      })
+
+      const targetToFocus = lastFocusedId && targets.includes(lastFocusedId)
+        ? lastFocusedId
+        : targets[targets.length - 1]
+
+      if (targetToFocus) {
+        bringToFront(targetToFocus)
+      }
+      setMinimizedSnapshot([])
+      setLastFocusedId(null)
+    }
+  }, [visibleWindows, activeWindowId, minimizedSnapshot, lastFocusedId, windows, bringToFront])
+
+  // Shortcut keyboard: Alt + D untuk Show Desktop
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && (e.key === "d" || e.key === "D")) {
+        e.preventDefault()
+        toggleShowDesktop()
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [toggleShowDesktop])
+
   React.useEffect(() => {
     const handleOpenApp = (e: Event) => {
       const customEvent = e as CustomEvent<{ appId: AppId }>
@@ -496,6 +567,8 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
       isAboutOpen,
       openAboutDialog,
       closeAboutDialog,
+      toggleShowDesktop,
+      isAllMinimized,
     }),
     [
       windows,
@@ -513,6 +586,8 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
       isAboutOpen,
       openAboutDialog,
       closeAboutDialog,
+      toggleShowDesktop,
+      isAllMinimized,
     ]
   )
 

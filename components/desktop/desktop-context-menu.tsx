@@ -1,10 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { Monitor, RotateCw, Info, Sparkles } from "lucide-react"
+import { Monitor, RotateCw, Info, Laptop } from "lucide-react"
 import { useWallpaper } from "@/lib/wallpaper-store"
 import { useDesktop } from "@/components/desktop/desktop-context"
-import { playRetroNotificationSound } from "@/lib/sound-effects"
 
 interface DesktopContextMenuProps {
   x: number
@@ -14,7 +13,7 @@ interface DesktopContextMenuProps {
 
 export function DesktopContextMenu({ x, y, onClose }: DesktopContextMenuProps) {
   const { openDialog } = useWallpaper()
-  const { openAboutDialog } = useDesktop()
+  const { openAboutDialog, toggleShowDesktop, isAllMinimized } = useDesktop()
   const menuRef = React.useRef<HTMLDivElement>(null)
 
   // Bounds checking to stay within viewport
@@ -60,7 +59,6 @@ export function DesktopContextMenu({ x, y, onClose }: DesktopContextMenuProps) {
 
   const handleRefresh = () => {
     onClose()
-    playRetroNotificationSound(0.2)
   }
 
   const handleOpenAbout = () => {
@@ -91,6 +89,18 @@ export function DesktopContextMenu({ x, y, onClose }: DesktopContextMenuProps) {
       >
         <RotateCw className="size-3.5 text-gray-600 group-hover:text-white" />
         <span>Segarkan Desktop</span>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => {
+          onClose()
+          toggleShowDesktop()
+        }}
+        className="w-full text-left px-3 py-1.5 hover:bg-[#1E4E8C] hover:text-white flex items-center gap-2 text-[#14253D] group transition-colors cursor-pointer"
+      >
+        <Laptop className="size-3.5 text-[#1E4E8C] group-hover:text-white" />
+        <span>{isAllMinimized ? "Kembalikan Semua Jendela" : "Tampilkan Desktop"}</span>
       </button>
 
       <div className="my-1 border-t border-[#A4B5C6]/70 mx-1" />

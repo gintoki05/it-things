@@ -40,7 +40,7 @@ interface TaskbarProps {
 }
 
 export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
-  const { windows, activeWindowId, openWindow, toggleWindow, openAboutDialog } = useDesktop()
+  const { windows, activeWindowId, openWindow, toggleWindow, openAboutDialog, toggleShowDesktop, isAllMinimized } = useDesktop()
   const { openDialog: openWallpaperDialog } = useWallpaper()
   const { user, isAdmin, isTreasurer, isGuest, isSupabaseConnected, signOut, setDemoUserRole, lockApp, canSwitchRole } = useAuth()
   const { isKasPic, isPantryPic } = usePicStore()
@@ -414,7 +414,43 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
           <span className="tracking-wide font-mono text-[11px]">Start</span>
         </button>
 
-        <div className="h-6 w-px bg-[#A4B5C6] mx-0.5" />
+        {/* Quick Launch Toolbar Windows 98 */}
+        <div className="flex items-center gap-1 pl-1 pr-1.5 border-l-2 border-l-white border-r border-r-[#7D8E9E]/80 h-7 select-none shrink-0">
+          {/* Quick Launch Embossed Gripper */}
+          <div className="flex flex-col gap-0.5 px-0.5 opacity-60">
+            <div className="w-0.5 h-3.5 bg-[#5E7287] shadow-[1px_1px_0px_white]" />
+          </div>
+
+          {/* Show Desktop Quick Launch Button */}
+          <button
+            type="button"
+            onClick={toggleShowDesktop}
+            title={
+              isAllMinimized
+                ? "Kembalikan Semua Jendela (Restore Windows - Alt+D)"
+                : "Tampilkan Desktop (Minimize Semua Jendela - Alt+D)"
+            }
+            className={cn(
+              "size-7 rounded-[2px] flex items-center justify-center transition-all cursor-pointer border",
+              isAllMinimized
+                ? "bg-[#BDCCD9] border-t-[#5E7287] border-l-[#5E7287] border-r-white border-b-white translate-y-px shadow-inner"
+                : "bg-[#D4DDE6] border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] hover:bg-[#DEE6EE] shadow-[1px_1px_0px_#5E7287] active:translate-y-px"
+            )}
+          >
+            {/* Authentic Windows 98 Show Desktop Icon */}
+            <svg className="size-4 drop-shadow-[0.5px_0.5px_0px_rgba(0,0,0,0.3)]" viewBox="0 0 16 16" fill="none">
+              {/* Desktop Screen base */}
+              <rect x="1.5" y="2.5" width="13" height="9" rx="1" fill="#1A365D" stroke="#102A45" strokeWidth="1" />
+              {/* Blue Desktop Wallpaper */}
+              <rect x="2" y="3" width="12" height="8" fill="#1E4E8C" />
+              {/* Window Pad */}
+              <rect x="3.5" y="4.5" width="7" height="5" rx="0.5" fill="#D4DDE6" stroke="#5E7287" strokeWidth="0.8" />
+              <rect x="4" y="5" width="6" height="1" fill="#1E4E8C" />
+              {/* Pen / Pencil / Restore Pointer */}
+              <path d="M12 5.5L8.5 9M8.5 9L7 11.5L9.5 10L12 5.5Z" fill="#FBBF24" stroke="#B45309" strokeWidth="0.6" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
 
         {/* Running Applications in Taskbar */}
         <div className="flex-1 flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">

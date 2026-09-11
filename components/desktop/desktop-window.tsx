@@ -175,6 +175,7 @@ export function DesktopWindow({ id, children, className, bodyClassName }: Deskto
   return (
     <div
       ref={windowRef}
+      data-window="true"
       onPointerDown={() => {
         if (activeWindowId !== id) {
           bringToFront(id)
@@ -185,7 +186,7 @@ export function DesktopWindow({ id, children, className, bodyClassName }: Deskto
         willChange: isDragging ? "transform" : "auto",
       }}
       className={cn(
-        "flex flex-col rounded-[4px] border-2 select-none overflow-hidden",
+        "retro-window-frame flex flex-col rounded-[4px] border-2 select-none overflow-hidden",
         // Retro bevel border styling
         "border-t-[#E8EEF5] border-l-[#E8EEF5] border-r-[#5E7287] border-b-[#5E7287] bg-[#D4DDE6] shadow-[2px_2px_12px_rgba(0,0,0,0.35)]",
         isActive ? "ring-1 ring-[#1A365D]/40" : "opacity-95",

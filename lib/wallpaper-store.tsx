@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { playRetroNotificationSound } from "@/lib/sound-effects"
 
 export type WallpaperDisplayMode = "fill" | "fit" | "tile" | "center"
 
@@ -108,6 +107,7 @@ const STORAGE_KEY = "it_things_wallpaper_config"
 interface WallpaperContextType {
   wallpaper: WallpaperConfig
   isDialogOpen: boolean
+  storageWarning: string | null
   openDialog: () => void
   closeDialog: () => void
   setWallpaper: (config: WallpaperConfig) => void
@@ -120,6 +120,7 @@ const WallpaperContext = React.createContext<WallpaperContextType | undefined>(u
 export function WallpaperProvider({ children }: { children: React.ReactNode }) {
   const [wallpaper, setWallpaperState] = React.useState<WallpaperConfig>(DEFAULT_WALLPAPER)
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
+  const [storageWarning, setStorageWarning] = React.useState<string | null>(null)
 
   // Load wallpaper from localStorage on mount
   React.useEffect(() => {
@@ -140,14 +141,15 @@ export function WallpaperProvider({ children }: { children: React.ReactNode }) {
     setWallpaperState(next)
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+      setStorageWarning(null)
     } catch (err) {
       console.warn("Gagal menyimpan wallpaper ke localStorage (mungkin kuota penuh):", err)
+      setStorageWarning("Penyimpanan browser penuh! Wallpaper aktif di sesi ini namun mungkin tidak tersimpan permanen.")
     }
   }, [])
 
   const resetWallpaper = React.useCallback(() => {
     setWallpaper(DEFAULT_WALLPAPER)
-    playRetroNotificationSound()
   }, [setWallpaper])
 
   const openDialog = React.useCallback(() => {
@@ -200,6 +202,7 @@ export function WallpaperProvider({ children }: { children: React.ReactNode }) {
       value={{
         wallpaper,
         isDialogOpen,
+        storageWarning,
         openDialog,
         closeDialog,
         setWallpaper,

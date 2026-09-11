@@ -55,9 +55,15 @@ function DesktopWorkspace() {
     const target = e.target as HTMLElement
     if (
       target.closest(".retro-window-frame") ||
+      target.closest("[data-window]") ||
+      target.closest("aside") ||
+      target.closest("dialog") ||
+      target.closest('[role="dialog"]') ||
       target.closest(".taskbar-container") ||
       target.closest("button") ||
       target.closest("input") ||
+      target.closest("textarea") ||
+      target.closest("select") ||
       target.closest("a")
     ) {
       return

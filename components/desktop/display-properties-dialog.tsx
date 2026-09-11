@@ -1,25 +1,26 @@
 "use client"
 
 import * as React from "react"
-import { X, Monitor, Upload, Palette, Check, RotateCcw, Image as ImageIcon, Sparkles } from "lucide-react"
+import { X, Monitor, Upload, Palette, Check, RotateCcw, Image as ImageIcon, Sparkles, AlertTriangle, Loader2 } from "lucide-react"
 import { useWallpaper, WALLPAPER_PRESETS, WallpaperConfig, WallpaperDisplayMode } from "@/lib/wallpaper-store"
-import { playRetroNotificationSound } from "@/lib/sound-effects"
 import { cn } from "@/lib/utils"
 
 export function DisplayPropertiesDialog() {
-  const { wallpaper, isDialogOpen, closeDialog, setWallpaper, resetWallpaper, getBackgroundStyle } = useWallpaper()
+  const { wallpaper, isDialogOpen, storageWarning, closeDialog, setWallpaper, resetWallpaper, getBackgroundStyle } = useWallpaper()
 
   const [activeTab, setActiveTab] = React.useState<"presets" | "custom" | "options">("presets")
   const [draftConfig, setDraftConfig] = React.useState<WallpaperConfig>(wallpaper)
   const [customUrlInput, setCustomUrlInput] = React.useState("")
-  const [urlError, setUrlError] = React.useState(false)
+  const [urlErrorMessage, setUrlErrorMessage] = React.useState<string | null>(null)
+  const [isUrlChecking, setIsUrlChecking] = React.useState(false)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
 
   // Sync draft state with currently active wallpaper when dialog opens
   React.useEffect(() => {
     if (isDialogOpen) {
       setDraftConfig(wallpaper)
-      setUrlError(false)
+      setUrlErrorMessage(null)
+      setIsUrlChecking(false)
       if (wallpaper.type === "custom-image" && wallpaper.value.startsWith("http")) {
         setCustomUrlInput(wallpaper.value)
       }
@@ -43,12 +44,10 @@ export function DisplayPropertiesDialog() {
 
   const handleApply = () => {
     setWallpaper(draftConfig)
-    playRetroNotificationSound(0.25)
   }
 
   const handleOk = () => {
     setWallpaper(draftConfig)
-    playRetroNotificationSound(0.25)
     closeDialog()
   }
 
@@ -81,19 +80,63 @@ export function DisplayPropertiesDialog() {
   const handleApplyUrl = () => {
     const trimmed = customUrlInput.trim()
     if (!trimmed) {
-      setUrlError(true)
+      setUrlErrorMessage("Masukkan URL gambar terlebih dahulu.")
       return
     }
-    setUrlError(false)
-    setDraftConfig({
-      id: "custom-url-" + Date.now(),
-      name: "Gambar URL Kustom",
-      type: "custom-image",
-      value: trimmed,
-      mode: draftConfig.mode,
-      showGridTexture: draftConfig.showGridTexture,
-      showWatermark: draftConfig.showWatermark,
-    })
+    if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://") && !trimmed.startsWith("data:image/")) {
+      setUrlErrorMessage("URL harus diawali dengan http:// atau https://")
+      return
+    }
+    setUrlErrorMessage(null)
+    setIsUrlChecking(true)
+
+    const testImg = new Image()
+    let resolved = false
+
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        resolved = true
+        setIsUrlChecking(false)
+        setDraftConfig({
+          id: "custom-url-" + Date.now(),
+          name: "Gambar Web",
+          type: "custom-image",
+          value: trimmed,
+          mode: draftConfig.mode,
+          showGridTexture: draftConfig.showGridTexture,
+          showWatermark: draftConfig.showWatermark,
+        })
+      }
+    }, 2500)
+
+    testImg.onload = () => {
+      if (!resolved) {
+        resolved = true
+        clearTimeout(timeout)
+        setIsUrlChecking(false)
+        setUrlErrorMessage(null)
+        setDraftConfig({
+          id: "custom-url-" + Date.now(),
+          name: "Gambar Web",
+          type: "custom-image",
+          value: trimmed,
+          mode: draftConfig.mode,
+          showGridTexture: draftConfig.showGridTexture,
+          showWatermark: draftConfig.showWatermark,
+        })
+      }
+    }
+
+    testImg.onerror = () => {
+      if (!resolved) {
+        resolved = true
+        clearTimeout(timeout)
+        setIsUrlChecking(false)
+        setUrlErrorMessage("Gambar tidak dapat dimuat (link rusak atau diblokir).")
+      }
+    }
+
+    testImg.src = trimmed
   }
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,7 +150,8 @@ export function DisplayPropertiesDialog() {
 
       const img = new Image()
       img.onload = () => {
-        const maxDim = 1600
+        // Kompresi optimal max 1280px & JPEG 0.75 agar aman di localStorage (~60-100KB)
+        const maxDim = 1280
         let w = img.width
         let h = img.height
 
@@ -128,7 +172,7 @@ export function DisplayPropertiesDialog() {
 
         if (ctx) {
           ctx.drawImage(img, 0, 0, w, h)
-          const compressed = canvas.toDataURL("image/jpeg", 0.82)
+          const compressed = canvas.toDataURL("image/jpeg", 0.75)
           setDraftConfig({
             id: "custom-upload-" + Date.now(),
             name: file.name.length > 18 ? file.name.slice(0, 15) + "..." : file.name,
@@ -249,12 +293,12 @@ export function DisplayPropertiesDialog() {
           </div>
 
           {/* Retro Tabs */}
-          <div className="flex items-center gap-1 border-b-2 border-[#5E7287] pt-1">
+          <div className="flex items-center gap-1 border-b-2 border-[#5E7287] pt-1 overflow-x-auto no-scrollbar">
             <button
               type="button"
               onClick={() => setActiveTab("presets")}
               className={cn(
-                "px-3 py-1 text-xs font-bold rounded-t-[3px] border-t-2 border-l-2 border-r-2 transition-colors relative -mb-[2px]",
+                "px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-bold rounded-t-[3px] border-t-2 border-l-2 border-r-2 transition-colors relative -mb-[2px] whitespace-nowrap shrink-0",
                 activeTab === "presets"
                   ? "bg-[#D4DDE6] border-t-white border-l-white border-r-[#5E7287] text-[#102A45] z-10"
                   : "bg-[#B8C5D3] border-t-white/80 border-l-white/80 border-r-[#5E7287] text-gray-600 hover:bg-[#C5D2E0]"
@@ -266,7 +310,7 @@ export function DisplayPropertiesDialog() {
               type="button"
               onClick={() => setActiveTab("custom")}
               className={cn(
-                "px-3 py-1 text-xs font-bold rounded-t-[3px] border-t-2 border-l-2 border-r-2 transition-colors relative -mb-[2px]",
+                "px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-bold rounded-t-[3px] border-t-2 border-l-2 border-r-2 transition-colors relative -mb-[2px] whitespace-nowrap shrink-0",
                 activeTab === "custom"
                   ? "bg-[#D4DDE6] border-t-white border-l-white border-r-[#5E7287] text-[#102A45] z-10"
                   : "bg-[#B8C5D3] border-t-white/80 border-l-white/80 border-r-[#5E7287] text-gray-600 hover:bg-[#C5D2E0]"
@@ -278,7 +322,7 @@ export function DisplayPropertiesDialog() {
               type="button"
               onClick={() => setActiveTab("options")}
               className={cn(
-                "px-3 py-1 text-xs font-bold rounded-t-[3px] border-t-2 border-l-2 border-r-2 transition-colors relative -mb-[2px]",
+                "px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-bold rounded-t-[3px] border-t-2 border-l-2 border-r-2 transition-colors relative -mb-[2px] whitespace-nowrap shrink-0",
                 activeTab === "options"
                   ? "bg-[#D4DDE6] border-t-white border-l-white border-r-[#5E7287] text-[#102A45] z-10"
                   : "bg-[#B8C5D3] border-t-white/80 border-l-white/80 border-r-[#5E7287] text-gray-600 hover:bg-[#C5D2E0]"
@@ -370,21 +414,35 @@ export function DisplayPropertiesDialog() {
                     value={customUrlInput}
                     onChange={(e) => {
                       setCustomUrlInput(e.target.value)
-                      setUrlError(false)
+                      setUrlErrorMessage(null)
                     }}
                     className={cn(
                       "flex-1 px-2 py-1 text-xs bg-white border-2 border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white focus:outline-none",
-                      urlError && "border-red-500 text-red-600"
+                      urlErrorMessage && "border-red-500 text-red-600"
                     )}
                   />
                   <button
                     type="button"
+                    disabled={isUrlChecking}
                     onClick={handleApplyUrl}
-                    className="px-2.5 py-1 bg-[#D4DDE6] hover:bg-[#C2D0DE] text-xs font-bold text-[#14253D] border-2 border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] shadow-sm active:translate-y-px cursor-pointer shrink-0"
+                    className="px-2.5 py-1 bg-[#D4DDE6] hover:bg-[#C2D0DE] disabled:opacity-50 text-xs font-bold text-[#14253D] border-2 border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] shadow-sm active:translate-y-px cursor-pointer shrink-0 flex items-center gap-1"
                   >
-                    Gunakan URL
+                    {isUrlChecking ? (
+                      <>
+                        <Loader2 className="size-3 animate-spin" />
+                        <span>Mengecek...</span>
+                      </>
+                    ) : (
+                      <span>Gunakan URL</span>
+                    )}
                   </button>
                 </div>
+                {urlErrorMessage && (
+                  <p className="text-[10px] text-red-600 font-semibold flex items-center gap-1">
+                    <AlertTriangle className="size-3 shrink-0" />
+                    <span>{urlErrorMessage}</span>
+                  </p>
+                )}
               </div>
 
               {/* Solid Color Palette */}
@@ -488,6 +546,14 @@ export function DisplayPropertiesDialog() {
                   <span>Tampilkan watermark teks branding IT-THINGS di pojok desktop</span>
                 </label>
               </div>
+            </div>
+          )}
+
+          {/* Peringatan jika kuota localStorage browser penuh */}
+          {storageWarning && (
+            <div className="p-2 bg-amber-100 border border-amber-400 rounded-[2px] text-[10px] text-amber-900 flex items-center gap-1.5 font-mono">
+              <AlertTriangle className="size-3.5 text-amber-700 shrink-0" />
+              <span>{storageWarning}</span>
             </div>
           )}
 
