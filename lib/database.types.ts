@@ -14,6 +14,141 @@ export type Database = {
   }
   public: {
     Tables: {
+      paint_war_rooms: {
+        Row: {
+          id: string
+          status: string
+          current_drawer_id: string | null
+          current_drawer_name: string | null
+          current_drawer_avatar: string | null
+          current_word: string | null
+          word_hint: string | null
+          category: string | null
+          round_number: number
+          total_rounds: number
+          round_start_time: string | null
+          round_duration_sec: number
+          canvas_snapshot: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          status?: string
+          current_drawer_id?: string | null
+          current_drawer_name?: string | null
+          current_drawer_avatar?: string | null
+          current_word?: string | null
+          word_hint?: string | null
+          category?: string | null
+          round_number?: number
+          total_rounds?: number
+          round_start_time?: string | null
+          round_duration_sec?: number
+          canvas_snapshot?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          status?: string
+          current_drawer_id?: string | null
+          current_drawer_name?: string | null
+          current_drawer_avatar?: string | null
+          current_word?: string | null
+          word_hint?: string | null
+          category?: string | null
+          round_number?: number
+          total_rounds?: number
+          round_start_time?: string | null
+          round_duration_sec?: number
+          canvas_snapshot?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      paint_war_players: {
+        Row: {
+          id: string
+          room_id: string
+          user_id: string
+          user_name: string
+          user_avatar: string | null
+          score: number
+          has_guessed: boolean
+          is_drawing: boolean
+          is_online: boolean
+          last_seen: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          room_id: string
+          user_id: string
+          user_name: string
+          user_avatar?: string | null
+          score?: number
+          has_guessed?: boolean
+          is_drawing?: boolean
+          is_online?: boolean
+          last_seen?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          room_id?: string
+          user_id?: string
+          user_name?: string
+          user_avatar?: string | null
+          score?: number
+          has_guessed?: boolean
+          is_drawing?: boolean
+          is_online?: boolean
+          last_seen?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      paint_war_messages: {
+        Row: {
+          id: string
+          room_id: string
+          user_id: string
+          user_name: string
+          user_avatar: string | null
+          message: string
+          is_system: boolean
+          is_correct_guess: boolean
+          points_awarded: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          room_id: string
+          user_id: string
+          user_name: string
+          user_avatar?: string | null
+          message: string
+          is_system?: boolean
+          is_correct_guess?: boolean
+          points_awarded?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          room_id?: string
+          user_id?: string
+          user_name?: string
+          user_avatar?: string | null
+          message?: string
+          is_system?: boolean
+          is_correct_guess?: boolean
+          points_awarded?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
       fridge_items: {
         Row: {
           category: string

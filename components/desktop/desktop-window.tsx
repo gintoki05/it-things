@@ -11,6 +11,7 @@ interface DesktopWindowProps {
   className?: string
   bodyClassName?: string
   keepMountedOnMinimize?: boolean
+  onCloseRequest?: () => void
 }
 
 export function DesktopWindow({
@@ -19,6 +20,7 @@ export function DesktopWindow({
   className,
   bodyClassName,
   keepMountedOnMinimize = false,
+  onCloseRequest,
 }: DesktopWindowProps) {
   const {
     windows,
@@ -279,7 +281,11 @@ export function DesktopWindow({
             type="button"
             onClick={(e) => {
               e.stopPropagation()
-              closeWindow(id)
+              if (onCloseRequest) {
+                onCloseRequest()
+              } else {
+                closeWindow(id)
+              }
             }}
             title="Close"
             className="size-8 md:size-5 flex items-center justify-center text-sm md:text-[11px] font-bold bg-[#D4DDE6] hover:bg-[#C53030] hover:text-white text-[#14253D] border border-[#7D8E9E] border-t-white border-l-white active:border-t-[#7D8E9E] active:border-l-[#7D8E9E] rounded-[2px] transition-colors"

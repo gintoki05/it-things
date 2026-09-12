@@ -1142,3 +1142,86 @@ GRANT ALL ON public.fridge_items TO anon, authenticated, service_role;
 
 -- Realtime
 ALTER PUBLICATION supabase_realtime ADD TABLE public.fridge_items;
+
+-- ============================================================
+-- Table: paint_war_rooms, paint_war_players, paint_war_messages
+-- PAINT_WAR.EXE / Retro Gartic 98 Multiplayer
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.paint_war_rooms (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    status TEXT NOT NULL DEFAULT 'waiting', -- 'waiting' | 'selecting_word' | 'drawing' | 'round_ended'
+    current_drawer_id TEXT,
+    current_drawer_name TEXT,
+    current_drawer_avatar TEXT,
+    current_word TEXT,
+    word_hint TEXT,
+    category TEXT DEFAULT 'Campuran IT & Kantor',
+    round_number INT NOT NULL DEFAULT 1,
+    total_rounds INT NOT NULL DEFAULT 5,
+    round_start_time TIMESTAMPTZ,
+    round_duration_sec INT NOT NULL DEFAULT 60,
+    canvas_snapshot TEXT,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.paint_war_players (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    room_id UUID NOT NULL REFERENCES public.paint_war_rooms(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL,
+    user_name TEXT NOT NULL,
+    user_avatar TEXT,
+    score INT NOT NULL DEFAULT 0,
+    has_guessed BOOLEAN NOT NULL DEFAULT false,
+    is_drawing BOOLEAN NOT NULL DEFAULT false,
+    is_online BOOLEAN NOT NULL DEFAULT true,
+    last_seen TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    UNIQUE(room_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.paint_war_messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    room_id UUID NOT NULL REFERENCES public.paint_war_rooms(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL,
+    user_name TEXT NOT NULL,
+    user_avatar TEXT,
+    message TEXT NOT NULL CHECK (char_length(trim(message)) > 0 AND char_length(message) <= 300),
+    is_system BOOLEAN NOT NULL DEFAULT false,
+    is_correct_guess BOOLEAN NOT NULL DEFAULT false,
+    points_awarded INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.paint_war_rooms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.paint_war_players ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.paint_war_messages ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "paint_war_rooms_select" ON public.paint_war_rooms FOR SELECT USING (true);
+CREATE POLICY "paint_war_rooms_insert" ON public.paint_war_rooms FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY "paint_war_rooms_update" ON public.paint_war_rooms FOR UPDATE USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "paint_war_players_select" ON public.paint_war_players FOR SELECT USING (true);
+CREATE POLICY "paint_war_players_insert" ON public.paint_war_players FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY "paint_war_players_update" ON public.paint_war_players FOR UPDATE USING (auth.uid() IS NOT NULL);
+CREATE POLICY "paint_war_players_delete" ON public.paint_war_players FOR DELETE USING (user_id = auth.uid()::text OR public.is_admin());
+
+CREATE POLICY "paint_war_messages_select" ON public.paint_war_messages FOR SELECT USING (true);
+CREATE POLICY "paint_war_messages_insert" ON public.paint_war_messages FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE INDEX IF NOT EXISTS idx_paint_war_players_room ON public.paint_war_players(room_id);
+CREATE INDEX IF NOT EXISTS idx_paint_war_players_user ON public.paint_war_players(user_id);
+CREATE INDEX IF NOT EXISTS idx_paint_war_messages_room ON public.paint_war_messages(room_id, created_at DESC);
+
+GRANT ALL ON public.paint_war_rooms TO anon, authenticated, service_role;
+GRANT ALL ON public.paint_war_players TO anon, authenticated, service_role;
+GRANT ALL ON public.paint_war_messages TO anon, authenticated, service_role;
+
+ALTER PUBLICATION supabase_realtime ADD TABLE public.paint_war_rooms;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.paint_war_players;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.paint_war_messages;
+
+INSERT INTO public.paint_war_rooms (id, status, category, round_number, total_rounds, round_duration_sec)
+VALUES ('00000000-0000-0000-0000-000000000099'::uuid, 'waiting', 'Campuran IT & Kantor', 1, 5, 60)
+ON CONFLICT (id) DO NOTHING;
+

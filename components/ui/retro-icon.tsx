@@ -85,18 +85,29 @@ export function resolveRetroIcon(nameOrEmoji?: string | null): RetroIconName | n
   return null
 }
 
+export const VALID_ICON_SIZES = [32, 48, 64, 128, 256] as const
+
+export function getClosestIconSize(size: number): 32 | 48 | 64 | 128 | 256 {
+  if (size <= 36) return 32
+  if (size <= 56) return 48
+  if (size <= 96) return 64
+  if (size <= 192) return 128
+  return 256
+}
+
 export function getRetroIconSrc(
   nameOrEmoji: string,
-  size: 32 | 48 | 64 | 128 | 256 = 32
+  size: 32 | 48 | 64 | 128 | 256 | number = 32
 ): string | null {
   const iconName = resolveRetroIcon(nameOrEmoji)
   if (!iconName) return null
-  return `/IT-THINGS-icon-pack/it-things-icon-pack/png-${size}/${iconName}.png`
+  const normalizedSize = getClosestIconSize(size)
+  return `/IT-THINGS-icon-pack/it-things-icon-pack/png-${normalizedSize}/${iconName}.png`
 }
 
 export interface RetroIconProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   name: RetroIconName | string
-  iconSize?: 32 | 48 | 64 | 128 | 256
+  iconSize?: 32 | 48 | 64 | 128 | 256 | number
   fallbackText?: string
 }
 
@@ -119,7 +130,8 @@ export function RetroIcon({
     )
   }
 
-  const src = `/IT-THINGS-icon-pack/it-things-icon-pack/png-${iconSize}/${resolved}.png`
+  const src = getRetroIconSrc(resolved, iconSize)
+  if (!src) return null
 
   return (
     <img

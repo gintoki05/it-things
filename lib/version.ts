@@ -5,12 +5,25 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.8"
+export const APP_VERSION = "v2.3.9"
 export const APP_BUILD = "2026.09.12"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.9",
+    date: "12 Sep 2026",
+    codename: "Multiplayer Paint War 98, Retro Game Arcade & Exit Confirmation",
+    changes: [
+      "Peluncuran game multiplayer Paint War 98 (paintwar.exe): tebak gambar live realtime bergaya MS Paint dengan 16 palet warna Win98, flood fill, undo, dan word bank istilah IT & kantor.",
+      "Integrasi Game Center (game.exe) sebagai launcher koleksi game retro tim menggantikan posisi ikon team.exe di desktop.",
+      "Perbaikan normalisasi resolusi ikon retro pada RetroIcon component untuk mencegah error load asset PNG.",
+      "Penambahan interceptor konfirmasi keluar retro (ConfirmDialog KELUAR_GAME.EXE) saat tombol close ditekan agar sesi permainan tidak sengaja tertutup.",
+      "Pembersihan status kehadiran online (is_online) secara otomatis saat pemain menutup game atau browser untuk mencegah ghost player.",
+      "Optimalisasi broadcast goresan gambar (throttling 50ms) dan debounced canvas snapshot ke Supabase Realtime.",
+    ],
+  },
   {
     version: "v2.3.8",
     date: "12 Sep 2026",
