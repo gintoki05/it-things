@@ -5,12 +5,26 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.9"
+export const APP_VERSION = "v2.3.10"
 export const APP_BUILD = "2026.09.12"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.10",
+    date: "12 Sep 2026",
+    codename: "Daily Wordle 98 Asynchronous Word Puzzle & Mobile Responsive Polish",
+    changes: [
+      "Peluncuran game harian asinkron Wordle 98 (wordle.exe): tebak 1 kata rahasia 5 huruf tiap hari (reset jam 00:00) santai tanpa harus online bersamaan.",
+      "Integrasi 200+ kosakata kurasi istilah IT, kultur kantor IT-Things, dan bahasa Indonesia 5-huruf valid.",
+      "Papan Klasemen Harian realtime terintegrasi Supabase yang mencatat ranking tebakan tersedikit dan waktu selesai anggota tim.",
+      "Fitur Salin Hasil Emoji retro khas Wordle untuk dibagikan ke obrolan tim atau chat messenger.",
+      "Dukungan input ganda: keyboard fisik komputer (A-Z, Enter, Backspace) dan keyboard virtual touch-friendly di layar.",
+      "Optimasi tampilan mobile untuk Wordle 98: touch-manipulation, hit area tombol min 32px, dan tata letak responsif.",
+      "Penyempurnaan state launcher desktop dengan auto-fallback data instance agar aplikasi game selalu terbuka lancar.",
+    ],
+  },
   {
     version: "v2.3.9",
     date: "12 Sep 2026",

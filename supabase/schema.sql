@@ -1225,3 +1225,39 @@ INSERT INTO public.paint_war_rooms (id, status, category, round_number, total_ro
 VALUES ('00000000-0000-0000-0000-000000000099'::uuid, 'waiting', 'Campuran IT & Kantor', 1, 5, 60)
 ON CONFLICT (id) DO NOTHING;
 
+-- ============================================================
+-- Table: wordle_daily_entries
+-- WORDLE98.EXE / Tebak Kata Harian 98
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.wordle_daily_entries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id TEXT NOT NULL,
+    user_name TEXT NOT NULL,
+    user_avatar TEXT,
+    target_date DATE NOT NULL,
+    guesses TEXT[] NOT NULL DEFAULT '{}',
+    is_solved BOOLEAN NOT NULL DEFAULT false,
+    attempts INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    completed_at TIMESTAMPTZ,
+    UNIQUE(user_id, target_date)
+);
+
+ALTER TABLE public.wordle_daily_entries ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "wordle_daily_entries_select" ON public.wordle_daily_entries FOR SELECT USING (true);
+CREATE POLICY "wordle_daily_entries_insert" ON public.wordle_daily_entries FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND user_id = auth.uid()::text
+);
+CREATE POLICY "wordle_daily_entries_update" ON public.wordle_daily_entries FOR UPDATE USING (
+    auth.uid() IS NOT NULL AND user_id = auth.uid()::text
+);
+
+CREATE INDEX IF NOT EXISTS idx_wordle_target_date ON public.wordle_daily_entries(target_date, attempts);
+CREATE INDEX IF NOT EXISTS idx_wordle_user_id ON public.wordle_daily_entries(user_id);
+
+GRANT ALL ON public.wordle_daily_entries TO anon, authenticated, service_role;
+
+ALTER PUBLICATION supabase_realtime ADD TABLE public.wordle_daily_entries;
+
+

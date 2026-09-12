@@ -21,6 +21,7 @@ const ITEM_GRID_POSITIONS: Record<AppId, string> = {
   team: "col-start-1 row-start-4",
   paintwar: "col-start-3 row-start-1",
   usage: "col-start-3 row-start-2",
+  wordle: "col-start-3 row-start-3",
 }
 
 export function DesktopIcons() {

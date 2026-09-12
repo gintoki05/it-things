@@ -9,12 +9,12 @@ import { Play, Sparkles, Users, Gamepad2, Award } from "lucide-react"
 
 interface GameItem {
   id: string
-  appId?: "paintwar"
+  appId?: "paintwar" | "wordle"
   title: string
   filename: string
   category: string
   description: string
-  iconName: "game" | "task" | "idea"
+  iconName: "game" | "task" | "idea" | "edit"
   isLive?: boolean
   isComingSoon?: boolean
 }
@@ -24,6 +24,16 @@ export function GameApp() {
   const { activePaintWarCount } = useNotification()
 
   const games: GameItem[] = [
+    {
+      id: "wordle",
+      appId: "wordle",
+      title: "Wordle 98",
+      filename: "WORDLE.EXE",
+      category: "Daily Word Puzzle Asinkron",
+      description:
+        "Tebak kata rahasia 5 huruf harian seputar tech, kantor, dan bahasa Indonesia dalam 6 kesempatan. Dilengkapi klasemen harian tim!",
+      iconName: "edit",
+    },
     {
       id: "paintwar",
       appId: "paintwar",
@@ -57,7 +67,7 @@ export function GameApp() {
     },
   ]
 
-  const handleLaunchGame = (appId?: "paintwar") => {
+  const handleLaunchGame = (appId?: "paintwar" | "wordle") => {
     if (appId) {
       openWindow(appId)
     }

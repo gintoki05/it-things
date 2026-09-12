@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
 
-export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "usage"
+export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "usage" | "wordle"
 
 export interface WindowState {
   id: AppId
@@ -235,6 +235,21 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     defaultPos: { x: 260, y: 70 },
     adminOnly: true,
   },
+  wordle: {
+    id: "wordle",
+    title: "Wordle98.exe - Tebak Kata Harian 98",
+    icon: "edit",
+    filename: "wordle.exe",
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    zIndex: 14,
+    position: { x: 260, y: 50 },
+    size: { width: 440, height: 620 },
+    defaultSize: { width: 440, height: 620 },
+    defaultPos: { x: 260, y: 50 },
+    hideFromDesktop: true,
+  },
 }
 
 export function DesktopProvider({ children }: { children: React.ReactNode }) {
@@ -262,7 +277,20 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
       requestedApp = "splitbill"
     }
 
-    const validApps: AppId[] = ["vote", "splitbill", "kas", "team", "chat", "readme", "pantry", "lapak"]
+    const validApps: AppId[] = [
+      "vote",
+      "splitbill",
+      "kas",
+      "team",
+      "chat",
+      "readme",
+      "pantry",
+      "lapak",
+      "paintwar",
+      "game",
+      "wordle",
+      "usage",
+    ]
     const targetApp = requestedApp && validApps.includes(requestedApp) ? requestedApp : null
 
     if (targetApp) {
@@ -350,11 +378,12 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
       setTopZIndex((prev) => {
         const nextZ = prev + 1
         setWindows((curr) => {
-          if (!curr[id]) return curr
+          const win = curr[id] || INITIAL_WINDOWS[id]
+          if (!win) return curr
           return {
             ...curr,
             [id]: {
-              ...curr[id],
+              ...win,
               zIndex: nextZ,
               isMinimized: false,
             },
@@ -385,7 +414,7 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
 
   const openWindow = React.useCallback(
     (id: AppId) => {
-      const target = windows[id]
+      const target = windows[id] || INITIAL_WINDOWS[id]
       if (!target || target.isHidden) return
       if (target.adminOnly && !isAdmin) return
       if (target.isComingSoon) {
@@ -394,7 +423,7 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
       }
 
       setWindows((curr) => {
-        const win = curr[id]
+        const win = curr[id] || INITIAL_WINDOWS[id]
         if (!win) return curr
         return {
           ...curr,

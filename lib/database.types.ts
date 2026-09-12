@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      wordle_daily_entries: {
+        Row: {
+          id: string
+          user_id: string
+          user_name: string
+          user_avatar: string | null
+          target_date: string
+          guesses: string[]
+          is_solved: boolean
+          attempts: number
+          created_at: string
+          completed_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          user_name: string
+          user_avatar?: string | null
+          target_date: string
+          guesses?: string[]
+          is_solved?: boolean
+          attempts?: number
+          created_at?: string
+          completed_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          user_name?: string
+          user_avatar?: string | null
+          target_date?: string
+          guesses?: string[]
+          is_solved?: boolean
+          attempts?: number
+          created_at?: string
+          completed_at?: string | null
+        }
+        Relationships: []
+      }
       paint_war_rooms: {
         Row: {
           id: string

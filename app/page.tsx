@@ -34,6 +34,7 @@ import { IExploreApp } from "@/components/apps/iexplore-app"
 import { PaintWarApp } from "@/components/apps/paint-war-app"
 import { GameApp } from "@/components/apps/game-app"
 import { UsageApp } from "@/components/apps/usage-app"
+import { WordleApp } from "@/components/apps/wordle-app"
 
 const MemoizedReadmeApp = React.memo(ReadmeApp)
 const MemoizedVoteApp = React.memo(VoteApp)
@@ -48,6 +49,7 @@ const MemoizedIExploreApp = React.memo(IExploreApp)
 const MemoizedPaintWarApp = React.memo(PaintWarApp)
 const MemoizedGameApp = React.memo(GameApp)
 const MemoizedUsageApp = React.memo(UsageApp)
+const MemoizedWordleApp = React.memo(WordleApp)
 const MemoizedDesktopIcons = React.memo(DesktopIcons)
 const MemoizedTeamWidget = React.memo(TeamWidget)
 const MemoizedStickyNoteWidget = React.memo(StickyNoteWidget)
@@ -223,6 +225,11 @@ function DesktopWorkspace() {
       {/* Retro Window: sysinfo.exe (Supabase Kuota Monitor) */}
       <DesktopWindow id="usage">
         <MemoizedUsageApp />
+      </DesktopWindow>
+
+      {/* Retro Window: wordle.exe (Wordle 98 - Tebak Kata Harian IT-Things) */}
+      <DesktopWindow id="wordle" bodyClassName="p-0 overflow-hidden flex flex-col">
+        <MemoizedWordleApp />
       </DesktopWindow>
 
       {/* Floating Retro Team Widget */}
