@@ -89,3 +89,14 @@ This version has breaking changes — APIs, conventions, and file structure may 
   - `visual="button"`: Untuk tombol aksi utama dengan label teks dan bevel retro Windows 98 yang konsisten.
 <!-- END:ui-action-buttons-rules -->
 
+<!-- BEGIN:ui-badge-rules -->
+# Standar Badge & Counter Notifikasi (Desktop & Komponen)
+
+- **HANYA ANGKA POLOS UNTUK COUNTER**:
+  - Badge counter jumlah pada ikon desktop (misal: Vote, Pantry, dll.) **HANYA boleh menampilkan angka saja** (contoh: `1`, `3`, `99+`).
+  - **DILARANG** menambahkan teks status pendamping seperti `AKTIF`, `ITEM`, atau sejenisnya di dalam badge angka (hindari `1 AKTIF`, `3 AKTIF`).
+  - Keterangan detail status disimpan pada atribut `title` (tooltip hover), contoh: `title="3 Poll Aktif"`.
+- **Badge Teks Khusus**:
+  - Badge teks hanya diperbolehkan untuk status non-angka yang memang berupa label sistem statis (contoh: `SOON`, `INFO`).
+<!-- END:ui-badge-rules -->
+

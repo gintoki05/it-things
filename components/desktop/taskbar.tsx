@@ -65,16 +65,17 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
   // Track virtual keyboard on mobile to prevent taskbar from overlaying chat
   React.useEffect(() => {
     if (typeof window === "undefined" || !window.visualViewport) return
+    const vv = window.visualViewport
     const handleVV = () => {
       if (window.innerWidth >= 768) {
         setIsKeyboardOpen(false)
         return
       }
-      const kbActive = (window.innerHeight - window.visualViewport.height) > 100
+      const kbActive = (window.innerHeight - vv.height) > 100
       setIsKeyboardOpen(kbActive)
     }
-    window.visualViewport.addEventListener("resize", handleVV)
-    return () => window.visualViewport?.removeEventListener("resize", handleVV)
+    vv.addEventListener("resize", handleVV)
+    return () => vv.removeEventListener("resize", handleVV)
   }, [])
 
   // Clock

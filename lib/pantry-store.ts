@@ -73,10 +73,12 @@ export function usePantryStore() {
   const { isPantryPic } = usePicStore()
   const canManagePantry = Boolean(!isGuest && (isAdmin || isPantryPic))
 
+  const currentMonth = getCurrentPeriodMonth()
   const [items, setItems] = React.useState<PantryItem[]>([])
   const [logs, setLogs] = React.useState<PantryLog[]>([])
+  const [currentMonthLogs, setCurrentMonthLogs] = React.useState<PantryLog[]>([])
   const [restocks, setRestocks] = React.useState<PantryRestock[]>([])
-  const [selectedPeriod, setSelectedPeriod] = React.useState<string>(getCurrentPeriodMonth())
+  const [selectedPeriod, setSelectedPeriod] = React.useState<string>(currentMonth)
   const [isLoading, setIsLoading] = React.useState(true)
   const [tableMissing, setTableMissing] = React.useState(false)
   const [isUsingSupabase, setIsUsingSupabase] = React.useState(false)
@@ -132,6 +134,45 @@ export function usePantryStore() {
     }
   }, [])
 
+  const fetchCurrentMonthLogs = React.useCallback(async () => {
+    if (!isSupabaseConfigured || !supabase) return
+    const curPeriod = getCurrentPeriodMonth()
+
+    try {
+      const { data, error } = await supabase
+        .from("pantry_logs")
+        .select("*")
+        .eq("period_month", curPeriod)
+        .order("created_at", { ascending: false })
+
+      if (error) {
+        if (isTableMissingError(error)) {
+          setTableMissing(true)
+        }
+        return
+      }
+
+      if (data) {
+        const mapped: PantryLog[] = data.map((d: Record<string, unknown>) => ({
+          id: String(d.id),
+          itemId: String(d.item_id),
+          userId: String(d.user_id),
+          userName: String(d.user_name || "Anonymous"),
+          userAvatar: d.user_avatar ? String(d.user_avatar) : null,
+          quantity: Number(d.quantity || 1),
+          periodMonth: String(d.period_month),
+          notes: d.notes ? String(d.notes) : null,
+          loggedById: String(d.logged_by_id),
+          loggedByName: String(d.logged_by_name || ""),
+          createdAt: String(d.created_at || ""),
+        }))
+        setCurrentMonthLogs(mapped)
+      }
+    } catch (err) {
+      console.error("Unexpected error fetching current month pantry logs:", err)
+    }
+  }, [])
+
   const fetchLogs = React.useCallback(async (period: string) => {
     if (!isSupabaseConfigured || !supabase) return
 
@@ -166,6 +207,9 @@ export function usePantryStore() {
           createdAt: String(d.created_at || ""),
         }))
         setLogs(mapped)
+        if (period === getCurrentPeriodMonth()) {
+          setCurrentMonthLogs(mapped)
+        }
       }
     } catch (err) {
       console.error("Unexpected error fetching pantry logs:", err)
@@ -211,14 +255,19 @@ export function usePantryStore() {
     let mounted = true
     const init = async () => {
       setIsLoading(true)
-      await Promise.all([fetchItems(), fetchLogs(selectedPeriod), fetchRestocks()])
+      await Promise.all([
+        fetchItems(),
+        fetchLogs(selectedPeriod),
+        fetchCurrentMonthLogs(),
+        fetchRestocks(),
+      ])
       if (mounted) setIsLoading(false)
     }
     init()
     return () => {
       mounted = false
     }
-  }, [fetchItems, fetchLogs, fetchRestocks, selectedPeriod])
+  }, [fetchItems, fetchLogs, fetchCurrentMonthLogs, fetchRestocks, selectedPeriod])
 
   // Realtime subscription
   React.useEffect(() => {
@@ -241,6 +290,7 @@ export function usePantryStore() {
         "postgres_changes",
         { event: "*", schema: "public", table: "pantry_logs" },
         () => {
+          fetchCurrentMonthLogs()
           fetchLogs(selectedPeriod)
           fetchItems()
         }
@@ -260,7 +310,7 @@ export function usePantryStore() {
         supabase.removeChannel(channel)
       }
     }
-  }, [fetchItems, fetchLogs, fetchRestocks, selectedPeriod])
+  }, [fetchItems, fetchLogs, fetchCurrentMonthLogs, fetchRestocks, selectedPeriod])
 
   // Ambil Item (Catat Pengambilan)
   const takeItem = async ({
@@ -270,6 +320,7 @@ export function usePantryStore() {
     targetUserId,
     targetUserName,
     targetUserAvatar,
+    periodMonth,
   }: {
     itemId: string
     quantity?: number
@@ -277,6 +328,7 @@ export function usePantryStore() {
     targetUserId?: string
     targetUserName?: string
     targetUserAvatar?: string | null
+    periodMonth?: string
   }) => {
     if (!user || !supabase) {
       return { success: false, error: "Silakan login terlebih dahulu." }
@@ -294,6 +346,7 @@ export function usePantryStore() {
     const finalUserId = targetUserId || currentUserId
     const finalUserName = targetUserName || currentUserName
     const finalUserAvatar = targetUserAvatar !== undefined ? targetUserAvatar : currentUserAvatar
+    const activePeriod = periodMonth || getCurrentPeriodMonth()
 
     const tempId = crypto.randomUUID()
     const newLog: PantryLog = {
@@ -303,7 +356,7 @@ export function usePantryStore() {
       userName: finalUserName,
       userAvatar: finalUserAvatar,
       quantity,
-      periodMonth: selectedPeriod,
+      periodMonth: activePeriod,
       notes: notes || null,
       loggedById: currentUserId,
       loggedByName: currentUserName,
@@ -311,7 +364,12 @@ export function usePantryStore() {
     }
 
     // Optimistic UI updates
-    setLogs((prev) => [newLog, ...prev])
+    if (activePeriod === getCurrentPeriodMonth()) {
+      setCurrentMonthLogs((prev) => [newLog, ...prev])
+    }
+    if (activePeriod === selectedPeriod) {
+      setLogs((prev) => [newLog, ...prev])
+    }
     setItems((prev) =>
       prev.map((i) =>
         i.id === itemId ? { ...i, stockQty: Math.max(0, i.stockQty - quantity) } : i
@@ -327,7 +385,7 @@ export function usePantryStore() {
           user_name: finalUserName,
           user_avatar: finalUserAvatar,
           quantity,
-          period_month: selectedPeriod,
+          period_month: activePeriod,
           notes: notes || null,
           logged_by_id: currentUserId,
           logged_by_name: currentUserName,
@@ -337,7 +395,12 @@ export function usePantryStore() {
 
       if (error) {
         // Rollback
-        setLogs((prev) => prev.filter((l) => l.id !== tempId))
+        if (activePeriod === getCurrentPeriodMonth()) {
+          setCurrentMonthLogs((prev) => prev.filter((l) => l.id !== tempId))
+        }
+        if (activePeriod === selectedPeriod) {
+          setLogs((prev) => prev.filter((l) => l.id !== tempId))
+        }
         setItems((prev) =>
           prev.map((i) =>
             i.id === itemId ? { ...i, stockQty: i.stockQty + quantity } : i
@@ -347,23 +410,32 @@ export function usePantryStore() {
       }
 
       if (data) {
-        setLogs((prev) =>
-          prev.map((l) =>
-            l.id === tempId
-              ? {
-                  ...l,
-                  id: String(data.id),
-                  createdAt: String(data.created_at),
-                }
-              : l
-          )
-        )
+        const updater = (l: PantryLog) =>
+          l.id === tempId
+            ? {
+                ...l,
+                id: String(data.id),
+                createdAt: String(data.created_at),
+              }
+            : l
+
+        if (activePeriod === getCurrentPeriodMonth()) {
+          setCurrentMonthLogs((prev) => prev.map(updater))
+        }
+        if (activePeriod === selectedPeriod) {
+          setLogs((prev) => prev.map(updater))
+        }
       }
 
       return { success: true }
     } catch (err) {
       // Rollback
-      setLogs((prev) => prev.filter((l) => l.id !== tempId))
+      if (activePeriod === getCurrentPeriodMonth()) {
+        setCurrentMonthLogs((prev) => prev.filter((l) => l.id !== tempId))
+      }
+      if (activePeriod === selectedPeriod) {
+        setLogs((prev) => prev.filter((l) => l.id !== tempId))
+      }
       setItems((prev) =>
         prev.map((i) =>
           i.id === itemId ? { ...i, stockQty: i.stockQty + quantity } : i
@@ -376,11 +448,14 @@ export function usePantryStore() {
   // Hapus Log
   const deleteLog = async (logId: string) => {
     if (!supabase) return { success: false, error: "Database tidak terhubung." }
-    const targetLog = logs.find((l) => l.id === logId)
+    const targetLog =
+      logs.find((l) => l.id === logId) ||
+      currentMonthLogs.find((l) => l.id === logId)
     if (!targetLog) return { success: false, error: "Catatan tidak ditemukan." }
 
     // Optimistic remove
     setLogs((prev) => prev.filter((l) => l.id !== logId))
+    setCurrentMonthLogs((prev) => prev.filter((l) => l.id !== logId))
     setItems((prev) =>
       prev.map((i) =>
         i.id === targetLog.itemId
@@ -393,7 +468,12 @@ export function usePantryStore() {
       const { error } = await supabase.from("pantry_logs").delete().eq("id", logId)
       if (error) {
         // Rollback
-        setLogs((prev) => [targetLog, ...prev])
+        if (targetLog.periodMonth === selectedPeriod) {
+          setLogs((prev) => [targetLog, ...prev])
+        }
+        if (targetLog.periodMonth === getCurrentPeriodMonth()) {
+          setCurrentMonthLogs((prev) => [targetLog, ...prev])
+        }
         setItems((prev) =>
           prev.map((i) =>
             i.id === targetLog.itemId
@@ -406,7 +486,12 @@ export function usePantryStore() {
       return { success: true }
     } catch (err) {
       // Rollback
-      setLogs((prev) => [targetLog, ...prev])
+      if (targetLog.periodMonth === selectedPeriod) {
+        setLogs((prev) => [targetLog, ...prev])
+      }
+      if (targetLog.periodMonth === getCurrentPeriodMonth()) {
+        setCurrentMonthLogs((prev) => [targetLog, ...prev])
+      }
       setItems((prev) =>
         prev.map((i) =>
           i.id === targetLog.itemId
@@ -613,12 +698,12 @@ export function usePantryStore() {
     }
   }
 
-  // Helpers untuk kalkulasi kuota & overquota
+  // Helpers untuk kalkulasi kuota & overquota (selalu mengacu pada bulan berjalan untuk Katalog)
   const getUserQuotaInfo = React.useCallback(
     (itemId: string, targetUserId: string) => {
       const item = items.find((i) => i.id === itemId)
       const quota = item ? item.monthlyQuota : 2
-      const userLogs = logs.filter(
+      const userLogs = currentMonthLogs.filter(
         (l) => l.itemId === itemId && l.userId === targetUserId
       )
       const taken = userLogs.reduce((sum, l) => sum + l.quantity, 0)
@@ -634,7 +719,7 @@ export function usePantryStore() {
         overquotaAmount,
       }
     },
-    [items, logs]
+    [items, currentMonthLogs]
   )
 
   const getMemberConsumptions = React.useCallback(
@@ -699,15 +784,17 @@ export function usePantryStore() {
     (itemId: string, targetUserId?: string) => {
       const uid = targetUserId || user?.id
       if (!uid) return []
-      return logs.filter((l) => l.itemId === itemId && (l.userId === uid || l.loggedById === uid))
+      return currentMonthLogs.filter(
+        (l) => l.itemId === itemId && (l.userId === uid || l.loggedById === uid)
+      )
     },
-    [logs, user?.id]
+    [currentMonthLogs, user?.id]
   )
 
   const cancelTakeItem = async (itemId: string, targetUserId?: string) => {
     const userItemLogs = getUserItemLogs(itemId, targetUserId)
     if (userItemLogs.length === 0) {
-      return { success: false, error: "Belum ada catatan pengambilan untuk item ini." }
+      return { success: false, error: "Belum ada catatan pengambilan untuk item ini di bulan ini." }
     }
     const latest = userItemLogs[0]
     return await deleteLog(latest.id)
@@ -716,9 +803,12 @@ export function usePantryStore() {
   return {
     items,
     logs,
+    currentMonthLogs,
+    currentMonthTotal: currentMonthLogs.reduce((sum, l) => sum + l.quantity, 0),
     restocks,
     selectedPeriod,
     setSelectedPeriod,
+    currentPeriod: currentMonth,
     isLoading,
     tableMissing,
     isUsingSupabase,
@@ -734,7 +824,12 @@ export function usePantryStore() {
     getMemberConsumptions,
     canManagePantry,
     refresh: async () => {
-      await Promise.all([fetchItems(), fetchLogs(selectedPeriod), fetchRestocks()])
+      await Promise.all([
+        fetchItems(),
+        fetchLogs(selectedPeriod),
+        fetchCurrentMonthLogs(),
+        fetchRestocks(),
+      ])
     },
   }
 }

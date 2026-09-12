@@ -28,6 +28,7 @@ import { ChatApp } from "@/components/apps/chat-app"
 import { ReadmeApp } from "@/components/apps/readme-app"
 import { PantryApp } from "@/components/apps/pantry-app"
 import { LapakApp } from "@/components/apps/lapak-app"
+import { IExploreApp } from "@/components/apps/iexplore-app"
 
 const MemoizedReadmeApp = React.memo(ReadmeApp)
 const MemoizedVoteApp = React.memo(VoteApp)
@@ -38,6 +39,7 @@ const MemoizedPantryApp = React.memo(PantryApp)
 const MemoizedLapakApp = React.memo(LapakApp)
 const MemoizedTeamApp = React.memo(TeamApp)
 const MemoizedChatApp = React.memo(ChatApp)
+const MemoizedIExploreApp = React.memo(IExploreApp)
 const MemoizedDesktopIcons = React.memo(DesktopIcons)
 const MemoizedTeamWidget = React.memo(TeamWidget)
 const MemoizedStickyNoteWidget = React.memo(StickyNoteWidget)
@@ -188,6 +190,11 @@ function DesktopWorkspace() {
       {/* Retro Window: Chat.exe */}
       <DesktopWindow id="chat" bodyClassName="p-0 overflow-hidden flex flex-col">
         <MemoizedChatApp />
+      </DesktopWindow>
+
+      {/* Retro Window: iexplore.exe (Internet Explorer - YouTube & Video) */}
+      <DesktopWindow id="iexplore" keepMountedOnMinimize bodyClassName="p-0 overflow-hidden flex flex-col">
+        <MemoizedIExploreApp />
       </DesktopWindow>
 
       {/* Floating Retro Team Widget */}

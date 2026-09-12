@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
 
-export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak"
+export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore"
 
 export interface WindowState {
   id: AppId
@@ -174,6 +174,21 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 440, height: 720 },
     defaultSize: { width: 440, height: 720 },
     defaultPos: { x: 880, y: 10 },
+  },
+  iexplore: {
+    id: "iexplore",
+    title: "Internet Explorer - YouTube",
+    icon: "search",
+    filename: "iexplore.exe",
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    zIndex: 11,
+    position: { x: 210, y: 30 },
+    size: { width: 840, height: 600 },
+    defaultSize: { width: 840, height: 600 },
+    defaultPos: { x: 210, y: 30 },
+    isHidden: true,
   },
 }
 

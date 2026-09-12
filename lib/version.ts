@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.5"
-export const APP_BUILD = "2026.09.11"
+export const APP_VERSION = "v2.3.6"
+export const APP_BUILD = "2026.09.12"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.6",
+    date: "12 Sep 2026",
+    codename: "Internet Explorer 98, Pantry Navigation Split & Clean Counter Badges",
+    changes: [
+      "Peluncuran aplikasi Internet Explorer (iexplore.exe) dengan YouTube video player retro, background audio persistence, pencarian video, dan preset kategori.",
+      "Pemisahan navigasi pemilih bulan di Pantry ke Tab Rekap dan Riwayat, mengunci Tab Katalog pada konsumsi bulan berjalan secara real-time.",
+      "Standarisasi badge counter notifikasi ikon desktop (Vote, Pantry) menjadi angka ringkas polos tanpa embel-embel teks.",
+      "Perbaikan handling virtual keyboard dan taskbar viewport pada perangkat mobile.",
+      "Integrasi skill workflow otomatisasi rilis untuk percepatan build, versioning, commit, dan push.",
+    ],
+  },
   {
     version: "v2.3.5",
     date: "11 Sep 2026",

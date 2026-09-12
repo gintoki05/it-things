@@ -47,6 +47,8 @@ export function PantryApp() {
   const {
     items,
     logs,
+    currentMonthLogs,
+    currentMonthTotal,
     restocks,
     selectedPeriod,
     setSelectedPeriod,
@@ -129,7 +131,7 @@ export function PantryApp() {
   const currentMonth = getCurrentPeriodMonth()
   const isCurrentMonth = selectedPeriod === currentMonth
 
-  // Month navigation
+  // Month navigation (used in Rekap & Riwayat tabs)
   const handlePrevMonth = () => {
     const [y, m] = selectedPeriod.split("-").map(Number)
     const d = new Date(y, m - 2, 1)
@@ -145,12 +147,32 @@ export function PantryApp() {
   }
 
   // Quick Stats
-  const totalLogsCount = logs.reduce((sum, l) => sum + l.quantity, 0)
   const totalStockCount = items.reduce((sum, i) => sum + i.stockQty, 0)
   const memberSummaries = getMemberConsumptions(selectedItemId === "all" ? undefined : selectedItemId)
   const overquotaMembers = memberSummaries.filter((m) => m.isOverquota)
 
-  // Ambil 1 Cepat
+  // Overquota bulan berjalan (untuk banner status global)
+  const currentMonthOverquotaCount = React.useMemo(() => {
+    const userTakenMap: Record<string, Record<string, number>> = {}
+    for (const log of currentMonthLogs) {
+      if (!userTakenMap[log.userId]) userTakenMap[log.userId] = {}
+      userTakenMap[log.userId][log.itemId] = (userTakenMap[log.userId][log.itemId] || 0) + log.quantity
+    }
+    let count = 0
+    for (const [, itemMap] of Object.entries(userTakenMap)) {
+      let isOver = false
+      for (const item of items) {
+        if ((itemMap[item.id] || 0) > item.monthlyQuota) {
+          isOver = true
+          break
+        }
+      }
+      if (isOver) count++
+    }
+    return count
+  }, [currentMonthLogs, items])
+
+  // Ambil 1 Cepat (Selalu catat ke bulan berjalan)
   const handleQuickTake = async (item: PantryItem) => {
     if (isGuest) {
       showStatus("Mode Tamu: Silakan login dengan Google untuk mencatat.", "error")
@@ -164,6 +186,7 @@ export function PantryApp() {
     const res = await takeItem({
       itemId: item.id,
       quantity: 1,
+      periodMonth: currentMonth,
       notes: isExceeding ? "Ambil melebihi kuota bulanan" : undefined,
     })
     setIsSubmittingTake(false)
@@ -182,7 +205,7 @@ export function PantryApp() {
     }
   }
 
-  // Submit modal ambil
+  // Submit modal ambil (Selalu catat ke bulan berjalan)
   const handleConfirmTake = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!takeModalItem) return
@@ -209,6 +232,7 @@ export function PantryApp() {
     const res = await takeItem({
       itemId: takeModalItem.id,
       quantity: takeQty,
+      periodMonth: currentMonth,
       notes: takeNotes.trim() || undefined,
       targetUserId: targetId,
       targetUserName: targetName,
@@ -368,40 +392,13 @@ export function PantryApp() {
         </div>
       )}
 
-      {/* Top Banner: Period Selector & Quick Stats */}
+      {/* Top Banner: Active Period & Quick Stats */}
       <div className="bg-[#EAEFF5] border border-[#B0C0D0] p-2 rounded-[3px] flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
         <div className="flex items-center gap-2">
-          <div className="flex items-center bg-white border border-[#A0B0C0] rounded-[2px] shadow-inner px-1 py-0.5">
-            <button
-              type="button"
-              onClick={handlePrevMonth}
-              title="Bulan Sebelumnya"
-              className="p-1 hover:bg-[#D8E4F0] rounded text-[#1E4E8C] active:scale-95"
-            >
-              <ChevronLeft className="size-4" />
-            </button>
-            <span className="px-2 font-bold min-w-[140px] text-center text-[#1E4E8C]">
-              {formatPeriodMonthDisplay(selectedPeriod)}
-            </span>
-            <button
-              type="button"
-              onClick={handleNextMonth}
-              title="Bulan Berikutnya"
-              className="p-1 hover:bg-[#D8E4F0] rounded text-[#1E4E8C] active:scale-95"
-            >
-              <ChevronRight className="size-4" />
-            </button>
+          <div className="flex items-center gap-1.5 bg-white border border-[#A0B0C0] rounded-[2px] shadow-inner px-2.5 py-1 text-[#1E4E8C] font-bold">
+            <Calendar className="size-3.5 text-[#1E4E8C]" />
+            <span>Periode Aktif: {formatPeriodMonthDisplay(currentMonth)}</span>
           </div>
-
-          {!isCurrentMonth && (
-            <button
-              type="button"
-              onClick={() => setSelectedPeriod(currentMonth)}
-              className="px-2 py-1 bg-[#1E4E8C] text-white rounded-[2px] text-[10px] font-bold border border-[#102A45] shadow-[1px_1px_0px_#102A45] active:translate-y-px"
-            >
-              Bulan Ini
-            </button>
-          )}
         </div>
 
         {/* Global Summary */}
@@ -424,13 +421,13 @@ export function PantryApp() {
           <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded border border-[#CBD5E1]">
             <Package className="size-3.5 text-emerald-600" />
             <span>Diambil Bulan Ini:</span>
-            <strong className="text-emerald-700">{totalLogsCount}</strong>
+            <strong className="text-emerald-700">{currentMonthTotal}</strong>
           </div>
-          {overquotaMembers.length > 0 && (
+          {currentMonthOverquotaCount > 0 && (
             <div className="flex items-center gap-1.5 bg-red-100 px-2 py-1 rounded border border-red-300 text-red-700 animate-pulse">
               <ShieldAlert className="size-3.5" />
               <span>Overquota:</span>
-              <strong className="font-black">{overquotaMembers.length} Orang</strong>
+              <strong className="font-black">{currentMonthOverquotaCount} Orang</strong>
             </div>
           )}
           <RetroActionButton
@@ -568,7 +565,7 @@ export function PantryApp() {
                     <th className="p-2.5 text-left">Item / Makanan</th>
                     <th className="p-2.5 text-left">Kategori</th>
                     <th className="p-2.5 text-center">Sisa Stok</th>
-                    <th className="p-2.5 text-center">Jatah Kamu ({formatPeriodMonthDisplay(selectedPeriod)})</th>
+                    <th className="p-2.5 text-center">Jatah Kamu ({formatPeriodMonthDisplay(currentMonth)})</th>
                     <th className="p-2.5 text-center">Status Kuota</th>
                     <th className="p-2.5 text-right">Aksi Ambil</th>
                   </tr>
@@ -773,9 +770,49 @@ export function PantryApp() {
 
           {/* Member List Cards */}
           <div className="bg-white border border-[#CBD5E1] rounded-[3px] overflow-hidden shadow-sm">
-            <div className="bg-[#EAEFF5] border-b border-[#CBD5E1] px-3 py-2 text-xs font-mono font-bold text-[#1E4E8C] flex items-center justify-between">
-              <span>REKAP KONSUMSI MEMBER ({memberSummaries.length} Orang Tercatat)</span>
-              <span className="text-[10px] text-slate-500">Periode: {selectedPeriod}</span>
+            <div className="bg-[#EAEFF5] border-b border-[#CBD5E1] px-3 py-2 text-xs font-mono font-bold text-[#1E4E8C] flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span>REKAP KONSUMSI MEMBER ({memberSummaries.length} Orang Tercatat)</span>
+                {!isCurrentMonth && (
+                  <span className="bg-amber-100 text-amber-800 border border-amber-300 text-[10px] px-1.5 py-0.5 rounded font-bold">
+                    Mode Arsip
+                  </span>
+                )}
+              </div>
+
+              {/* Month Navigation */}
+              <div className="flex items-center gap-1.5">
+                <div className="flex items-center bg-white border border-[#A0B0C0] rounded-[2px] shadow-inner px-1 py-0.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={handlePrevMonth}
+                    title="Bulan Sebelumnya"
+                    className="p-1 hover:bg-[#D8E4F0] rounded text-[#1E4E8C] active:scale-95 cursor-pointer"
+                  >
+                    <ChevronLeft className="size-3.5" />
+                  </button>
+                  <span className="px-2 font-bold min-w-[130px] text-center text-[#1E4E8C]">
+                    {formatPeriodMonthDisplay(selectedPeriod)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleNextMonth}
+                    title="Bulan Berikutnya"
+                    className="p-1 hover:bg-[#D8E4F0] rounded text-[#1E4E8C] active:scale-95 cursor-pointer"
+                  >
+                    <ChevronRight className="size-3.5" />
+                  </button>
+                </div>
+                {!isCurrentMonth && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPeriod(currentMonth)}
+                    className="px-2 py-1 bg-[#1E4E8C] text-white rounded-[2px] text-[10px] font-bold border border-[#102A45] shadow-[1px_1px_0px_#102A45] active:translate-y-px cursor-pointer"
+                  >
+                    Bulan Ini
+                  </button>
+                )}
+              </div>
             </div>
 
             {memberSummaries.length === 0 ? (
@@ -859,9 +896,49 @@ export function PantryApp() {
       {/* ============================================================ */}
       {activeTab === "riwayat" && (
         <div className="bg-white border border-[#CBD5E1] rounded-[3px] overflow-hidden shadow-sm">
-          <div className="bg-[#EAEFF5] border-b border-[#CBD5E1] px-3 py-2 text-xs font-mono font-bold text-[#1E4E8C] flex items-center justify-between">
-            <span>RIWAYAT PENGAMBILAN ({logs.length} Transaksi)</span>
-            <span className="text-[10px] text-slate-500">Urutan Waktu Terkini</span>
+          <div className="bg-[#EAEFF5] border-b border-[#CBD5E1] px-3 py-2 text-xs font-mono font-bold text-[#1E4E8C] flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span>RIWAYAT PENGAMBILAN ({logs.length} Transaksi)</span>
+              {!isCurrentMonth && (
+                <span className="bg-amber-100 text-amber-800 border border-amber-300 text-[10px] px-1.5 py-0.5 rounded font-bold">
+                  Arsip: {formatPeriodMonthDisplay(selectedPeriod)}
+                </span>
+              )}
+            </div>
+
+            {/* Month Navigation */}
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center bg-white border border-[#A0B0C0] rounded-[2px] shadow-inner px-1 py-0.5 text-xs">
+                <button
+                  type="button"
+                  onClick={handlePrevMonth}
+                  title="Bulan Sebelumnya"
+                  className="p-1 hover:bg-[#D8E4F0] rounded text-[#1E4E8C] active:scale-95 cursor-pointer"
+                >
+                  <ChevronLeft className="size-3.5" />
+                </button>
+                <span className="px-2 font-bold min-w-[130px] text-center text-[#1E4E8C]">
+                  {formatPeriodMonthDisplay(selectedPeriod)}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleNextMonth}
+                  title="Bulan Berikutnya"
+                  className="p-1 hover:bg-[#D8E4F0] rounded text-[#1E4E8C] active:scale-95 cursor-pointer"
+                >
+                  <ChevronRight className="size-3.5" />
+                </button>
+              </div>
+              {!isCurrentMonth && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedPeriod(currentMonth)}
+                  className="px-2 py-1 bg-[#1E4E8C] text-white rounded-[2px] text-[10px] font-bold border border-[#102A45] shadow-[1px_1px_0px_#102A45] active:translate-y-px cursor-pointer"
+                >
+                  Bulan Ini
+                </button>
+              )}
+            </div>
           </div>
 
           {logs.length === 0 ? (

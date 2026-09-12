@@ -10,9 +10,16 @@ interface DesktopWindowProps {
   children: React.ReactNode
   className?: string
   bodyClassName?: string
+  keepMountedOnMinimize?: boolean
 }
 
-export function DesktopWindow({ id, children, className, bodyClassName }: DesktopWindowProps) {
+export function DesktopWindow({
+  id,
+  children,
+  className,
+  bodyClassName,
+  keepMountedOnMinimize = false,
+}: DesktopWindowProps) {
   const {
     windows,
     activeWindowId,
@@ -62,7 +69,11 @@ export function DesktopWindow({ id, children, className, bodyClassName }: Deskto
     }
   }, [])
 
-  if (!win || !win.isOpen || win.isMinimized) {
+  if (!win || !win.isOpen || win.isHidden) {
+    return null
+  }
+
+  if (win.isMinimized && !keepMountedOnMinimize) {
     return null
   }
 
@@ -208,6 +219,7 @@ export function DesktopWindow({ id, children, className, bodyClassName }: Deskto
       style={{
         ...windowStyle,
         willChange: isDragging ? "transform" : "auto",
+        display: win.isMinimized ? "none" : undefined,
       }}
       className={cn(
         "retro-window-frame flex flex-col rounded-[4px] border-2 select-none overflow-hidden",
@@ -215,6 +227,7 @@ export function DesktopWindow({ id, children, className, bodyClassName }: Deskto
         "border-t-[#E8EEF5] border-l-[#E8EEF5] border-r-[#5E7287] border-b-[#5E7287] bg-[#D4DDE6] shadow-[2px_2px_12px_rgba(0,0,0,0.35)]",
         isActive ? "ring-1 ring-[#1A365D]/40" : "opacity-95",
         isDragging && "shadow-[4px_8px_24px_rgba(0,0,0,0.45)] cursor-move",
+        win.isMinimized && "hidden pointer-events-none",
         className
       )}
     >

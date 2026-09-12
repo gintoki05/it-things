@@ -17,6 +17,7 @@ const ITEM_GRID_POSITIONS: Record<AppId, string> = {
   kas: "col-start-2 row-start-2",
   pantry: "col-start-2 row-start-3",
   lapak: "col-start-2 row-start-4",
+  iexplore: "col-start-1 row-start-5",
 }
 
 export function DesktopIcons() {
@@ -91,17 +92,17 @@ export function DesktopIcons() {
               {!item.isComingSoon && item.id === "vote" && activeVoteCount > 0 && (
                 <span
                   title={`${activeVoteCount} Poll Aktif`}
-                  className="absolute -top-1.5 -right-2 bg-emerald-500 text-slate-950 font-mono text-[8px] font-black px-1 py-0.5 rounded border border-emerald-600 shadow leading-none uppercase"
+                  className="absolute -top-1.5 -right-2 bg-emerald-500 text-slate-950 font-mono text-[9px] font-black min-w-[16px] text-center px-1 py-0.5 rounded border border-emerald-600 shadow leading-none"
                 >
-                  {activeVoteCount > 1 ? `${activeVoteCount} AKTIF` : "1 AKTIF"}
+                  {activeVoteCount}
                 </span>
               )}
               {!item.isComingSoon && item.id === "pantry" && activePantryCount > 0 && (
                 <span
                   title={`${activePantryCount} Item Pantry Aktif`}
-                  className="absolute -top-1.5 -right-2 bg-emerald-500 text-slate-950 font-mono text-[8px] font-black px-1 py-0.5 rounded border border-emerald-600 shadow leading-none uppercase"
+                  className="absolute -top-1.5 -right-2 bg-emerald-500 text-slate-950 font-mono text-[9px] font-black min-w-[16px] text-center px-1 py-0.5 rounded border border-emerald-600 shadow leading-none"
                 >
-                  {activePantryCount > 1 ? `${activePantryCount} AKTIF` : "1 AKTIF"}
+                  {activePantryCount}
                 </span>
               )}
               {!item.isComingSoon && item.id === "chat" && unreadChatCount > 0 && (
