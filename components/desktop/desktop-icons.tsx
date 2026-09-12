@@ -12,15 +12,16 @@ const ITEM_GRID_POSITIONS: Record<AppId, string> = {
   vote: "col-start-1 row-start-2",
   chat: "col-start-1 row-start-3",
   game: "col-start-1 row-start-4",
-  iexplore: "col-start-1 row-start-5",
+  team: "col-start-1 row-start-5",
   splitbill: "col-start-2 row-start-1",
   kas: "col-start-2 row-start-2",
   pantry: "col-start-2 row-start-3",
   lapak: "col-start-2 row-start-4",
-  wheel: "col-start-2 row-start-5",
-  wordle: "col-start-3 row-start-1",
-  paintwar: "col-start-3 row-start-2",
-  team: "col-start-3 row-start-3",
+  winamp: "col-start-2 row-start-5",
+  wordle: "",
+  paintwar: "",
+  wheel: "",
+  iexplore: "",
 }
 
 export function DesktopIcons() {
@@ -49,7 +50,7 @@ export function DesktopIcons() {
   }
 
   return (
-    <div className="absolute top-4 left-4 grid grid-flow-col grid-rows-5 auto-cols-max gap-y-4 gap-x-2 select-none z-0">
+    <div className="absolute top-3 sm:top-4 left-3 sm:left-4 grid grid-flow-col grid-rows-5 auto-cols-max gap-y-2.5 sm:gap-y-3.5 gap-x-2 select-none z-0">
       {items.map((item) => {
         const isSelected = selectedId === item.id
 
@@ -133,7 +134,7 @@ export function DesktopIcons() {
                   {unreadChatCount > 99 ? "99+" : unreadChatCount}
                 </span>
               )}
-              {!item.isComingSoon && item.id === "game" && activePaintWarCount > 0 && (
+              {!item.isComingSoon && (item.id === "game" || item.id === "paintwar") && activePaintWarCount > 0 && (
                 <span
                   title={`${activePaintWarCount} Pemain Online di Paint War`}
                   className="absolute -top-1.5 -right-2 bg-purple-600 text-white font-mono text-[9px] font-black min-w-[16px] text-center px-1 py-0.5 rounded border border-purple-400 shadow leading-none animate-pulse"

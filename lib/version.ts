@@ -5,12 +5,26 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.11"
+export const APP_VERSION = "v2.3.12"
 export const APP_BUILD = "2026.09.12"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.12",
+    date: "12 Sep 2026",
+    codename: "Winamp 2.91 Media Player with CRT Video Display & 2-Way Sync",
+    changes: [
+      "Peluncuran aplikasi pemutar media retro Winamp 2.91 (winamp.exe) dengan green LCD marquee, spectrum equalizer, volume control, dan drawer playlist.",
+      "Layar CRT Video Display (AVS) dengan 4 filter retro: CRT 90s scanlines, VHS Tape OSD, Matrix Green Terminal, dan Normal.",
+      "Input Cepat & Standby Terminal Langsung di Layar CRT: Memungkinkan paste link YouTube langsung di tengah monitor tanpa perlu scroll.",
+      "Sinkronisasi 2-Arah via YouTube IFrame API: Slider volume Winamp mengontrol volume YouTube real-time, serta aksi pause/play langsung di video tersinkronisasi otomatis ke Winamp.",
+      "Spektrum Equalizer Reaktif: Animasi bar spektrum yang merespons volume suara dan langsung rata saat di-pause atau di-mute.",
+      "Dialog Konfirmasi Hapus Retro: Menggunakan standar ConfirmDialog (HAPUS_LAGU.EXE dan KOSONGKAN_PLAYLIST.EXE) dengan RetroActionButton.",
+      "Integrasi Shortcut Desktop & Taskbar Ticker: Shortcut Winamp dan Wordle di desktop serta running track ticker di taskbar.",
+    ],
+  },
   {
     version: "v2.3.11",
     date: "12 Sep 2026",

@@ -34,6 +34,8 @@ import { IExploreApp } from "@/components/apps/iexplore-app"
 import { PaintWarApp } from "@/components/apps/paint-war-app"
 import { GameApp } from "@/components/apps/game-app"
 import { WordleApp } from "@/components/apps/wordle-app"
+import { WinampApp } from "@/components/apps/winamp-app"
+import { WinampProvider } from "@/lib/winamp-store"
 
 const MemoizedReadmeApp = React.memo(ReadmeApp)
 const MemoizedVoteApp = React.memo(VoteApp)
@@ -48,6 +50,7 @@ const MemoizedIExploreApp = React.memo(IExploreApp)
 const MemoizedPaintWarApp = React.memo(PaintWarApp)
 const MemoizedGameApp = React.memo(GameApp)
 const MemoizedWordleApp = React.memo(WordleApp)
+const MemoizedWinampApp = React.memo(WinampApp)
 const MemoizedDesktopIcons = React.memo(DesktopIcons)
 const MemoizedTeamWidget = React.memo(TeamWidget)
 const MemoizedStickyNoteWidget = React.memo(StickyNoteWidget)
@@ -226,6 +229,11 @@ function DesktopWorkspace() {
         <MemoizedWordleApp />
       </DesktopWindow>
 
+      {/* Retro Window: winamp.exe (Winamp 2.91 Media Player) */}
+      <DesktopWindow id="winamp" keepMountedOnMinimize bodyClassName="p-0 overflow-hidden flex flex-col bg-[#1C1C1C]">
+        <MemoizedWinampApp />
+      </DesktopWindow>
+
       {/* Floating Retro Team Widget */}
       <MemoizedTeamWidget />
 
@@ -288,11 +296,13 @@ export default function Page() {
     <AuthProvider>
       <NotificationProvider>
         <PresenceProvider>
-          <DesktopProvider>
-            <WallpaperProvider>
-              <DesktopWorkspace />
-            </WallpaperProvider>
-          </DesktopProvider>
+          <WinampProvider>
+            <DesktopProvider>
+              <WallpaperProvider>
+                <DesktopWorkspace />
+              </WallpaperProvider>
+            </DesktopProvider>
+          </WinampProvider>
         </PresenceProvider>
       </NotificationProvider>
     </AuthProvider>

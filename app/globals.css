@@ -191,4 +191,33 @@
 
 .animate-marquee:hover {
   animation-play-state: paused;
+}
+
+/* Retro Windows 98 Scrollbar */
+.retro-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #CBD5E1 #E5E9EE;
+}
+
+.retro-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.retro-scrollbar::-webkit-scrollbar-track {
+  background: #E5E9EE;
+  box-shadow: inset 1px 1px 0px #7D8E9E;
+}
+
+.retro-scrollbar::-webkit-scrollbar-thumb {
+  background: #D4DDE6;
+  border-top: 1px solid #FFFFFF;
+  border-left: 1px solid #FFFFFF;
+  border-right: 1px solid #5E7287;
+  border-bottom: 1px solid #5E7287;
+  box-shadow: inset -1px -1px 0px #102A45;
+}
+
+.retro-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #C4D0DC;
 }

@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
 
-export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "wordle"
+export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "wordle" | "winamp"
 
 export interface WindowState {
   id: AppId
@@ -52,7 +52,7 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     title: "Notepad - README.txt",
     icon: "task",
     filename: "README.txt",
-    isOpen: true,
+    isOpen: false,
     isMinimized: false,
     isMaximized: false,
     zIndex: 15,
@@ -66,7 +66,7 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     title: "Vote.exe - Poll & Vote Groups",
     icon: "vote",
     filename: "vote.exe",
-    isOpen: true,
+    isOpen: false,
     isMinimized: false,
     isMaximized: false,
     zIndex: 10,
@@ -160,7 +160,7 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 740, height: 560 },
     defaultSize: { width: 740, height: 560 },
     defaultPos: { x: 295, y: 104 },
-    hideFromDesktop: true,
+    hideFromDesktop: false,
   },
   chat: {
     id: "chat",
@@ -233,20 +233,33 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 440, height: 620 },
     defaultSize: { width: 440, height: 620 },
     defaultPos: { x: 260, y: 50 },
-    hideFromDesktop: false,
+    hideFromDesktop: true,
+  },
+  winamp: {
+    id: "winamp",
+    title: "WINAMP.EXE - Winamp 2.91 Media Player",
+    icon: "📻",
+    filename: "winamp.exe",
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    zIndex: 14,
+    position: { x: 260, y: 30 },
+    size: { width: 540, height: 680 },
+    defaultSize: { width: 540, height: 680 },
+    defaultPos: { x: 260, y: 30 },
   },
 }
 
 export function DesktopProvider({ children }: { children: React.ReactNode }) {
   const { isAdmin } = useAuth()
   const [windows, setWindows] = React.useState<Record<AppId, WindowState>>(INITIAL_WINDOWS)
-  const [activeWindowId, setActiveWindowId] = React.useState<AppId | null>("readme")
+  const [activeWindowId, setActiveWindowId] = React.useState<AppId | null>(null)
   const [topZIndex, setTopZIndex] = React.useState(20)
   const [comingSoonApp, setComingSoonApp] = React.useState<WindowState | null>(null)
   const [isAboutOpen, setIsAboutOpen] = React.useState(false)
 
-  // Tempatkan Chat.exe secara responsif di panel kanan desktop pada layar lebar
-  // Serta tangani Deep Link (?app=... atau ?id=...) saat pertama kali dibuka
+  // Otomatis buka app dari URL query params atau load default desktop layout
   React.useEffect(() => {
     if (typeof window === "undefined") return
 
@@ -274,14 +287,15 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
       "paintwar",
       "game",
       "wordle",
+      "winamp",
     ]
     const targetApp = requestedApp && validApps.includes(requestedApp) ? requestedApp : null
 
     if (targetApp) {
       setActiveWindowId(targetApp)
       setTopZIndex(25)
-    } else if (hasSeenReadme) {
-      setActiveWindowId("vote")
+    } else if (!isMobile) {
+      setActiveWindowId("chat")
     }
 
     setWindows((curr) => {

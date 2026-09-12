@@ -24,7 +24,8 @@ import {
   Info,
   Volume2,
   VolumeX,
-  Monitor
+  Monitor,
+  Music
 } from "lucide-react"
 import { EditProfileModal } from "@/components/auth/edit-profile-modal"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -35,6 +36,7 @@ import { TaskbarTicker } from "@/components/desktop/taskbar-ticker"
 import { usePicStore } from "@/lib/pic-store"
 import { useWallpaper } from "@/lib/wallpaper-store"
 import { usePresence } from "@/lib/presence-store"
+import { useWinamp } from "@/lib/winamp-store"
 
 interface TaskbarProps {
   onOpenLoginModal?: () => void
@@ -55,6 +57,7 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
     browserPermission,
   } = useNotification()
   const { onlineCount, onlineUsers } = usePresence()
+  const { currentTrack, isPlaying: isWinampPlaying } = useWinamp()
 
   const onlineTooltip = React.useMemo(() => {
     if (onlineUsers.length === 0) return "Tidak ada pengguna online"
@@ -138,10 +141,10 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
       {isStartOpen && (
         <div
           ref={startMenuRef}
-          className="fixed bottom-[44px] left-1 z-50 w-72 max-h-[calc(100dvh-52px)] bg-[#D4DDE6] border-2 border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] shadow-2xl flex rounded-t-[3px] select-none overflow-y-auto overscroll-contain"
+          className="fixed bottom-[44px] left-1 z-50 w-80 max-w-[calc(100vw-8px)] max-h-[min(590px,calc(100dvh-52px))] bg-[#D4DDE6] border-2 border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] shadow-2xl flex rounded-t-[3px] select-none overflow-hidden"
         >
           {/* Windows 98 Style Vertical Banner */}
-          <div className="w-9 shrink-0 bg-gradient-to-t from-[#102A45] via-[#1E4E8C] to-[#2E6FB5] flex items-end justify-center pb-4 text-white font-mono font-black text-sm tracking-widest uppercase select-none">
+          <div className="w-9 shrink-0 bg-gradient-to-t from-[#102A45] via-[#1E4E8C] to-[#2E6FB5] flex items-end justify-center pb-4 text-white font-mono font-black text-sm tracking-widest uppercase select-none border-r border-[#5E7287]/40">
             <span
               style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
               className="tracking-widest flex items-center gap-2 text-blue-100"
@@ -151,10 +154,17 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
           </div>
 
           {/* Start Menu Content */}
-          <div className="flex-1 flex flex-col p-1.5 text-xs text-[#14253D] space-y-1">
-            {/* User Profile Header */}
-            <div className="p-2 bg-white/60 rounded border border-[#A4B5C6] flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="flex-1 flex flex-col min-w-0 min-h-0 text-xs text-[#14253D]">
+            {/* User Profile Header (pinned at top) */}
+            <div className="p-2 m-1.5 mb-1 bg-white/70 rounded border border-[#A4B5C6] flex items-center justify-between gap-2 shrink-0 shadow-2xs">
+              <div
+                className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer"
+                onClick={() => {
+                  setIsStartOpen(false)
+                  setIsProfileModalOpen(true)
+                }}
+                title="Klik untuk Edit Profil"
+              >
                 <UserAvatar
                   src={user?.avatarUrl}
                   name={user?.name || "IT"}
@@ -162,18 +172,18 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                   textClass="text-xs"
                 />
                 <div className="min-w-0 flex-1">
-                  <div className="font-bold text-[11px] truncate">{user?.name || "Tamu Internal IT"}</div>
-                  <div className="flex items-center gap-1 text-[10px] text-gray-600">
+                  <div className="font-bold text-[11px] truncate leading-tight">{user?.name || "Tamu Internal IT"}</div>
+                  <div className="flex items-center gap-1 text-[10px] text-gray-600 mt-0.5">
                     {isGuest ? (
-                      <span className="text-amber-800 font-bold flex items-center gap-1 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">
-                        <Eye className="size-3" /> Mode Tamu (Read-Only)
+                      <span className="text-amber-800 font-bold flex items-center gap-1 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300 text-[9px]">
+                        <Eye className="size-2.5" /> Mode Tamu (Read-Only)
                       </span>
                     ) : isAdmin ? (
-                      <span className="text-purple-700 font-semibold flex items-center gap-0.5">
+                      <span className="text-purple-700 font-semibold flex items-center gap-0.5 text-[10px]">
                         <ShieldCheck className="size-3" /> Administrator
                       </span>
                     ) : (
-                      <span>Anggota Tim</span>
+                      <span className="text-gray-600 font-medium text-[10px]">Anggota Tim</span>
                     )}
                   </div>
                 </div>
@@ -185,15 +195,15 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                   setIsProfileModalOpen(true)
                 }}
                 title="Edit Profil & Nama"
-                className="p-1 hover:bg-[#A4B5C6]/40 rounded text-gray-600 hover:text-[#1E4E8C] transition-colors shrink-0"
+                className="p-1.5 hover:bg-[#A4B5C6]/40 active:bg-[#A4B5C6]/60 rounded text-gray-600 hover:text-[#1E4E8C] transition-colors shrink-0"
               >
                 <Edit3 className="size-3.5" />
               </button>
             </div>
 
-            {/* Apps List */}
-            <div className="py-1 border-t border-[#A4B5C6]/60">
-              <div className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-500 font-mono">
+            {/* Apps List (Scrollable if overflowing) */}
+            <div className="flex-1 min-h-0 overflow-y-auto px-1.5 py-1 border-t border-[#A4B5C6]/60 retro-scrollbar space-y-0.5">
+              <div className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-500 font-mono sticky top-0 bg-[#D4DDE6]/95 backdrop-blur-xs z-10">
                 Programs (.exe)
               </div>
               {programItems.map((item) => (
@@ -205,7 +215,7 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                     setIsStartOpen(false)
                   }}
                   className={cn(
-                    "w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-[2px] transition-colors text-left",
+                    "w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-[2px] transition-colors text-left group",
                     item.isComingSoon
                       ? "hover:bg-[#1E4E8C]/20 text-[#14253D]"
                       : "hover:bg-[#1E4E8C] hover:text-white"
@@ -213,46 +223,94 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                 >
                   <RetroIcon name={item.icon || item.id} iconSize={32} className="size-5 object-contain shrink-0" />
                   <div className="min-w-0 flex-1">
-                    <div className="font-bold text-[11px] flex items-center justify-between gap-1">
+                    <div className="font-bold text-[11px] flex items-center justify-between gap-1 leading-snug">
                       <span className="truncate">{item.filename}</span>
                       {item.isComingSoon && (
-                        <span className="text-[8px] font-mono font-bold bg-amber-100 text-amber-800 border border-amber-300 px-1 py-0.2 rounded shrink-0">
+                        <span className="text-[8px] font-mono font-bold bg-amber-100 text-amber-800 border border-amber-300 px-1 py-0.2 rounded shrink-0 group-hover:bg-amber-200">
                           Soon
                         </span>
                       )}
                     </div>
-                    <div className="text-[9px] opacity-80 truncate">{item.title.split(" - ")[1]}</div>
+                    <div className="text-[9px] opacity-75 truncate group-hover:opacity-90">{item.title.split(" - ")[1]}</div>
                   </div>
                 </button>
               ))}
             </div>
 
-            {/* Role Switcher or Guest Notice */}
-            {isGuest ? (
-              <div className="p-2 bg-amber-50 border border-amber-300 rounded text-[10px] space-y-1">
-                <div className="font-bold text-amber-900 flex items-center gap-1">
-                  <ShieldAlert className="size-3.5 text-amber-700" /> Mode Akses Tamu
-                </div>
-                <p className="text-amber-800 text-[9px] leading-tight">
-                  Status Anda hanya dapat melihat data (Read-Only). Masuk dengan Google untuk berpartisipasi.
-                </p>
-              </div>
-            ) : canSwitchRole ? (
-              <div className="p-1.5 bg-[#E8EEF5] border border-[#A4B5C6] rounded text-[10px]">
-                <div className="font-bold flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-1">
-                    <span>Mode Peran:</span>
-                    {user?.role !== (user?.realRole || "admin") && (
-                      <span className="text-[8px] bg-amber-100 text-amber-800 border border-amber-300 px-1 rounded font-mono font-normal">
-                        Simulasi
-                      </span>
-                    )}
+            {/* Bottom Section: Role Switcher & System Actions (Pinned at bottom) */}
+            <div className="shrink-0 p-1.5 pt-1 border-t border-[#A4B5C6]/80 bg-[#CAD6E2]/40 space-y-1">
+              {/* Role Switcher or Guest Notice */}
+              {isGuest ? (
+                <div className="p-1.5 bg-amber-50 border border-amber-300 rounded text-[10px] space-y-0.5">
+                  <div className="font-bold text-amber-900 flex items-center gap-1 text-[10px]">
+                    <ShieldAlert className="size-3 text-amber-700" /> Mode Akses Tamu
                   </div>
+                  <p className="text-amber-800 text-[9px] leading-tight">
+                    Status Anda hanya dapat melihat data (Read-Only). Masuk dengan Google untuk berpartisipasi.
+                  </p>
+                </div>
+              ) : canSwitchRole ? (
+                <div className="p-1.5 bg-[#E8EEF5] border border-[#A4B5C6] rounded text-[10px]">
+                  <div className="font-bold flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-1">
+                      <span>Mode Peran:</span>
+                      {user?.role !== (user?.realRole || "admin") && (
+                        <span className="text-[8px] bg-amber-100 text-amber-800 border border-amber-300 px-1 rounded font-mono font-normal">
+                          Simulasi
+                        </span>
+                      )}
+                    </div>
+                    <span
+                      className={
+                        isAdmin
+                          ? "text-purple-700 font-bold flex items-center gap-1 text-[10px]"
+                          : "text-gray-600 font-bold flex items-center gap-1 text-[10px]"
+                      }
+                    >
+                      {isAdmin ? (
+                        <>
+                          <ShieldCheck className="size-3 text-purple-700" /> Admin
+                        </>
+                      ) : (
+                        <>
+                          <User className="size-3 text-gray-600" /> Anggota
+                        </>
+                      )}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setDemoUserRole && setDemoUserRole("member")}
+                      className={`py-0.5 px-1 border rounded text-[9px] font-mono text-center transition-colors ${
+                        user?.role === "member"
+                          ? "bg-[#1E4E8C] text-white font-bold border-[#102A45]"
+                          : "bg-white text-gray-700 hover:bg-gray-100 border-[#7D8E9E]"
+                      }`}
+                    >
+                      Member
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDemoUserRole && setDemoUserRole("admin")}
+                      className={`py-0.5 px-1 border rounded text-[9px] font-mono text-center transition-colors ${
+                        user?.role === "admin"
+                          ? "bg-purple-700 text-white font-bold border-purple-900"
+                          : "bg-white text-gray-700 hover:bg-gray-100 border-[#7D8E9E]"
+                      }`}
+                    >
+                      Admin
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-1.5 bg-[#E8EEF5] border border-[#A4B5C6] rounded text-[10px] flex items-center justify-between">
+                  <span className="font-semibold text-gray-700">Peran Akun:</span>
                   <span
                     className={
                       isAdmin
                         ? "text-purple-700 font-bold flex items-center gap-1"
-                        : "text-gray-600 font-bold flex items-center gap-1"
+                        : "text-[#1E4E8C] font-bold flex items-center gap-1"
                     }
                   >
                     {isAdmin ? (
@@ -261,111 +319,89 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                       </>
                     ) : (
                       <>
-                        <User className="size-3 text-gray-600" /> Anggota
+                        <User className="size-3 text-[#1E4E8C]" /> Anggota Tim
                       </>
                     )}
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setDemoUserRole && setDemoUserRole("member")}
-                    className={`py-0.5 px-1 border rounded text-[9px] font-mono text-center transition-colors ${
-                      user?.role === "member"
-                        ? "bg-[#1E4E8C] text-white font-bold border-[#102A45]"
-                        : "bg-white text-gray-700 hover:bg-gray-100 border-[#7D8E9E]"
-                    }`}
-                  >
-                    Member
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDemoUserRole && setDemoUserRole("admin")}
-                    className={`py-0.5 px-1 border rounded text-[9px] font-mono text-center transition-colors ${
-                      user?.role === "admin"
-                        ? "bg-purple-700 text-white font-bold border-purple-900"
-                        : "bg-white text-gray-700 hover:bg-gray-100 border-[#7D8E9E]"
-                    }`}
-                  >
-                    Admin
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="p-1.5 bg-[#E8EEF5] border border-[#A4B5C6] rounded text-[10px] flex items-center justify-between">
-                <span className="font-semibold text-gray-700">Peran Akun:</span>
-                <span
-                  className={
-                    isAdmin
-                      ? "text-purple-700 font-bold flex items-center gap-1"
-                      : "text-[#1E4E8C] font-bold flex items-center gap-1"
-                  }
+              )}
+
+              {/* System Actions */}
+              <div className="space-y-0.5 pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsStartOpen(false)
+                    openWallpaperDialog()
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[#1E4E8C] hover:text-white text-[#14253D] rounded-[2px] transition-colors text-left font-semibold text-[11px] group"
                 >
-                  {isAdmin ? (
-                    <>
-                      <ShieldCheck className="size-3 text-purple-700" /> Admin
-                    </>
-                  ) : (
-                    <>
-                      <User className="size-3 text-[#1E4E8C]" /> Anggota Tim
-                    </>
-                  )}
-                </span>
-              </div>
-            )}
+                  <Monitor className="size-3.5 text-[#1E4E8C] group-hover:text-white shrink-0" />
+                  <span>Pengaturan Tampilan (Wallpaper)...</span>
+                </button>
 
-            {/* Auth Action */}
-            <div className="pt-1 border-t border-[#A4B5C6]/60 space-y-0.5">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsStartOpen(false)
-                  openAboutDialog()
-                }}
-                className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[#A4B5C6]/30 text-[#14253D] rounded-[2px] transition-colors text-left font-semibold text-[11px]"
-              >
-                <Info className="size-3.5 text-[#1E4E8C]" />
-                <span>Tentang IT-Things ({APP_VERSION})...</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsStartOpen(false)
+                    lockApp()
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[#1E4E8C] hover:text-white text-[#14253D] rounded-[2px] transition-colors text-left font-semibold text-[11px] group"
+                >
+                  <Lock className="size-3.5 text-[#1E4E8C] group-hover:text-white shrink-0" />
+                  <span>Kunci Layar (Lock PIN)</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setIsStartOpen(false)
-                  lockApp()
-                }}
-                className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[#A4B5C6]/30 text-[#14253D] rounded-[2px] transition-colors text-left font-semibold text-[11px]"
-              >
-                <Lock className="size-3.5 text-[#1E4E8C]" />
-                <span>Kunci Layar (Lock PIN)</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsStartOpen(false)
+                    openAboutDialog()
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[#1E4E8C] hover:text-white text-[#14253D] rounded-[2px] transition-colors text-left font-semibold text-[11px] group"
+                >
+                  <Info className="size-3.5 text-[#1E4E8C] group-hover:text-white shrink-0" />
+                  <span>Tentang IT-Things ({APP_VERSION})...</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setIsStartOpen(false)
-                  setIsProfileModalOpen(true)
-                }}
-                className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[#A4B5C6]/30 text-[#14253D] rounded-[2px] transition-colors text-left font-semibold text-[11px]"
-              >
-                <Edit3 className="size-3.5 text-[#1E4E8C]" />
-                <span>Edit Profil & Nama...</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setIsStartOpen(false)
-                  openWallpaperDialog()
-                }}
-                className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[#A4B5C6]/30 text-[#14253D] rounded-[2px] transition-colors text-left font-semibold text-[11px]"
-              >
-                <Monitor className="size-3.5 text-[#1E4E8C]" />
-                <span>Pengaturan Tampilan (Wallpaper)...</span>
-              </button>
-
-              {isGuest ? (
-                <>
+                {isGuest ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsStartOpen(false)
+                        onOpenLoginModal?.()
+                      }}
+                      className="w-full flex items-center gap-2 px-2 py-1.5 bg-[#1E4E8C] text-white hover:bg-[#153A6B] rounded-[2px] transition-colors text-left font-semibold text-[11px]"
+                    >
+                      <LogIn className="size-3.5" />
+                      <span>Masuk dengan Google</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsStartOpen(false)
+                        setShowLogoutConfirm(true)
+                      }}
+                      className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[#C53030] hover:text-white text-[#14253D] rounded-[2px] transition-colors text-left font-semibold text-[11px]"
+                    >
+                      <LogOut className="size-3.5" />
+                      <span>Keluar Mode Tamu</span>
+                    </button>
+                  </>
+                ) : user ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsStartOpen(false)
+                      setShowLogoutConfirm(true)
+                    }}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[#C53030] hover:text-white text-[#14253D] rounded-[2px] transition-colors text-left font-semibold text-[11px]"
+                  >
+                    <LogOut className="size-3.5" />
+                    <span>Log Off {user.name.split(" ")[0]}...</span>
+                  </button>
+                ) : (
                   <button
                     type="button"
                     onClick={() => {
@@ -377,43 +413,8 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                     <LogIn className="size-3.5" />
                     <span>Masuk dengan Google</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsStartOpen(false)
-                      setShowLogoutConfirm(true)
-                    }}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[#C53030] hover:text-white rounded-[2px] transition-colors text-left font-semibold text-[11px]"
-                  >
-                    <LogOut className="size-3.5" />
-                    <span>Keluar Mode Tamu</span>
-                  </button>
-                </>
-              ) : user ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsStartOpen(false)
-                    setShowLogoutConfirm(true)
-                  }}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[#C53030] hover:text-white rounded-[2px] transition-colors text-left font-semibold text-[11px]"
-                >
-                  <LogOut className="size-3.5" />
-                  <span>Log Off {user.name.split(" ")[0]}...</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsStartOpen(false)
-                    onOpenLoginModal?.()
-                  }}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 bg-[#1E4E8C] text-white hover:bg-[#153A6B] rounded-[2px] transition-colors text-left font-semibold text-[11px]"
-                >
-                  <LogIn className="size-3.5" />
-                  <span>Masuk dengan Google</span>
-                </button>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -516,6 +517,19 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
 
         {/* Running Ticker Marquee for Lapak Teman / Promosi (Hidden on mobile < md) */}
         <TaskbarTicker className="hidden md:flex" />
+
+        {/* Winamp Background Audio Ticker (Hidden on small screens) */}
+        {currentTrack && isWinampPlaying && (
+          <button
+            type="button"
+            onClick={() => openWindow("winamp")}
+            title={`Sedang memutar di Winamp: ${currentTrack.title} (Klik untuk membuka)`}
+            className="hidden lg:flex items-center gap-1.5 h-7 px-2 bg-[#021402] hover:bg-[#032003] text-[#00FF41] font-mono text-[10px] border-2 border-t-[#007700] border-l-[#007700] border-r-black border-b-black rounded-[2px] cursor-pointer shadow-xs active:translate-y-px shrink-0 max-w-[220px] overflow-hidden"
+          >
+            <Music className="size-3 text-[#00FF41] animate-pulse shrink-0" />
+            <span className="truncate font-bold tracking-tight">♪ {currentTrack.title}</span>
+          </button>
+        )}
 
         {/* System Tray */}
         <div className="h-7 px-2 bg-[#CBD5E1] border border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] flex items-center gap-1.5 shrink-0 text-xs font-mono text-[#14253D]">

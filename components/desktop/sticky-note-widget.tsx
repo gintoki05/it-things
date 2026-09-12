@@ -34,7 +34,7 @@ interface Position {
 }
 
 const STORAGE_KEY_MINIMIZED = "it_things_sticky_note_minimized"
-const STORAGE_KEY_POSITION = "it_things_sticky_note_position"
+const STORAGE_KEY_POSITION = "it_things_sticky_note_position_v2"
 
 export function StickyNoteWidget() {
   const { memo, isLoading, isSaving, canManageMemo, updateMemo } = useMemoStore()
@@ -82,8 +82,8 @@ export function StickyNoteWidget() {
     const savedMin = localStorage.getItem(STORAGE_KEY_MINIMIZED)
     if (savedMin !== null) {
       setIsMinimized(savedMin === "true")
-    } else if (window.innerWidth < 768) {
-      setIsMinimized(true)
+    } else {
+      setIsMinimized(false)
     }
 
     const savedPos = localStorage.getItem(STORAGE_KEY_POSITION)
@@ -302,7 +302,7 @@ export function StickyNoteWidget() {
         aria-label="Papan Pengumuman Minimized"
         style={positionStyle}
         className={`absolute z-20 select-none animate-in fade-in duration-200 ${
-          !position ? "top-10 right-3 sm:top-12 sm:left-[190px] sm:right-auto" : ""
+          !position ? "top-12 left-1/2 -translate-x-1/2 sm:top-14 sm:left-[44%] sm:-translate-x-1/2" : ""
         }`}
       >
         <div
@@ -349,13 +349,13 @@ export function StickyNoteWidget() {
       aria-label="Papan Pengumuman & Lapak Tim"
       style={positionStyle}
       className={`absolute z-20 w-72 max-w-[calc(100vw-32px)] sm:w-80 bg-[#FFF9A6] border border-[#DCD36A] shadow-[4px_4px_14px_rgba(0,0,0,0.35)] rounded-[2px] select-none flex flex-col font-mono rotate-[-1deg] transition-transform hover:rotate-0 duration-150 animate-in fade-in ${
-        !position ? "top-10 right-3 sm:top-12 sm:left-[190px] sm:right-auto" : ""
+        !position ? "top-12 left-1/2 -translate-x-1/2 sm:top-14 sm:left-[44%] sm:-translate-x-1/2" : ""
       } ${isDragging ? "opacity-95 shadow-2xl scale-[1.01] cursor-grabbing" : ""}`}
     >
       {/* Visual Red Pushpin on Top Header (Klik ganda untuk reset posisi) */}
       <div
         onDoubleClick={handleResetPosition}
-        title="Klik ganda pin untuk kembalikan posisi ke default (samping kiri desktop)"
+        title="Klik ganda pin untuk kembalikan posisi ke default (tengah desktop)"
         className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 flex items-center justify-center cursor-pointer group"
       >
         <div className="size-4 rounded-full bg-gradient-to-br from-red-500 to-red-700 border border-black shadow-[1px_1px_2px_rgba(0,0,0,0.6)] flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -560,7 +560,7 @@ export function StickyNoteWidget() {
                     <button
                       type="button"
                       onClick={handleResetPosition}
-                      title="Kembalikan posisi memo ke default (samping kiri desktop)"
+                      title="Kembalikan posisi memo ke default (tengah desktop)"
                       className="text-[8px] text-amber-800 underline hover:text-black cursor-pointer ml-1"
                     >
                       Reset
