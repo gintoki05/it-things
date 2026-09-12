@@ -116,9 +116,9 @@ export function DesktopIcons() {
               {!item.isComingSoon && item.id === "chat" && unreadChatCount > 0 && (
                 <span
                   title={`${unreadChatCount} Pesan Belum Dibaca`}
-                  className="absolute -top-1.5 -right-2 bg-rose-500 text-white font-mono text-[8px] font-black px-1 py-0.5 rounded border border-rose-600 shadow leading-none uppercase animate-pulse"
+                  className="absolute -top-1.5 -right-2 bg-rose-500 text-white font-mono text-[9px] font-black min-w-[16px] text-center px-1 py-0.5 rounded border border-rose-600 shadow leading-none animate-pulse"
                 >
-                  {unreadChatCount > 99 ? "99+" : `${unreadChatCount} BARU`}
+                  {unreadChatCount > 99 ? "99+" : unreadChatCount}
                 </span>
               )}
             </div>

@@ -235,7 +235,7 @@ export function DesktopWindow({
       <div
         onPointerDown={handlePointerDown}
         className={cn(
-          "h-8 px-2 flex items-center justify-between font-mono text-xs font-bold shrink-0 cursor-move select-none",
+          "h-9 md:h-8 px-2 flex items-center justify-between font-mono text-xs font-bold shrink-0 cursor-move select-none",
           isActive
             ? "bg-gradient-to-r from-[#1E4E8C] via-[#2A65B2] to-[#1E4E8C] text-white shadow-inner"
             : "bg-[#8B9DAE] text-[#2C3E50]"
@@ -248,7 +248,7 @@ export function DesktopWindow({
 
         {/* Window controls: _ □ × */}
         <div 
-          className="flex items-center gap-1 shrink-0 font-mono ml-2"
+          className="flex items-center gap-1.5 md:gap-1 shrink-0 font-mono ml-2"
           onPointerDown={(e) => e.stopPropagation()}
         >
           <button
@@ -258,7 +258,7 @@ export function DesktopWindow({
               minimizeWindow(id)
             }}
             title="Minimize"
-            className="size-5 flex items-center justify-center text-[10px] font-bold bg-[#D4DDE6] text-[#14253D] border border-[#7D8E9E] border-t-white border-l-white active:border-t-[#7D8E9E] active:border-l-[#7D8E9E] active:border-r-white active:border-b-white rounded-[2px]"
+            className="size-8 md:size-5 flex items-center justify-center text-xs md:text-[10px] font-bold bg-[#D4DDE6] text-[#14253D] border border-[#7D8E9E] border-t-white border-l-white active:border-t-[#7D8E9E] active:border-l-[#7D8E9E] active:border-r-white active:border-b-white rounded-[2px]"
           >
             _
           </button>
@@ -270,7 +270,7 @@ export function DesktopWindow({
                 maximizeWindow(id)
               }}
               title={win.isMaximized ? "Restore" : "Maximize"}
-              className="size-5 flex items-center justify-center text-[10px] font-bold bg-[#D4DDE6] text-[#14253D] border border-[#7D8E9E] border-t-white border-l-white active:border-t-[#7D8E9E] active:border-l-[#7D8E9E] active:border-r-white active:border-b-white rounded-[2px]"
+              className="size-8 md:size-5 flex items-center justify-center text-xs md:text-[10px] font-bold bg-[#D4DDE6] text-[#14253D] border border-[#7D8E9E] border-t-white border-l-white active:border-t-[#7D8E9E] active:border-l-[#7D8E9E] active:border-r-white active:border-b-white rounded-[2px]"
             >
               {win.isMaximized ? "❐" : "□"}
             </button>
@@ -282,7 +282,7 @@ export function DesktopWindow({
               closeWindow(id)
             }}
             title="Close"
-            className="size-5 flex items-center justify-center text-[11px] font-bold bg-[#D4DDE6] hover:bg-[#C53030] hover:text-white text-[#14253D] border border-[#7D8E9E] border-t-white border-l-white active:border-t-[#7D8E9E] active:border-l-[#7D8E9E] rounded-[2px] transition-colors"
+            className="size-8 md:size-5 flex items-center justify-center text-sm md:text-[11px] font-bold bg-[#D4DDE6] hover:bg-[#C53030] hover:text-white text-[#14253D] border border-[#7D8E9E] border-t-white border-l-white active:border-t-[#7D8E9E] active:border-l-[#7D8E9E] rounded-[2px] transition-colors"
           >
             ×
           </button>

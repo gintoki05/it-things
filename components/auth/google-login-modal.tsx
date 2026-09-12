@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
-import { Lock, Mail, Key, User, Eye, EyeOff, AlertTriangle, AlertCircle, CheckCircle2, ShieldCheck, ArrowLeft, KeyRound } from "lucide-react"
+import { Lock, Mail, Key, User, Eye, EyeOff, AlertTriangle, AlertCircle, CheckCircle2, ShieldCheck, ArrowLeft, KeyRound, X } from "lucide-react"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 
 interface GoogleLoginModalProps {
@@ -165,19 +165,28 @@ export function GoogleLoginModal({ isOpen, onClose }: GoogleLoginModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] flex items-center justify-center p-4 select-none">
-      <div className="retro-window-frame max-w-md w-full rounded-[4px] overflow-hidden shadow-[6px_6px_0px_rgba(0,0,0,0.35)] flex flex-col bg-[#D4DDE6] border-2 border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287]">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] overflow-y-auto flex items-center justify-center p-3 sm:p-4 select-none min-h-full">
+      <div className="retro-window-frame max-w-md w-full my-auto rounded-[4px] overflow-hidden shadow-[6px_6px_0px_rgba(0,0,0,0.35)] flex flex-col max-h-[90dvh] bg-[#D4DDE6] border-2 border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287]">
         
         {/* Title Bar */}
-        <div className="retro-titlebar px-3 py-1.5 flex items-center justify-between font-mono text-xs font-bold text-white bg-gradient-to-r from-[#102A45] via-[#1E4E8C] to-[#2E6FB5]">
+        <div className="retro-titlebar px-3 py-1.5 flex items-center justify-between font-mono text-xs font-bold text-white bg-gradient-to-r from-[#102A45] via-[#1E4E8C] to-[#2E6FB5] shrink-0">
           <div className="flex items-center gap-2">
             <Lock className="size-3.5 text-blue-200" />
             <span>SECURITY_GATE.EXE — AUTENTIKASI PENGGUNA</span>
           </div>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="size-7 sm:size-4 min-w-[28px] sm:min-w-0 min-h-[28px] sm:min-h-0 bg-[#D4DDE6] text-[#14253D] hover:bg-[#C53030] hover:text-white flex items-center justify-center border border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] font-mono text-xs sm:text-[10px] font-bold active:translate-y-px cursor-pointer touch-manipulation ml-2"
+            >
+              <X className="size-3.5 sm:size-3" />
+            </button>
+          )}
         </div>
 
         {/* Navigation Tabs (Windows 98 Tab Style) */}
-        <div className="flex items-center px-3 pt-2 bg-[#D4DDE6] border-b border-[#A4B5C6] gap-1 font-mono text-xs">
+        <div className="flex items-center px-3 pt-2 bg-[#D4DDE6] border-b border-[#A4B5C6] gap-1 font-mono text-xs shrink-0 overflow-x-auto">
           <button
             type="button"
             onClick={() => {
@@ -235,7 +244,7 @@ export function GoogleLoginModal({ isOpen, onClose }: GoogleLoginModalProps) {
         </div>
 
         {/* Content Container */}
-        <div className="p-4 sm:p-5 bg-white space-y-4">
+        <div className="p-4 sm:p-5 bg-white space-y-4 overflow-y-auto flex-1">
           
           {/* TAB 1: EMAIL & PASSWORD */}
           {activeTab === "password" && (

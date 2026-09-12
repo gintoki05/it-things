@@ -119,13 +119,19 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    }
+  }
+  html,
   body {
-    @apply bg-background text-foreground;
-    }
+    height: 100dvh;
+    overflow-x: hidden;
+    overscroll-behavior: none;
+  }
   html {
     @apply font-sans;
-    }
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 
 /* Retro Utilities & 3D Bevels */

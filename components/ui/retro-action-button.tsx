@@ -126,9 +126,13 @@ export function RetroActionButton({
   const IconComponent = CustomIcon || config.icon
   const resolvedTooltip = tooltip || config.defaultTooltip
 
-  // Icon size mapping
+  // Icon size mapping (scaled slightly on mobile for balanced 32px touch target)
   const iconSizeClass =
-    size === "xs" ? "size-3" : size === "md" ? "size-4" : "size-3.5"
+    size === "xs"
+      ? "size-3.5 md:size-3"
+      : size === "md"
+        ? "size-4.5 md:size-4"
+        : "size-4 md:size-3.5"
 
   if (visual === "button") {
     const displayText = label || config.defaultLabel || ""
@@ -138,13 +142,13 @@ export function RetroActionButton({
         title={resolvedTooltip}
         disabled={disabled || isLoading}
         className={cn(
-          "inline-flex items-center justify-center gap-1.5 font-mono font-bold rounded-[2px] border transition-all cursor-pointer select-none active:translate-y-px disabled:opacity-50 disabled:pointer-events-none",
+          "inline-flex items-center justify-center gap-1.5 font-mono font-bold rounded-[2px] border transition-all cursor-pointer select-none active:translate-y-px disabled:opacity-50 disabled:pointer-events-none touch-manipulation",
           config.buttonBg,
           config.buttonBorder,
           config.buttonTextColor,
-          size === "xs" && "h-6 px-1.5 text-[10px]",
-          size === "sm" && "h-7 px-2 text-[11px] shadow-[1px_1px_0px_#CBD5E1]",
-          size === "md" && "h-8 px-2.5 text-xs shadow-[1px_1px_0px_#102A45]",
+          size === "xs" && "h-8 md:h-6 min-h-[32px] md:min-h-0 px-2.5 md:px-1.5 text-xs md:text-[10px]",
+          size === "sm" && "h-8 md:h-7 min-h-[32px] md:min-h-0 px-3 md:px-2 text-xs md:text-[11px] shadow-[1px_1px_0px_#CBD5E1]",
+          size === "md" && "h-9 md:h-8 min-h-[36px] md:min-h-0 px-3.5 md:px-2.5 text-xs shadow-[1px_1px_0px_#102A45]",
           className
         )}
         {...props}
@@ -161,20 +165,20 @@ export function RetroActionButton({
     )
   }
 
-  // Visual === "icon" (compact table action)
+  // Visual === "icon" (compact table action on desktop >= md, min 32px hit target on mobile < md)
   return (
     <button
       type="button"
       title={resolvedTooltip}
       disabled={disabled || isLoading}
       className={cn(
-        "inline-flex items-center justify-center rounded-[2px] border border-transparent transition-all cursor-pointer select-none active:scale-95 disabled:opacity-50 disabled:pointer-events-none",
+        "inline-flex items-center justify-center rounded-[2px] border border-transparent transition-all cursor-pointer select-none active:scale-95 disabled:opacity-50 disabled:pointer-events-none touch-manipulation",
         config.hoverBg,
         config.hoverBorder,
         config.iconColor,
-        size === "xs" && "size-5 p-0.5",
-        size === "sm" && "size-6 p-1",
-        size === "md" && "size-7 p-1.5",
+        size === "xs" && "size-8 md:size-5 min-w-[32px] min-h-[32px] md:min-w-0 md:min-h-0 p-1.5 md:p-0.5",
+        size === "sm" && "size-8 md:size-6 min-w-[32px] min-h-[32px] md:min-w-0 md:min-h-0 p-1.5 md:p-1",
+        size === "md" && "size-9 md:size-7 min-w-[36px] min-h-[36px] md:min-w-0 md:min-h-0 p-2 md:p-1.5",
         className
       )}
       {...props}

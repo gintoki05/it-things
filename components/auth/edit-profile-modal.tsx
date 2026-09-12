@@ -108,10 +108,10 @@ export function EditProfileModal({ isOpen, onClose }: EditProfileModalProps) {
   const isUsingInitials = selectedAvatar === ""
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4 select-none">
-      <div className="retro-window-frame max-w-md w-full rounded-[3px] overflow-hidden shadow-[5px_5px_0px_rgba(0,0,0,0.35)] flex flex-col bg-[#D4DDE6] border-2 border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] overflow-y-auto flex items-center justify-center p-3 sm:p-4 select-none min-h-full">
+      <div className="retro-window-frame max-w-md w-full my-auto rounded-[3px] overflow-hidden shadow-[5px_5px_0px_rgba(0,0,0,0.35)] flex flex-col max-h-[90dvh] bg-[#D4DDE6] border-2 border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] animate-in fade-in zoom-in-95 duration-150">
         {/* Title Bar */}
-        <div className="retro-titlebar px-2.5 py-1.5 flex items-center justify-between font-mono text-xs font-bold text-white bg-gradient-to-r from-[#102A45] via-[#1E4E8C] to-[#2E6FB5]">
+        <div className="retro-titlebar px-2.5 py-1.5 flex items-center justify-between font-mono text-xs font-bold text-white bg-gradient-to-r from-[#102A45] via-[#1E4E8C] to-[#2E6FB5] shrink-0">
           <div className="flex items-center gap-2">
             <User className="size-3.5 text-blue-200" />
             <span>PROFILE.EXE — EDIT PROFIL & AVATAR</span>
@@ -119,14 +119,14 @@ export function EditProfileModal({ isOpen, onClose }: EditProfileModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="size-4 bg-[#D4DDE6] text-[#14253D] hover:bg-[#C53030] hover:text-white flex items-center justify-center border border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] font-mono text-[10px] font-bold active:translate-y-px"
+            className="size-7 sm:size-4 min-w-[28px] sm:min-w-0 min-h-[28px] sm:min-h-0 bg-[#D4DDE6] text-[#14253D] hover:bg-[#C53030] hover:text-white flex items-center justify-center border border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] font-mono text-xs sm:text-[10px] font-bold active:translate-y-px cursor-pointer touch-manipulation"
           >
-            <X className="size-3" />
+            <X className="size-3.5 sm:size-3" />
           </button>
         </div>
 
         {/* Content Form */}
-        <form onSubmit={handleSubmit} className="p-4 space-y-3.5 text-xs font-sans text-[#14253D]">
+        <form onSubmit={handleSubmit} className="p-3 sm:p-4 space-y-3.5 text-xs font-sans text-[#14253D] overflow-y-auto flex-1 flex flex-col">
           {/* Avatar Preview & Identitas Header */}
           <div className="flex items-center gap-3 p-3 bg-white/80 border border-[#A4B5C6] rounded-[2px] shadow-inner">
             <div className="relative shrink-0">
@@ -312,19 +312,19 @@ export function EditProfileModal({ isOpen, onClose }: EditProfileModalProps) {
           )}
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#A4B5C6]">
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#A4B5C6] shrink-0">
             <button
               type="button"
               onClick={onClose}
               disabled={isSaving}
-              className="px-3.5 py-1 bg-[#D4DDE6] hover:bg-[#C2CEDC] text-[#14253D] font-mono text-xs border border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] rounded-[2px] active:translate-y-px cursor-pointer"
+              className="px-3.5 py-1.5 sm:py-1 min-h-[32px] sm:min-h-0 bg-[#D4DDE6] hover:bg-[#C2CEDC] text-[#14253D] font-mono text-xs border border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] rounded-[2px] active:translate-y-px cursor-pointer touch-manipulation"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={isSaving || !name.trim() || !hasChanges}
-              className="px-4 py-1 bg-[#1E4E8C] hover:bg-[#153A6B] text-white font-mono text-xs font-bold border border-[#102A45] shadow-[1px_1px_0px_#102A45] rounded-[2px] active:translate-y-px cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-1.5 sm:py-1 min-h-[32px] sm:min-h-0 bg-[#1E4E8C] hover:bg-[#153A6B] text-white font-mono text-xs font-bold border border-[#102A45] shadow-[1px_1px_0px_#102A45] rounded-[2px] active:translate-y-px cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
             >
               {isSaving ? "Menyimpan..." : "Simpan Perubahan"}
             </button>

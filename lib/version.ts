@@ -5,12 +5,26 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.7"
+export const APP_VERSION = "v2.3.8"
 export const APP_BUILD = "2026.09.12"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.8",
+    date: "12 Sep 2026",
+    codename: "Mobile Responsive Overhaul — Taskbar, Pantry Card View & Auth Modals",
+    changes: [
+      "Taskbar mobile: ticker promo, badge versi, nama & role user disembunyikan di layar < md agar tidak terpotong.",
+      "Pantry katalog: tampilan card list khusus mobile (< sm) menggantikan tabel — stok, progress kuota, dan tombol ambil nyaman di-tap.",
+      "Tab navigasi Pantry kini scrollable horizontal (overflow-x-auto) dan tidak wrapping di layar sempit.",
+      "Google Login Modal: tambah tombol close (×) di title bar dengan touch target min 32px.",
+      "global.css: overflow-x hidden + overscroll-behavior none untuk mencegah horizontal scroll tak disengaja.",
+      "RetroActionButton: hit area icon mode diperluas ke minimal 32px untuk kenyamanan tap mobile.",
+      "Sticky note widget: batas posisi dan max-width diperbaiki agar tidak menimpa ikon desktop di viewport sempit.",
+    ],
+  },
   {
     version: "v2.3.7",
     date: "12 Sep 2026",

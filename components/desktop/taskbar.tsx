@@ -130,10 +130,10 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
       {isStartOpen && (
         <div
           ref={startMenuRef}
-          className="fixed bottom-[44px] left-1 z-50 w-72 bg-[#D4DDE6] border-2 border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] shadow-2xl flex rounded-t-[3px] select-none overflow-hidden"
+          className="fixed bottom-[44px] left-1 z-50 w-72 max-h-[calc(100dvh-52px)] bg-[#D4DDE6] border-2 border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] shadow-2xl flex rounded-t-[3px] select-none overflow-y-auto overscroll-contain"
         >
           {/* Windows 98 Style Vertical Banner */}
-          <div className="w-9 bg-gradient-to-t from-[#102A45] via-[#1E4E8C] to-[#2E6FB5] flex items-end justify-center pb-4 text-white font-mono font-black text-sm tracking-widest uppercase select-none">
+          <div className="w-9 shrink-0 bg-gradient-to-t from-[#102A45] via-[#1E4E8C] to-[#2E6FB5] flex items-end justify-center pb-4 text-white font-mono font-black text-sm tracking-widest uppercase select-none">
             <span
               style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
               className="tracking-widest flex items-center gap-2 text-blue-100"
@@ -473,7 +473,7 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
         </div>
 
         {/* Running Applications in Taskbar */}
-        <div className="flex-1 flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
+        <div className="flex-1 min-w-0 flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
           {openWindows.map((win) => {
             const isActive = activeWindowId === win.id && !win.isMinimized
             const isUnreadChat = win.id === "chat" && unreadChatCount > 0 && !isActive
@@ -487,7 +487,7 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                   toggleWindow(win.id)
                 }}
                 className={cn(
-                  "h-7 max-w-[170px] px-2 flex items-center gap-1.5 rounded-[2px] text-xs font-mono font-medium truncate transition-all border relative",
+                  "h-7 min-w-[80px] max-w-[170px] shrink-0 px-2 flex items-center gap-1.5 rounded-[2px] text-xs font-mono font-medium truncate transition-all border relative",
                   isActive
                     ? "bg-[#BDCCD9] border-t-[#5E7287] border-l-[#5E7287] border-r-white border-b-white text-[#14253D] font-bold shadow-inner"
                     : "bg-[#D4DDE6] border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] text-gray-700 hover:bg-[#DEE6EE]",
@@ -506,8 +506,8 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
           })}
         </div>
 
-        {/* Running Ticker Marquee for Lapak Teman / Promosi */}
-        <TaskbarTicker />
+        {/* Running Ticker Marquee for Lapak Teman / Promosi (Hidden on mobile < md) */}
+        <TaskbarTicker className="hidden md:flex" />
 
         {/* System Tray */}
         <div className="h-7 px-2 bg-[#CBD5E1] border border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] flex items-center gap-1.5 shrink-0 text-xs font-mono text-[#14253D]">
@@ -526,7 +526,7 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                 : "Notifikasi Suara: AKTIF (Klik untuk membisukan)"
             }
             className={cn(
-              "size-5.5 rounded-[2px] border transition-colors cursor-pointer flex items-center justify-center active:translate-y-px",
+              "size-5.5 rounded-[2px] border transition-colors cursor-pointer flex items-center justify-center active:translate-y-px shrink-0",
               isMuted
                 ? "bg-red-100 border-red-400 text-red-700 hover:bg-red-200"
                 : "bg-[#BDCCD9] border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white text-[#14253D] hover:bg-[#A8BCCC]"
@@ -535,7 +535,7 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
             {isMuted ? <VolumeX className="size-3" /> : <Volume2 className="size-3" />}
           </button>
 
-          {/* User Profile & Role Pill in Tray */}
+          {/* User Profile & Role Pill in Tray (Truncated to Avatar Only on Mobile < md) */}
           <button
             type="button"
             onClick={() => {
@@ -551,7 +551,7 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                 : `Login sebagai: ${user?.name || "User"} (${isAdmin ? "Administrator" : isKasPic ? "PIC Kas" : isPantryPic ? "PIC Pantry" : "Anggota Tim"}) - Klik untuk edit profil`
             }
             className={cn(
-              "h-5.5 px-1.5 rounded-[2px] border transition-colors cursor-pointer flex items-center gap-1.5 active:translate-y-px text-[11px] font-sans select-none",
+              "size-5.5 md:size-auto md:h-5.5 md:px-1.5 rounded-[2px] border transition-colors cursor-pointer flex items-center justify-center md:justify-start md:gap-1.5 active:translate-y-px text-[11px] font-sans select-none shrink-0",
               isGuest
                 ? "bg-amber-100 hover:bg-amber-200 border-amber-400 text-amber-900"
                 : "bg-[#BDCCD9] hover:bg-[#A8BCCC] border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white text-[#14253D]"
@@ -563,42 +563,44 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
               size="size-3.5"
               textClass="text-[8px]"
             />
-            <span className="font-bold text-[10px] max-w-[70px] sm:max-w-[100px] truncate leading-none">
+            <span className="hidden md:inline font-bold text-[10px] max-w-[100px] truncate leading-none">
               {isGuest ? "Tamu" : (user?.name?.split(" ")[0] || "User")}
             </span>
-            <span className="h-3 w-px bg-[#7D8E9E]/50" />
-            {isGuest ? (
-              <span className="flex items-center gap-0.5 text-amber-800 text-[9px] font-bold">
-                <Eye className="size-2.5 shrink-0" />
-                <span className="hidden sm:inline">Tamu</span>
-              </span>
-            ) : isAdmin ? (
-              <span className="flex items-center gap-0.5 text-purple-700 text-[9px] font-bold">
-                <ShieldCheck className="size-2.5 shrink-0 text-purple-700" />
-                <span className="hidden sm:inline">Admin</span>
-              </span>
-            ) : isKasPic ? (
-              <span className="flex items-center gap-0.5 text-amber-800 text-[9px] font-bold">
-                <span>💰</span>
-                <span className="hidden sm:inline">PIC Kas</span>
-              </span>
-            ) : isPantryPic ? (
-              <span className="flex items-center gap-0.5 text-sky-800 text-[9px] font-bold">
-                <span>☕</span>
-                <span className="hidden sm:inline">PIC Pantry</span>
-              </span>
-            ) : (
-              <span className="flex items-center gap-0.5 text-slate-600 text-[9px] font-semibold">
-                <User className="size-2.5 shrink-0 text-slate-500" />
-                <span className="hidden sm:inline">Anggota</span>
-              </span>
-            )}
+            <span className="hidden md:inline-block h-3 w-px bg-[#7D8E9E]/50" />
+            <div className="hidden md:flex items-center">
+              {isGuest ? (
+                <span className="flex items-center gap-0.5 text-amber-800 text-[9px] font-bold">
+                  <Eye className="size-2.5 shrink-0" />
+                  <span>Tamu</span>
+                </span>
+              ) : isAdmin ? (
+                <span className="flex items-center gap-0.5 text-purple-700 text-[9px] font-bold">
+                  <ShieldCheck className="size-2.5 shrink-0 text-purple-700" />
+                  <span>Admin</span>
+                </span>
+              ) : isKasPic ? (
+                <span className="flex items-center gap-0.5 text-amber-800 text-[9px] font-bold">
+                  <span>💰</span>
+                  <span>PIC Kas</span>
+                </span>
+              ) : isPantryPic ? (
+                <span className="flex items-center gap-0.5 text-sky-800 text-[9px] font-bold">
+                  <span>☕</span>
+                  <span>PIC Pantry</span>
+                </span>
+              ) : (
+                <span className="flex items-center gap-0.5 text-slate-600 text-[9px] font-semibold">
+                  <User className="size-2.5 shrink-0 text-slate-500" />
+                  <span>Anggota</span>
+                </span>
+              )}
+            </div>
           </button>
 
           {/* Connection Indicator */}
           <div
             title={isSupabaseConnected ? "Supabase Realtime: Terhubung" : "Mode Demo (Local Storage)"}
-            className="flex items-center gap-1 cursor-help"
+            className="flex items-center gap-1 cursor-help shrink-0"
           >
             <span
               className={cn(
@@ -606,23 +608,23 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                 isSupabaseConnected ? "bg-emerald-500" : "bg-amber-500"
               )}
             />
-            <span className="text-[10px] hidden sm:inline font-sans font-semibold text-gray-700">
+            <span className="text-[10px] hidden md:inline font-sans font-semibold text-gray-700">
               {isSupabaseConnected ? "LIVE" : "DEMO"}
             </span>
           </div>
 
-          {/* Version Badge */}
+          {/* Version Badge (Hidden on mobile < md) */}
           <button
             type="button"
             onClick={openAboutDialog}
             title={`IT-THINGS ${APP_VERSION} (Build ${APP_BUILD}) - Klik untuk lihat changelog`}
-            className="px-1.5 py-0.5 rounded-[2px] bg-[#BDCCD9] hover:bg-[#A8BCCC] active:translate-y-px border border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white text-[10px] font-mono font-bold text-[#14253D] cursor-pointer transition-colors shadow-none"
+            className="hidden md:inline-flex px-1.5 py-0.5 rounded-[2px] bg-[#BDCCD9] hover:bg-[#A8BCCC] active:translate-y-px border border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white text-[10px] font-mono font-bold text-[#14253D] cursor-pointer transition-colors shadow-none shrink-0"
           >
             {APP_VERSION}
           </button>
 
           {/* Clock */}
-          <div className="font-bold text-[11px] tracking-wider text-slate-800">{time}</div>
+          <div className="font-bold text-[11px] tracking-wider text-slate-800 shrink-0">{time}</div>
         </div>
       </footer>
 

@@ -53,6 +53,20 @@ export function StickyNoteWidget() {
   const [isDragging, setIsDragging] = React.useState<boolean>(false)
   const containerRef = React.useRef<HTMLElement>(null)
 
+  // Helper to safely clamp coordinates within viewport bounds for 360px+ screens
+  const getSafeClampedPosition = React.useCallback((x: number, y: number) => {
+    if (typeof window === "undefined") return { x, y }
+    const isNarrow = window.innerWidth < 640
+    // w-72 is 288px on mobile, sm:w-80 is 320px on desktop. 10px padding on both sides.
+    const widgetWidth = isNarrow ? Math.min(288, window.innerWidth - 32) : 320
+    const maxX = Math.max(10, window.innerWidth - widgetWidth - 10)
+    const maxY = Math.max(10, window.innerHeight - 150)
+    return {
+      x: Math.max(10, Math.min(maxX, x)),
+      y: Math.max(10, Math.min(maxY, y)),
+    }
+  }, [])
+
   // Load minimize & position preferences from localStorage
   React.useEffect(() => {
     if (typeof window === "undefined") return
@@ -69,10 +83,7 @@ export function StickyNoteWidget() {
       try {
         const parsed = JSON.parse(savedPos)
         if (typeof parsed.x === "number" && typeof parsed.y === "number") {
-          // Clamp to screen bounds safely
-          const clampedX = Math.max(10, Math.min(window.innerWidth - 280, parsed.x))
-          const clampedY = Math.max(10, Math.min(window.innerHeight - 150, parsed.y))
-          setPosition({ x: clampedX, y: clampedY })
+          setPosition(getSafeClampedPosition(parsed.x, parsed.y))
         }
       } catch {
         // ignore invalid json
@@ -83,15 +94,13 @@ export function StickyNoteWidget() {
     const handleResize = () => {
       setPosition((prev) => {
         if (!prev) return null
-        const clampedX = Math.max(10, Math.min(window.innerWidth - 280, prev.x))
-        const clampedY = Math.max(10, Math.min(window.innerHeight - 150, prev.y))
-        return { x: clampedX, y: clampedY }
+        return getSafeClampedPosition(prev.x, prev.y)
       })
     }
 
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
-  }, [])
+  }, [getSafeClampedPosition])
 
   // Auto carousel for Lapak Tab if more than 1 item
   React.useEffect(() => {
@@ -137,8 +146,9 @@ export function StickyNoteWidget() {
         hasMoved = true
       }
 
-      currentX = Math.max(10, Math.min(window.innerWidth - 280, startX + deltaX))
-      currentY = Math.max(10, Math.min(window.innerHeight - 150, startY + deltaY))
+      const clamped = getSafeClampedPosition(startX + deltaX, startY + deltaY)
+      currentX = clamped.x
+      currentY = clamped.y
 
       if (rafId === null) {
         rafId = requestAnimationFrame(() => {
@@ -284,7 +294,7 @@ export function StickyNoteWidget() {
         aria-label="Papan Pengumuman Minimized"
         style={positionStyle}
         className={`absolute z-20 select-none animate-in fade-in duration-200 ${
-          !position ? "top-10 sm:top-12 left-4 sm:left-[190px]" : ""
+          !position ? "top-10 right-3 sm:top-12 sm:left-[190px] sm:right-auto" : ""
         }`}
       >
         <div
@@ -322,8 +332,8 @@ export function StickyNoteWidget() {
       ref={containerRef}
       aria-label="Papan Pengumuman & Lapak Tim"
       style={positionStyle}
-      className={`absolute z-20 w-72 sm:w-80 bg-[#FFF9A6] border border-[#DCD36A] shadow-[4px_4px_14px_rgba(0,0,0,0.35)] rounded-[2px] select-none flex flex-col font-mono rotate-[-1deg] transition-transform hover:rotate-0 duration-150 animate-in fade-in ${
-        !position ? "top-10 sm:top-12 left-4 sm:left-[190px]" : ""
+      className={`absolute z-20 w-72 max-w-[calc(100vw-32px)] sm:w-80 bg-[#FFF9A6] border border-[#DCD36A] shadow-[4px_4px_14px_rgba(0,0,0,0.35)] rounded-[2px] select-none flex flex-col font-mono rotate-[-1deg] transition-transform hover:rotate-0 duration-150 animate-in fade-in ${
+        !position ? "top-10 right-3 sm:top-12 sm:left-[190px] sm:right-auto" : ""
       } ${isDragging ? "opacity-95 shadow-2xl scale-[1.01] cursor-grabbing" : ""}`}
     >
       {/* Visual Red Pushpin on Top Header (Klik ganda untuk reset posisi) */}

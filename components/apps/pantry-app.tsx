@@ -481,13 +481,13 @@ export function PantryApp() {
       )}
 
       {/* Tab Navigation */}
-      <div className="bg-[#D8E0E8] border border-[#96A6B6] p-1 rounded-[2px] flex items-center justify-between gap-1 font-mono text-xs">
-        <div className="flex items-center gap-1">
+      <div className="bg-[#D8E0E8] border border-[#96A6B6] p-1 rounded-[2px] flex items-center justify-between gap-1 font-mono text-xs overflow-x-auto">
+        <div className="flex items-center gap-1 shrink-0">
           <button
             type="button"
             onClick={() => setActiveTab("katalog")}
             className={cn(
-              "px-3 py-1 rounded-[2px] font-bold transition-all flex items-center gap-1.5 cursor-pointer",
+              "px-3 py-1 rounded-[2px] font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap",
               activeTab === "katalog"
                 ? "bg-[#1E4E8C] text-white shadow-inner"
                 : "hover:bg-white/40 text-[#2B3E50]"
@@ -501,14 +501,14 @@ export function PantryApp() {
             type="button"
             onClick={() => setActiveTab("rekap")}
             className={cn(
-              "px-3 py-1 rounded-[2px] font-bold transition-all flex items-center gap-1.5 cursor-pointer relative",
+              "px-3 py-1 rounded-[2px] font-bold transition-all flex items-center gap-1.5 cursor-pointer relative whitespace-nowrap",
               activeTab === "rekap"
                 ? "bg-[#1E4E8C] text-white shadow-inner"
                 : "hover:bg-white/40 text-[#2B3E50]"
             )}
           >
             <Users className="size-3.5" />
-            <span>Rekap Kuota & Pelanggar</span>
+            <span>Rekap Kuota</span>
             {overquotaMembers.length > 0 && (
               <span className="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full ml-0.5">
                 {overquotaMembers.length}
@@ -520,7 +520,7 @@ export function PantryApp() {
             type="button"
             onClick={() => setActiveTab("riwayat")}
             className={cn(
-              "px-3 py-1 rounded-[2px] font-bold transition-all flex items-center gap-1.5 cursor-pointer",
+              "px-3 py-1 rounded-[2px] font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap",
               activeTab === "riwayat"
                 ? "bg-[#1E4E8C] text-white shadow-inner"
                 : "hover:bg-white/40 text-[#2B3E50]"
@@ -536,7 +536,7 @@ export function PantryApp() {
             type="button"
             onClick={() => setActiveTab("admin")}
             className={cn(
-              "px-2.5 py-1 rounded-[2px] font-bold transition-all flex items-center gap-1 cursor-pointer text-[11px]",
+              "px-2.5 py-1 rounded-[2px] font-bold transition-all flex items-center gap-1 cursor-pointer text-[11px] shrink-0 whitespace-nowrap",
               activeTab === "admin"
                 ? "bg-amber-600 text-white shadow-inner"
                 : "bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200"
@@ -558,188 +558,187 @@ export function PantryApp() {
               Belum ada item makanan di pantry. Hubungi Admin untuk menambahkan item.
             </div>
           ) : (
-            <div className="bg-white border border-[#CBD5E1] rounded-[3px] shadow-sm overflow-x-auto">
-              <table className="w-full text-xs font-mono border-collapse">
-                <thead>
-                  <tr className="bg-[#E2E8F0] border-b border-[#CBD5E1] text-[#1E3A5F] text-[11px] font-bold">
-                    <th className="p-2.5 text-left">Item / Makanan</th>
-                    <th className="p-2.5 text-left">Kategori</th>
-                    <th className="p-2.5 text-center">Sisa Stok</th>
-                    <th className="p-2.5 text-center">Jatah Kamu ({formatPeriodMonthDisplay(currentMonth)})</th>
-                    <th className="p-2.5 text-center">Status Kuota</th>
-                    <th className="p-2.5 text-right">Aksi Ambil</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {items.map((item) => {
-                    const userQuota = getUserQuotaInfo(item.id, currentUserId)
-                    const isOver = userQuota.isOverquota
-                    const isFull = userQuota.taken >= item.monthlyQuota
-                    const isLowStock = item.stockQty <= 3
+            <>
+              {/* DESKTOP VIEW: Tabel */}
+              <div className="hidden sm:block bg-white border border-[#CBD5E1] rounded-[3px] shadow-sm overflow-x-auto">
+                <table className="w-full text-xs font-mono border-collapse">
+                  <thead>
+                    <tr className="bg-[#E2E8F0] border-b border-[#CBD5E1] text-[#1E3A5F] text-[11px] font-bold">
+                      <th className="p-2.5 text-left">Item / Makanan</th>
+                      <th className="p-2.5 text-left">Kategori</th>
+                      <th className="p-2.5 text-center">Sisa Stok</th>
+                      <th className="p-2.5 text-center">Jatah Kamu ({formatPeriodMonthDisplay(currentMonth)})</th>
+                      <th className="p-2.5 text-center">Status Kuota</th>
+                      <th className="p-2.5 text-right">Aksi Ambil</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {items.map((item) => {
+                      const userQuota = getUserQuotaInfo(item.id, currentUserId)
+                      const isOver = userQuota.isOverquota
+                      const isFull = userQuota.taken >= item.monthlyQuota
+                      const isLowStock = item.stockQty <= 3
 
-                    return (
-                      <tr
-                        key={item.id}
-                        className={cn(
-                          "hover:bg-slate-50 transition-colors",
-                          isOver && "bg-red-50/40"
-                        )}
-                      >
-                        {/* Item / Makanan */}
-                        <td className="p-2.5 font-bold">
-                          <div className="flex items-center gap-2.5">
-                            <span className="text-2xl select-none shrink-0">{item.emoji}</span>
-                            <div className="flex flex-col min-w-0">
-                              <span className="text-[#14253D] font-extrabold text-[12px] leading-tight">
-                                {item.name}
-                              </span>
-                              <span className="text-[10px] text-slate-400 font-normal">
-                                Batas: {item.monthlyQuota} {item.unit} / orang / bln
-                              </span>
+                      return (
+                        <tr
+                          key={item.id}
+                          className={cn(
+                            "hover:bg-slate-50 transition-colors",
+                            isOver && "bg-red-50/40"
+                          )}
+                        >
+                          <td className="p-2.5 font-bold">
+                            <div className="flex items-center gap-2.5">
+                              <span className="text-2xl select-none shrink-0">{item.emoji}</span>
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-[#14253D] font-extrabold text-[12px] leading-tight">{item.name}</span>
+                                <span className="text-[10px] text-slate-400 font-normal">Batas: {item.monthlyQuota} {item.unit} / orang / bln</span>
+                              </div>
+                              {canManagePantry && (
+                                <RetroActionButton
+                                  action="edit" visual="icon" size="xs"
+                                  onClick={() => { setEditItemModal(item); setEditItemName(item.name); setEditItemCategory(item.category); setEditItemEmoji(item.emoji); setEditItemQuota(item.monthlyQuota); setEditItemUnit(item.unit) }}
+                                  tooltip="Edit item / ganti nama"
+                                />
+                              )}
                             </div>
+                          </td>
+                          <td className="p-2.5 text-slate-600 whitespace-nowrap">
+                            <span className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] border border-slate-200">{item.category}</span>
+                          </td>
+                          <td className="p-2.5 text-center whitespace-nowrap">
+                            <span className={cn("px-2 py-0.5 rounded-[2px] font-bold text-[11px] border inline-block", item.stockQty === 0 ? "bg-slate-100 text-slate-500 border-slate-300" : isLowStock ? "bg-amber-100 text-amber-800 border-amber-300" : "bg-blue-50 text-blue-700 border-blue-200")}>
+                              {item.stockQty} {item.unit}
+                            </span>
+                          </td>
+                          <td className="p-2.5 text-center whitespace-nowrap">
+                            <div className="inline-flex flex-col items-center">
+                              <span className={cn("font-extrabold text-[12px]", isOver ? "text-red-600" : isFull ? "text-amber-700" : "text-emerald-700")}>
+                                {userQuota.taken} / {item.monthlyQuota} {item.unit}
+                              </span>
+                              <div className="w-24 bg-slate-200 h-1.5 rounded-full overflow-hidden mt-1">
+                                <div className={cn("h-full rounded-full transition-all", isOver ? "bg-red-600" : isFull ? "bg-amber-500" : "bg-emerald-500")} style={{ width: `${Math.min(100, (userQuota.taken / item.monthlyQuota) * 100)}%` }} />
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-2.5 text-center whitespace-nowrap">
+                            {isOver ? (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-red-100 text-red-700 border border-red-300 inline-flex items-center gap-1"><AlertTriangle className="size-2.5" />OVERQUOTA (+{userQuota.overquotaAmount})</span>
+                            ) : isFull ? (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">PAS KUOTA</span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">SISA {userQuota.remaining}</span>
+                            )}
+                          </td>
+                          <td className="p-2.5 text-right whitespace-nowrap">
+                            <div className="inline-flex items-center gap-1.5">
+                              <button type="button" onClick={() => handleQuickTake(item)} disabled={isSubmittingTake}
+                                className={cn("py-1 px-2.5 rounded-[2px] font-mono text-[11px] font-bold text-white transition-all flex items-center gap-1 border shadow-[1px_1px_0px_#102A45] active:translate-y-px cursor-pointer", isOver ? "bg-red-600 hover:bg-red-700 border-red-900" : "bg-[#1E4E8C] hover:bg-[#153A6B] border-[#102A45]")}
+                                title={`Ambil 1 ${item.unit}`}>
+                                <Plus className="size-3" /><span>Ambil 1 {item.unit}</span>
+                              </button>
+                              <button type="button" onClick={() => { setTakeModalItem(item); setTakeQty(1); setTakeNotes(""); setTakeTargetUserId(currentUserId) }}
+                                className="py-1 px-2 bg-white hover:bg-slate-100 border border-[#CBD5E1] rounded-[2px] font-mono text-[11px] font-bold text-slate-700 shadow-[1px_1px_0px_#CBD5E1] active:translate-y-px cursor-pointer">
+                                Opsi...
+                              </button>
+                              {userQuota.taken > 0 && (
+                                <RetroActionButton action="undo" visual="button" size="xs" onClick={() => setCancelTargetItem(item)} label="Batal" tooltip={`Batalkan pengambilan ${item.name}`} />
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* MOBILE VIEW: Card List */}
+              <div className="sm:hidden flex flex-col gap-2">
+                {items.map((item) => {
+                  const userQuota = getUserQuotaInfo(item.id, currentUserId)
+                  const isOver = userQuota.isOverquota
+                  const isFull = userQuota.taken >= item.monthlyQuota
+                  const isLowStock = item.stockQty <= 3
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={cn(
+                        "bg-white border rounded-[3px] p-3 shadow-sm flex flex-col gap-2.5",
+                        isOver ? "border-red-300 bg-red-50/30" : "border-[#CBD5E1]"
+                      )}
+                    >
+                      {/* Header: emoji + nama + kategori */}
+                      <div className="flex items-start gap-3">
+                        <span className="text-3xl select-none shrink-0 leading-none">{item.emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-extrabold text-[13px] text-[#14253D] leading-tight">{item.name}</span>
                             {canManagePantry && (
                               <RetroActionButton
-                                action="edit"
-                                visual="icon"
-                                size="xs"
-                                onClick={() => {
-                                  setEditItemModal(item)
-                                  setEditItemName(item.name)
-                                  setEditItemCategory(item.category)
-                                  setEditItemEmoji(item.emoji)
-                                  setEditItemQuota(item.monthlyQuota)
-                                  setEditItemUnit(item.unit)
-                                }}
-                                tooltip="Edit item / ganti nama"
+                                action="edit" visual="icon" size="xs"
+                                onClick={() => { setEditItemModal(item); setEditItemName(item.name); setEditItemCategory(item.category); setEditItemEmoji(item.emoji); setEditItemQuota(item.monthlyQuota); setEditItemUnit(item.unit) }}
+                                tooltip="Edit item"
                               />
                             )}
                           </div>
-                        </td>
-
-                        {/* Kategori */}
-                        <td className="p-2.5 text-slate-600 whitespace-nowrap">
-                          <span className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] border border-slate-200">
-                            {item.category}
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {item.category} · Batas {item.monthlyQuota} {item.unit}/orang/bln
                           </span>
-                        </td>
+                        </div>
+                        {/* Stok badge di kanan atas */}
+                        <span className={cn("px-2 py-0.5 rounded-[2px] font-bold text-[11px] border shrink-0", item.stockQty === 0 ? "bg-slate-100 text-slate-500 border-slate-300" : isLowStock ? "bg-amber-100 text-amber-800 border-amber-300" : "bg-blue-50 text-blue-700 border-blue-200")}>
+                          {item.stockQty} {item.unit}
+                        </span>
+                      </div>
 
-                        {/* Sisa Stok */}
-                        <td className="p-2.5 text-center whitespace-nowrap">
-                          <span
-                            className={cn(
-                              "px-2 py-0.5 rounded-[2px] font-bold text-[11px] border inline-block",
-                              item.stockQty === 0
-                                ? "bg-slate-100 text-slate-500 border-slate-300"
-                                : isLowStock
-                                ? "bg-amber-100 text-amber-800 border-amber-300"
-                                : "bg-blue-50 text-blue-700 border-blue-200"
-                            )}
-                          >
-                            {item.stockQty} {item.unit}
+                      {/* Progress kuota */}
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between text-[10px] font-mono">
+                          <span className="text-slate-500">Jatahmu bulan ini</span>
+                          <span className={cn("font-extrabold", isOver ? "text-red-600" : isFull ? "text-amber-700" : "text-emerald-700")}>
+                            {userQuota.taken}/{item.monthlyQuota} {item.unit} · {isOver ? `OVERQUOTA (+${userQuota.overquotaAmount})` : isFull ? "PAS KUOTA" : `SISA ${userQuota.remaining}`}
                           </span>
-                        </td>
+                        </div>
+                        <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                          <div
+                            className={cn("h-full rounded-full transition-all", isOver ? "bg-red-500" : isFull ? "bg-amber-500" : "bg-emerald-500")}
+                            style={{ width: `${Math.min(100, (userQuota.taken / item.monthlyQuota) * 100)}%` }}
+                          />
+                        </div>
+                      </div>
 
-                        {/* Jatah Kamu Bulan Ini */}
-                        <td className="p-2.5 text-center whitespace-nowrap">
-                          <div className="inline-flex flex-col items-center">
-                            <span
-                              className={cn(
-                                "font-extrabold text-[12px]",
-                                isOver
-                                  ? "text-red-600"
-                                  : isFull
-                                  ? "text-amber-700"
-                                  : "text-emerald-700"
-                              )}
-                            >
-                              {userQuota.taken} / {item.monthlyQuota} {item.unit}
-                            </span>
-                            <div className="w-24 bg-slate-200 h-1.5 rounded-full overflow-hidden mt-1">
-                              <div
-                                className={cn(
-                                  "h-full rounded-full transition-all",
-                                  isOver ? "bg-red-600" : isFull ? "bg-amber-500" : "bg-emerald-500"
-                                )}
-                                style={{
-                                  width: `${Math.min(
-                                    100,
-                                    (userQuota.taken / item.monthlyQuota) * 100
-                                  )}%`,
-                                }}
-                              />
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Status Kuota */}
-                        <td className="p-2.5 text-center whitespace-nowrap">
-                          {isOver ? (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-red-100 text-red-700 border border-red-300 inline-flex items-center gap-1">
-                              <AlertTriangle className="size-2.5" />
-                              OVERQUOTA (+{userQuota.overquotaAmount})
-                            </span>
-                          ) : isFull ? (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
-                              PAS KUOTA
-                            </span>
-                          ) : (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                              SISA {userQuota.remaining}
-                            </span>
+                      {/* Tombol aksi */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleQuickTake(item)}
+                          disabled={isSubmittingTake || item.stockQty === 0}
+                          className={cn(
+                            "flex-1 py-2.5 rounded-[2px] font-mono text-[12px] font-bold text-white flex items-center justify-center gap-1.5 border shadow-[1px_1px_0px_#102A45] active:translate-y-px cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation",
+                            isOver ? "bg-red-600 hover:bg-red-700 border-red-900" : "bg-[#1E4E8C] hover:bg-[#153A6B] border-[#102A45]"
                           )}
-                        </td>
-
-                        {/* Aksi Ambil */}
-                        <td className="p-2.5 text-right whitespace-nowrap">
-                          <div className="inline-flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleQuickTake(item)}
-                              disabled={isSubmittingTake}
-                              className={cn(
-                                "py-1 px-2.5 rounded-[2px] font-mono text-[11px] font-bold text-white transition-all flex items-center gap-1 border shadow-[1px_1px_0px_#102A45] active:translate-y-px cursor-pointer",
-                                isOver
-                                  ? "bg-red-600 hover:bg-red-700 border-red-900"
-                                  : "bg-[#1E4E8C] hover:bg-[#153A6B] border-[#102A45]"
-                              )}
-                              title={`Ambil 1 ${item.unit}`}
-                            >
-                              <Plus className="size-3" />
-                              <span>Ambil 1 {item.unit}</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setTakeModalItem(item)
-                                setTakeQty(1)
-                                setTakeNotes("")
-                                setTakeTargetUserId(currentUserId)
-                              }}
-                              className="py-1 px-2 bg-white hover:bg-slate-100 border border-[#CBD5E1] rounded-[2px] font-mono text-[11px] font-bold text-slate-700 shadow-[1px_1px_0px_#CBD5E1] active:translate-y-px cursor-pointer"
-                              title="Input jumlah atau catatan kustom"
-                            >
-                              Opsi...
-                            </button>
-
-                            {userQuota.taken > 0 && (
-                              <RetroActionButton
-                                action="undo"
-                                visual="button"
-                                size="xs"
-                                onClick={() => setCancelTargetItem(item)}
-                                label="Batal"
-                                tooltip={`Batalkan pengambilan ${item.name}`}
-                              />
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        >
+                          <Plus className="size-3.5" />
+                          Ambil 1 {item.unit}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setTakeModalItem(item); setTakeQty(1); setTakeNotes(""); setTakeTargetUserId(currentUserId) }}
+                          className="py-2.5 px-3 bg-white hover:bg-slate-100 border border-[#CBD5E1] rounded-[2px] font-mono text-[11px] font-bold text-slate-700 active:translate-y-px cursor-pointer touch-manipulation"
+                        >
+                          Opsi...
+                        </button>
+                        {userQuota.taken > 0 && (
+                          <RetroActionButton action="undo" visual="icon" size="sm" onClick={() => setCancelTargetItem(item)} tooltip={`Batalkan pengambilan ${item.name}`} />
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
           )}
         </div>
       )}

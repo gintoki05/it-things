@@ -75,7 +75,7 @@ function DesktopWorkspace() {
   // Saat pertama kali memuat / reload, tunggu pengecekan storage selesai
   if (isPasscodeLoading) {
     return (
-      <div className="w-screen h-screen bg-[#1A365D] flex items-center justify-center select-none">
+      <div className="w-full h-[100dvh] overflow-hidden bg-[#1A365D] flex items-center justify-center select-none">
         <div className="font-mono text-xs text-blue-200 tracking-widest animate-pulse">
           IT-THINGS.EXE // INITIALIZING...
         </div>
@@ -89,7 +89,7 @@ function DesktopWorkspace() {
 
   return (
     <div
-      className="relative w-screen h-screen overflow-hidden select-none transition-all duration-300"
+      className="relative w-full h-[100dvh] overflow-hidden select-none transition-all duration-300"
       style={getBackgroundStyle()}
       onContextMenu={handleDesktopContextMenu}
       onClick={() => setContextMenuPos(null)}
