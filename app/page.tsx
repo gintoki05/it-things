@@ -3,6 +3,7 @@
 import * as React from "react"
 import { AuthProvider, useAuth } from "@/lib/auth"
 import { NotificationProvider } from "@/lib/notification-store"
+import { PresenceProvider } from "@/lib/presence-store"
 import { DesktopProvider, useDesktop } from "@/components/desktop/desktop-context"
 import { DesktopIcons } from "@/components/desktop/desktop-icons"
 import { DesktopWindow } from "@/components/desktop/desktop-window"
@@ -29,6 +30,8 @@ import { ReadmeApp } from "@/components/apps/readme-app"
 import { PantryApp } from "@/components/apps/pantry-app"
 import { LapakApp } from "@/components/apps/lapak-app"
 import { IExploreApp } from "@/components/apps/iexplore-app"
+import { PaintWarApp } from "@/components/apps/paint-war-app"
+import { GameApp } from "@/components/apps/game-app"
 
 const MemoizedReadmeApp = React.memo(ReadmeApp)
 const MemoizedVoteApp = React.memo(VoteApp)
@@ -40,6 +43,8 @@ const MemoizedLapakApp = React.memo(LapakApp)
 const MemoizedTeamApp = React.memo(TeamApp)
 const MemoizedChatApp = React.memo(ChatApp)
 const MemoizedIExploreApp = React.memo(IExploreApp)
+const MemoizedPaintWarApp = React.memo(PaintWarApp)
+const MemoizedGameApp = React.memo(GameApp)
 const MemoizedDesktopIcons = React.memo(DesktopIcons)
 const MemoizedTeamWidget = React.memo(TeamWidget)
 const MemoizedStickyNoteWidget = React.memo(StickyNoteWidget)
@@ -197,6 +202,16 @@ function DesktopWorkspace() {
         <MemoizedIExploreApp />
       </DesktopWindow>
 
+      {/* Retro Window: paintwar.exe (Paint War - Multiplayer Gartic 98) */}
+      <DesktopWindow id="paintwar" bodyClassName="p-0 overflow-hidden flex flex-col">
+        <MemoizedPaintWarApp />
+      </DesktopWindow>
+
+      {/* Retro Window: game.exe (Koleksi Game & Arcade 98) */}
+      <DesktopWindow id="game" bodyClassName="p-0 overflow-hidden flex flex-col">
+        <MemoizedGameApp />
+      </DesktopWindow>
+
       {/* Floating Retro Team Widget */}
       <MemoizedTeamWidget />
 
@@ -243,11 +258,13 @@ export default function Page() {
   return (
     <AuthProvider>
       <NotificationProvider>
-        <DesktopProvider>
-          <WallpaperProvider>
-            <DesktopWorkspace />
-          </WallpaperProvider>
-        </DesktopProvider>
+        <PresenceProvider>
+          <DesktopProvider>
+            <WallpaperProvider>
+              <DesktopWorkspace />
+            </WallpaperProvider>
+          </DesktopProvider>
+        </PresenceProvider>
       </NotificationProvider>
     </AuthProvider>
   )

@@ -34,6 +34,7 @@ import { RetroNotificationToast } from "@/components/desktop/retro-notification-
 import { TaskbarTicker } from "@/components/desktop/taskbar-ticker"
 import { usePicStore } from "@/lib/pic-store"
 import { useWallpaper } from "@/lib/wallpaper-store"
+import { usePresence } from "@/lib/presence-store"
 
 interface TaskbarProps {
   onOpenLoginModal?: () => void
@@ -53,6 +54,13 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
     hasBrowserNotificationSupport,
     browserPermission,
   } = useNotification()
+  const { onlineCount, onlineUsers } = usePresence()
+
+  const onlineTooltip = React.useMemo(() => {
+    if (onlineUsers.length === 0) return "Tidak ada pengguna online"
+    const names = onlineUsers.map((u) => u.name)
+    return `${onlineCount} Pengguna Online: ${names.join(", ")}`
+  }, [onlineCount, onlineUsers])
 
   const [isStartOpen, setIsStartOpen] = React.useState(false)
   const [isProfileModalOpen, setIsProfileModalOpen] = React.useState(false)
@@ -611,6 +619,16 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
             <span className="text-[10px] hidden md:inline font-sans font-semibold text-gray-700">
               {isSupabaseConnected ? "LIVE" : "DEMO"}
             </span>
+          </div>
+
+          {/* Online Users Indicator */}
+          <div
+            title={onlineTooltip}
+            className="h-5.5 px-1.5 bg-[#BDCCD9] border border-t-[#7D8E9E] border-l-[#7D8E9E] border-r-white border-b-white rounded-[2px] flex items-center gap-1 shrink-0 text-[10px] font-mono font-bold text-[#14253D] cursor-help select-none"
+          >
+            <span className="size-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <span>{onlineCount}</span>
+            <span className="hidden md:inline text-[9px] font-sans text-gray-700 font-semibold">Online</span>
           </div>
 
           {/* Version Badge (Hidden on mobile < md) */}

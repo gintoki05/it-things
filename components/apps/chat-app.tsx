@@ -40,6 +40,7 @@ import {
   BellOff,
 } from "lucide-react"
 import { useNotification } from "@/lib/notification-store"
+import { usePresence } from "@/lib/presence-store"
 import { cn } from "@/lib/utils"
 
 const QUICK_EMOJIS = ["👍", "☕", "🚀", "😂", "❤️", "🔥", "🙏"]
@@ -135,6 +136,7 @@ export function ChatApp() {
     browserPermission,
     requestNotificationPermission,
   } = useNotification()
+  const { isUserOnline, onlineTeamCount } = usePresence()
 
   React.useEffect(() => {
     clearUnreadChat()
@@ -606,6 +608,15 @@ export function ChatApp() {
             <Hash className="size-3 text-blue-300" />
             <span>general</span>
           </div>
+          {onlineTeamCount > 0 && (
+            <span
+              title={`${onlineTeamCount} anggota tim sedang online`}
+              className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded border border-emerald-300 shadow-2xs"
+            >
+              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>{onlineTeamCount} online</span>
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
@@ -614,7 +625,7 @@ export function ChatApp() {
             <button
               type="button"
               onClick={() => setIsRosterOpen((prev) => !prev)}
-              title={`Daftar Anggota Tim (${members.length})`}
+              title={`Daftar Anggota Tim (${members.length}, ${onlineTeamCount} Online)`}
               className={cn(
                 "channel-roster-trigger px-1.5 py-0.5 border border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] shadow-sm active:translate-y-px cursor-pointer rounded-[2px] flex items-center gap-1 text-[10px] font-mono",
                 isRosterOpen
@@ -624,41 +635,69 @@ export function ChatApp() {
             >
               <Users className={cn("size-3", isRosterOpen ? "text-blue-200" : "text-[#1E4E8C]")} />
               <span>{members.length}</span>
+              {onlineTeamCount > 0 && (
+                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5" />
+              )}
             </button>
 
             {/* Roster Dropdown */}
             {isRosterOpen && (
-              <div className="channel-roster-popover absolute top-full right-0 mt-1 w-56 bg-[#D4DDE6] border-2 border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] shadow-xl rounded-[2px] z-40 overflow-hidden select-none animate-in fade-in zoom-in-95">
+              <div className="channel-roster-popover absolute top-full right-0 mt-1 w-60 bg-[#D4DDE6] border-2 border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] shadow-xl rounded-[2px] z-40 overflow-hidden select-none animate-in fade-in zoom-in-95">
                 <div className="px-2 py-1 bg-gradient-to-r from-[#102A45] to-[#1E4E8C] text-white flex items-center justify-between text-[11px] font-mono font-bold">
-                  <span className="flex items-center gap-1">
-                    <Users className="size-3 text-blue-200" /> Anggota Tim ({members.length})
+                  <span className="flex items-center gap-1.5">
+                    <Users className="size-3 text-blue-200" />
+                    <span>Anggota Tim ({members.length})</span>
+                    {onlineTeamCount > 0 && (
+                      <span className="text-[9px] text-emerald-300 font-normal">
+                        • {onlineTeamCount} online
+                      </span>
+                    )}
                   </span>
                   <button
                     type="button"
                     onClick={() => setIsRosterOpen(false)}
-                    className="size-3.5 hover:bg-white/20 rounded flex items-center justify-center text-xs leading-none"
+                    className="size-3.5 hover:bg-white/20 rounded flex items-center justify-center text-xs leading-none cursor-pointer"
                   >
                     ×
                   </button>
                 </div>
                 <div className="max-h-52 overflow-y-auto p-1 space-y-0.5 bg-white">
-                  {members.map((m) => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => handleMentionUser(m.name)}
-                      title={`Klik untuk mention @${m.name}`}
-                      className="w-full flex items-center justify-between gap-1.5 p-1 rounded hover:bg-blue-50 text-left cursor-pointer transition-colors"
-                    >
-                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                        <UserAvatar src={m.avatar_url} name={m.name} size="size-5" textClass="text-[8px]" />
-                        <span className="text-[11px] font-medium text-[#14253D] truncate">{m.name}</span>
-                      </div>
-                      <span className="text-[9px] font-mono text-gray-500 shrink-0">
-                        {m.role === "admin" ? "🛡️" : "👤"}
-                      </span>
-                    </button>
-                  ))}
+                  {members.map((m) => {
+                    const isOnline = isUserOnline(m.user_id, m.name)
+
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => handleMentionUser(m.name)}
+                        title={`Klik untuk mention @${m.name} (${isOnline ? "Online" : "Offline"})`}
+                        className="w-full flex items-center justify-between gap-1.5 p-1 rounded hover:bg-blue-50 text-left cursor-pointer transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                          <div className="relative shrink-0">
+                            <UserAvatar src={m.avatar_url} name={m.name} size="size-5" textClass="text-[8px]" />
+                            {isOnline && (
+                              <span
+                                title="Sedang Online"
+                                className="absolute -bottom-0.5 -right-0.5 size-1.5 bg-emerald-500 border border-white rounded-full ring-0.5 ring-emerald-600"
+                              />
+                            )}
+                          </div>
+                          <span className="text-[11px] font-medium text-[#14253D] truncate">{m.name}</span>
+                        </div>
+                        <div className="shrink-0 flex items-center gap-1">
+                          {isOnline && (
+                            <span className="text-[8px] font-mono font-bold text-emerald-700 bg-emerald-50 px-1 rounded border border-emerald-300">
+                              ON
+                            </span>
+                          )}
+                          <span className="text-[9px] font-mono text-gray-500">
+                            {m.role === "admin" ? "🛡️" : "👤"}
+                          </span>
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             )}

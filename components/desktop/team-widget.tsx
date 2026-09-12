@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useTeamStore } from "@/lib/team-store"
 import { usePicStore } from "@/lib/pic-store"
+import { usePresence } from "@/lib/presence-store"
 import { useDesktop } from "./desktop-context"
 import { UserAvatar } from "@/components/retro/user-avatar"
 import { Users, ChevronDown, ChevronUp, Shield, User, ExternalLink, MessageSquare } from "lucide-react"
@@ -11,6 +12,7 @@ import { cn } from "@/lib/utils"
 export function TeamWidget() {
   const { members } = useTeamStore()
   const { getUserPicTags } = usePicStore()
+  const { isUserOnline, onlineTeamCount } = usePresence()
   const { openWindow } = useDesktop()
   const [isMinimized, setIsMinimized] = React.useState(false)
 
@@ -61,24 +63,37 @@ export function TeamWidget() {
         <button
           type="button"
           onClick={toggleMinimize}
-          title="Buka Widget Anggota Tim IT"
+          title={`Buka Widget Anggota Tim IT (${onlineTeamCount} online)`}
           className="h-7 px-2.5 bg-[#D4DDE6] hover:bg-[#DEE6EE] border-2 border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] shadow-lg flex items-center gap-2 text-xs font-mono text-[#14253D] active:translate-y-px cursor-pointer rounded-[2px]"
         >
           <div className="flex items-center -space-x-1.5 overflow-hidden py-0.5">
-            {members.slice(0, 3).map((m) => (
-              <UserAvatar
-                key={m.id}
-                src={m.avatar_url}
-                name={m.name}
-                size="size-4"
-                textClass="text-[8px]"
-                className="border border-[#14253D]/40 shadow-xs"
-              />
-            ))}
+            {members.slice(0, 3).map((m) => {
+              const isOnline = isUserOnline(m.user_id, m.name)
+              return (
+                <div key={m.id} className="relative shrink-0">
+                  <UserAvatar
+                    src={m.avatar_url}
+                    name={m.name}
+                    size="size-4"
+                    textClass="text-[8px]"
+                    className="border border-[#14253D]/40 shadow-xs"
+                  />
+                  {isOnline && (
+                    <span className="absolute -bottom-0.5 -right-0.5 size-1.5 bg-emerald-500 border border-white rounded-full" />
+                  )}
+                </div>
+              )
+            })}
           </div>
           <span className="font-bold flex items-center gap-1">
             <Users className="size-3 text-[#1E4E8C]" />
             <span>Tim IT ({members.length})</span>
+            {onlineTeamCount > 0 && (
+              <span className="inline-flex items-center gap-0.5 text-[9px] text-emerald-700 bg-emerald-100 px-1 py-0.2 rounded border border-emerald-300">
+                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>{onlineTeamCount}</span>
+              </span>
+            )}
           </span>
           <ChevronUp className="size-3 text-gray-600" />
         </button>
@@ -94,6 +109,15 @@ export function TeamWidget() {
         <div className="flex items-center gap-1.5 font-mono font-bold text-xs">
           <Users className="size-3.5 text-blue-200" />
           <span className="tracking-wide">Tim IT ({members.length})</span>
+          {onlineTeamCount > 0 && (
+            <span
+              title={`${onlineTeamCount} anggota tim sedang online`}
+              className="text-[9px] font-mono bg-emerald-700/70 text-emerald-200 px-1.5 py-0.2 rounded border border-emerald-400/40 flex items-center gap-1"
+            >
+              <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>{onlineTeamCount} online</span>
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -116,25 +140,44 @@ export function TeamWidget() {
         ) : (
           members.map((member) => {
             const isAdminRole = member.role === "admin"
+            const isOnline = isUserOnline(member.user_id, member.name)
 
             return (
               <button
                 key={member.id}
                 type="button"
                 onClick={() => handleMemberClick(member.name)}
-                title={`Klik untuk mention @${member.name} di obrolan tim`}
+                title={`Klik untuk mention @${member.name} di obrolan tim (${isOnline ? "Online" : "Offline"})`}
                 className="w-full flex items-center justify-between gap-2 p-1.5 rounded-[2px] bg-white hover:bg-blue-50 border border-transparent hover:border-[#1E4E8C]/30 transition-all text-left cursor-pointer group"
               >
                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <UserAvatar
-                    src={member.avatar_url}
-                    name={member.name}
-                    size="size-6"
-                    textClass="text-[10px]"
-                  />
+                  <div className="relative shrink-0">
+                    <UserAvatar
+                      src={member.avatar_url}
+                      name={member.name}
+                      size="size-6"
+                      textClass="text-[10px]"
+                    />
+                    {isOnline ? (
+                      <span
+                        title="Sedang Online"
+                        className="absolute -bottom-0.5 -right-0.5 size-2 bg-emerald-500 border border-white rounded-full ring-1 ring-emerald-600 animate-pulse"
+                      />
+                    ) : (
+                      <span
+                        title="Offline"
+                        className="absolute -bottom-0.5 -right-0.5 size-1.5 bg-gray-400 border border-white rounded-full"
+                      />
+                    )}
+                  </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-[11px] font-semibold text-[#14253D] group-hover:text-[#1E4E8C] truncate leading-tight">
-                      {member.name}
+                    <div className="text-[11px] font-semibold text-[#14253D] group-hover:text-[#1E4E8C] truncate leading-tight flex items-center gap-1">
+                      <span className="truncate">{member.name}</span>
+                      {isOnline && (
+                        <span className="text-[8px] font-mono font-bold text-emerald-700 bg-emerald-50 px-1 rounded border border-emerald-300">
+                          ON
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>

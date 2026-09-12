@@ -4,6 +4,7 @@ import * as React from "react"
 import { useAuth, UserRole } from "@/lib/auth"
 import { useTeamStore, TeamMember } from "@/lib/team-store"
 import { usePicStore } from "@/lib/pic-store"
+import { usePresence } from "@/lib/presence-store"
 import { UserAvatar } from "@/components/retro/user-avatar"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { RetroActionButton } from "@/components/ui/retro-action-button"
@@ -49,6 +50,7 @@ export function TeamApp() {
     canAssignModulePic,
     getUserPicTags,
   } = usePicStore()
+  const { isUserOnline, onlineTeamCount } = usePresence()
 
   const isLoading = isTeamLoading || isPicsLoading
 
@@ -219,6 +221,12 @@ export function TeamApp() {
               <span className="font-mono text-[10px] bg-blue-50 text-[#1E4E8C] px-1.5 py-0.2 rounded border border-blue-200">
                 {members.length} Orang
               </span>
+              {onlineTeamCount > 0 && (
+                <span className="font-mono text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.2 rounded border border-emerald-300 flex items-center gap-1">
+                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>{onlineTeamCount} Online</span>
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-1.5 mt-1 font-mono text-[10px] text-gray-500">
               <span className="text-purple-700 font-semibold">{adminCount} Admin</span>
@@ -578,6 +586,7 @@ export function TeamApp() {
                 filteredMembers.map((member, idx) => {
                   const isItemAdmin = member.role === "admin"
                   const isMe = user?.id === member.user_id || user?.email === member.email
+                  const isOnline = isUserOnline(member.user_id, member.name)
                   const picTags = getUserPicTags(member.user_id || member.id)
 
                   return (
@@ -593,17 +602,35 @@ export function TeamApp() {
                       {/* Name & Avatar */}
                       <td className="p-2 border-r border-gray-100">
                         <div className="flex items-center gap-2">
-                          <UserAvatar
-                            src={member.avatar_url}
-                            name={member.name}
-                            size="size-6"
-                            textClass="text-[10px]"
-                          />
+                          <div className="relative shrink-0">
+                            <UserAvatar
+                              src={member.avatar_url}
+                              name={member.name}
+                              size="size-6"
+                              textClass="text-[10px]"
+                            />
+                            {isOnline ? (
+                              <span
+                                title="Sedang Online"
+                                className="absolute -bottom-0.5 -right-0.5 size-2 bg-emerald-500 border border-white rounded-full ring-1 ring-emerald-600 animate-pulse"
+                              />
+                            ) : (
+                              <span
+                                title="Offline"
+                                className="absolute -bottom-0.5 -right-0.5 size-1.5 bg-gray-400 border border-white rounded-full"
+                              />
+                            )}
+                          </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="font-semibold text-gray-900 leading-tight truncate">
                                 {member.name}
                               </span>
+                              {isOnline && (
+                                <span className="text-[9px] font-mono font-bold bg-emerald-50 text-emerald-700 px-1 py-0.2 rounded border border-emerald-300">
+                                  Online
+                                </span>
+                              )}
                               {isMe && (
                                 <span className="text-[9px] font-mono font-bold bg-blue-50 text-blue-700 px-1 py-0.2 rounded border border-blue-200">
                                   Anda
