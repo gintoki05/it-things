@@ -80,7 +80,7 @@ export function WhatsNewDialog({ isOpen, onClose }: WhatsNewDialogProps) {
   return (
     <div
       className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[1px] flex items-center justify-center p-3 select-none animate-in fade-in-0 duration-150"
-      onClick={handleDismiss}
+      onClick={() => handleDismiss(true)}
     >
       <div
         role="dialog"
@@ -99,7 +99,7 @@ export function WhatsNewDialog({ isOpen, onClose }: WhatsNewDialogProps) {
           </div>
           <button
             type="button"
-            onClick={handleDismiss}
+            onClick={() => handleDismiss(true)}
             className="hover:bg-red-600 hover:text-white px-1.5 py-0.5 rounded-[2px] transition-colors leading-none cursor-pointer shrink-0 ml-2"
             title="Tutup (Esc)"
           >
