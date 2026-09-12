@@ -385,6 +385,73 @@ export function useChatStore() {
       }
     }
 
+    const handleExternalReactionInsert = (e: Event) => {
+      const customEvent = e as CustomEvent<DbChatReaction>
+      if (customEvent.detail) {
+        const newRx = mapDbReaction(customEvent.detail)
+        setReactions((prev) => {
+          const list = prev[newRx.messageId] || []
+          const existingIdx = list.findIndex(
+            (r) => r.id === newRx.id || r.userId === newRx.userId
+          )
+          if (existingIdx >= 0) {
+            const nextList = [...list]
+            nextList[existingIdx] = newRx
+            return {
+              ...prev,
+              [newRx.messageId]: nextList,
+            }
+          }
+          return {
+            ...prev,
+            [newRx.messageId]: [...list, newRx],
+          }
+        })
+      }
+    }
+
+    const handleExternalReactionUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent<DbChatReaction>
+      if (customEvent.detail) {
+        const updatedRx = mapDbReaction(customEvent.detail)
+        setReactions((prev) => {
+          const list = prev[updatedRx.messageId] || []
+          const existingIdx = list.findIndex(
+            (r) => r.id === updatedRx.id || r.userId === updatedRx.userId
+          )
+          if (existingIdx >= 0) {
+            const nextList = [...list]
+            nextList[existingIdx] = updatedRx
+            return {
+              ...prev,
+              [updatedRx.messageId]: nextList,
+            }
+          }
+          return {
+            ...prev,
+            [updatedRx.messageId]: [...list, updatedRx],
+          }
+        })
+      }
+    }
+
+    const handleExternalReactionDelete = (e: Event) => {
+      const customEvent = e as CustomEvent<{ id?: string }>
+      const oldRx = customEvent.detail
+      if (oldRx?.id) {
+        setReactions((prev) => {
+          let changed = false
+          const next: Record<string, ChatReaction[]> = {}
+          for (const [mId, list] of Object.entries(prev)) {
+            const filtered = list.filter((r) => r.id !== oldRx.id)
+            if (filtered.length !== list.length) changed = true
+            next[mId] = filtered
+          }
+          return changed ? next : prev
+        })
+      }
+    }
+
     if (typeof window !== "undefined") {
       window.addEventListener("profile-updated", handleProfileUpdated)
       window.addEventListener("focus", handleReactivation)
@@ -393,126 +460,13 @@ export function useChatStore() {
       window.addEventListener("chat-message-received", handleExternalMessage)
       window.addEventListener("chat-message-updated", handleExternalUpdate)
       window.addEventListener("chat-message-deleted", handleExternalDelete)
+      window.addEventListener("chat-reaction-inserted", handleExternalReactionInsert)
+      window.addEventListener("chat-reaction-updated", handleExternalReactionUpdate)
+      window.addEventListener("chat-reaction-deleted", handleExternalReactionDelete)
       document.addEventListener("visibilitychange", handleVisibilityChange)
     }
 
-    // 3. Supabase Realtime Channel khusus instance ini (menghindari topic collision di Supabase JS)
-    const channelName = `chat-realtime-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-    const channel = isSupabaseConfigured && supabase
-      ? supabase
-          .channel(channelName)
-          .on(
-            "postgres_changes",
-            { event: "INSERT", schema: "public", table: "chat_messages" },
-            (payload) => {
-              const newMsg = mapDbMessage(payload.new as DbChatMessage)
-              setMessages((prev) => {
-                if (prev.some((m) => m.id === newMsg.id)) return prev
-                return [...prev, newMsg]
-              })
-            }
-          )
-          .on(
-            "postgres_changes",
-            { event: "UPDATE", schema: "public", table: "chat_messages" },
-            (payload) => {
-              const updatedMsg = mapDbMessage(payload.new as DbChatMessage)
-              setMessages((prev) =>
-                prev.map((m) => (m.id === updatedMsg.id ? updatedMsg : m))
-              )
-            }
-          )
-          .on(
-            "postgres_changes",
-            { event: "DELETE", schema: "public", table: "chat_messages" },
-            (payload) => {
-              const deletedId = (payload.old as { id?: string })?.id
-              if (deletedId) {
-                setMessages((prev) => prev.filter((m) => m.id !== deletedId))
-              }
-            }
-          )
-          .on(
-            "postgres_changes",
-            { event: "INSERT", schema: "public", table: "chat_reactions" },
-            (payload) => {
-              const newRx = mapDbReaction(payload.new as DbChatReaction)
-              setReactions((prev) => {
-                const list = prev[newRx.messageId] || []
-                const existingIdx = list.findIndex(
-                  (r) => r.id === newRx.id || r.userId === newRx.userId
-                )
-                if (existingIdx >= 0) {
-                  const nextList = [...list]
-                  nextList[existingIdx] = newRx
-                  return {
-                    ...prev,
-                    [newRx.messageId]: nextList,
-                  }
-                }
-                return {
-                  ...prev,
-                  [newRx.messageId]: [...list, newRx],
-                }
-              })
-            }
-          )
-          .on(
-            "postgres_changes",
-            { event: "UPDATE", schema: "public", table: "chat_reactions" },
-            (payload) => {
-              const updatedRx = mapDbReaction(payload.new as DbChatReaction)
-              setReactions((prev) => {
-                const list = prev[updatedRx.messageId] || []
-                const existingIdx = list.findIndex(
-                  (r) => r.id === updatedRx.id || r.userId === updatedRx.userId
-                )
-                if (existingIdx >= 0) {
-                  const nextList = [...list]
-                  nextList[existingIdx] = updatedRx
-                  return {
-                    ...prev,
-                    [updatedRx.messageId]: nextList,
-                  }
-                }
-                return {
-                  ...prev,
-                  [updatedRx.messageId]: [...list, updatedRx],
-                }
-              })
-            }
-          )
-          .on(
-            "postgres_changes",
-            { event: "DELETE", schema: "public", table: "chat_reactions" },
-            (payload) => {
-              const oldRx = payload.old as { id?: string }
-              if (oldRx?.id) {
-                setReactions((prev) => {
-                  let changed = false
-                  const next: Record<string, ChatReaction[]> = {}
-                  for (const [mId, list] of Object.entries(prev)) {
-                    const filtered = list.filter((r) => r.id !== oldRx.id)
-                    if (filtered.length !== list.length) changed = true
-                    next[mId] = filtered
-                  }
-                  return changed ? next : prev
-                })
-              }
-            }
-          )
-          .subscribe((status) => {
-            if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-              console.warn(`[chat-store] Chat realtime status: ${status}, resyncing messages...`)
-              handleReactivation()
-            }
-          })
-      : null
-
     return () => {
-      if (supabase && channel) {
-        supabase.removeChannel(channel)
-      }
       if (typeof window !== "undefined") {
         window.removeEventListener("profile-updated", handleProfileUpdated)
         window.removeEventListener("focus", handleReactivation)
@@ -521,6 +475,9 @@ export function useChatStore() {
         window.removeEventListener("chat-message-received", handleExternalMessage)
         window.removeEventListener("chat-message-updated", handleExternalUpdate)
         window.removeEventListener("chat-message-deleted", handleExternalDelete)
+        window.removeEventListener("chat-reaction-inserted", handleExternalReactionInsert)
+        window.removeEventListener("chat-reaction-updated", handleExternalReactionUpdate)
+        window.removeEventListener("chat-reaction-deleted", handleExternalReactionDelete)
         document.removeEventListener("visibilitychange", handleVisibilityChange)
       }
     }

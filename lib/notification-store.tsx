@@ -22,6 +22,7 @@ interface NotificationContextType {
   activePantryCount: number
   alertFridgeCount: number
   activeSplitBillCount: number
+  activePaintWarCount: number
   activeToast: NotificationToast | null
   toggleMute: () => void
   dismissToast: () => void
@@ -44,9 +45,29 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [activePantryCount, setActivePantryCount] = React.useState<number>(0)
   const [alertFridgeCount, setAlertFridgeCount] = React.useState<number>(0)
   const [activeSplitBillCount, setActiveSplitBillCount] = React.useState<number>(0)
+  const [activePaintWarCount, setActivePaintWarCount] = React.useState<number>(0)
   const [activeToast, setActiveToast] = React.useState<NotificationToast | null>(null)
   const [browserPermission, setBrowserPermission] = React.useState<NotificationPermission | "unsupported">("default")
   const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
+
+  // ─── Fetch Active Paint War Player Count ────────────────────
+  const fetchActivePaintWarCount = React.useCallback(async () => {
+    if (!isSupabaseConfigured || !supabase) return
+    try {
+      const cutoff = new Date(Date.now() - 45 * 1000).toISOString()
+      const { data, error } = await supabase
+        .from("paint_war_players")
+        .select("id, is_online, last_seen")
+        .eq("is_online", true)
+        .gte("last_seen", cutoff)
+
+      if (!error && data) {
+        setActivePaintWarCount(data.length)
+      }
+    } catch (err) {
+      console.warn("fetchActivePaintWarCount error:", err)
+    }
+  }, [])
 
   // ─── Fetch Active Split Bill Count ──────────────────────────
   const fetchActiveSplitBillCount = React.useCallback(async () => {
@@ -184,6 +205,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     fetchActivePantryCount()
     fetchAlertFridgeCount()
     fetchActiveSplitBillCount()
+    fetchActivePaintWarCount()
     fetchInitialUnreadChat()
 
     const handleVoteChanged = () => fetchActiveVoteCount()
@@ -253,12 +275,24 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       )
       .subscribe()
 
+    const paintwarChannel = supabase
+      .channel("global-paintwar-badges")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "paint_war_players" },
+        () => {
+          fetchActivePaintWarCount()
+        }
+      )
+      .subscribe()
+
     return () => {
       if (supabase) {
         supabase.removeChannel(voteChannel)
         supabase.removeChannel(pantryChannel)
         supabase.removeChannel(fridgeChannel)
         supabase.removeChannel(splitbillChannel)
+        supabase.removeChannel(paintwarChannel)
       }
       if (typeof window !== "undefined") {
         window.removeEventListener("vote-changed", handleVoteChanged)
@@ -267,7 +301,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         window.removeEventListener("splitbill-changed", handleSplitBillChanged)
       }
     }
-  }, [fetchActiveVoteCount, fetchActivePantryCount, fetchAlertFridgeCount, fetchActiveSplitBillCount, fetchInitialUnreadChat])
+  }, [fetchActiveVoteCount, fetchActivePantryCount, fetchAlertFridgeCount, fetchActiveSplitBillCount, fetchActivePaintWarCount, fetchInitialUnreadChat])
 
   const isMutedRef = React.useRef(isMuted)
   React.useEffect(() => {
@@ -487,6 +521,39 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           }
         }
       )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "chat_reactions" },
+        (payload) => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("chat-reaction-inserted", { detail: payload.new })
+            )
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "chat_reactions" },
+        (payload) => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("chat-reaction-updated", { detail: payload.new })
+            )
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "chat_reactions" },
+        (payload) => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("chat-reaction-deleted", { detail: payload.old })
+            )
+          }
+        }
+      )
       .subscribe((status) => {
         if (status === "TIMED_OUT" || status === "CHANNEL_ERROR") {
           console.warn(`[notification-store] Realtime channel status: ${status}`)
@@ -520,6 +587,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         activePantryCount,
         alertFridgeCount,
         activeSplitBillCount,
+        activePaintWarCount,
         activeToast,
         toggleMute,
         dismissToast,
