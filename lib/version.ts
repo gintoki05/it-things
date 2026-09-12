@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.6"
+export const APP_VERSION = "v2.3.7"
 export const APP_BUILD = "2026.09.12"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.7",
+    date: "12 Sep 2026",
+    codename: "Split Bill Suite, Realtime Database Sync & Deterministic Member Order",
+    changes: [
+      "Peluncuran modul Split Bill (splitbill.exe) dengan kalkulasi otomatis (bagi rata & itemized), ongkir, pajak, dan diskon.",
+      "Integrasi Supabase Realtime & RLS: izin kelola eksklusif untuk Pembuat Sesi dan Admin.",
+      "Pembersihan otomatis data tagihan setelah 7 hari via pg_cron untuk menjaga performa database.",
+      "Format input nominal otomatis dengan masking titik Rupiah dan opsi simpan rekening default per pengguna.",
+      "Kunci urutan peserta deterministik dan stabil agar daftar anggota tidak meloncat saat konfirmasi pembayaran.",
+    ],
+  },
   {
     version: "v2.3.6",
     date: "12 Sep 2026",

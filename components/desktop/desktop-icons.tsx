@@ -12,7 +12,7 @@ const ITEM_GRID_POSITIONS: Record<AppId, string> = {
   vote: "col-start-1 row-start-2",
   chat: "col-start-1 row-start-3",
   team: "col-start-1 row-start-4",
-  wheel: "col-start-2 row-start-1",
+  wheel: "col-start-2 row-start-5",
   splitbill: "col-start-2 row-start-1",
   kas: "col-start-2 row-start-2",
   pantry: "col-start-2 row-start-3",
@@ -23,7 +23,7 @@ const ITEM_GRID_POSITIONS: Record<AppId, string> = {
 export function DesktopIcons() {
   const { windows, openWindow } = useDesktop()
   const { isAdmin } = useAuth()
-  const { unreadChatCount, activeVoteCount, activePantryCount, clearUnreadChat } = useNotification()
+  const { unreadChatCount, activeVoteCount, activePantryCount, activeSplitBillCount, clearUnreadChat } = useNotification()
   const [selectedId, setSelectedId] = React.useState<AppId | null>(null)
 
   // Hanya tampilkan modul yang tidak disembunyikan dan bukan adminOnly (kecuali admin)
@@ -103,6 +103,14 @@ export function DesktopIcons() {
                   className="absolute -top-1.5 -right-2 bg-emerald-500 text-slate-950 font-mono text-[9px] font-black min-w-[16px] text-center px-1 py-0.5 rounded border border-emerald-600 shadow leading-none"
                 >
                   {activePantryCount}
+                </span>
+              )}
+              {!item.isComingSoon && item.id === "splitbill" && activeSplitBillCount > 0 && (
+                <span
+                  title={`${activeSplitBillCount} Tagihan Aktif`}
+                  className="absolute -top-1.5 -right-2 bg-blue-500 text-white font-mono text-[9px] font-black min-w-[16px] text-center px-1 py-0.5 rounded border border-blue-400 shadow leading-none"
+                >
+                  {activeSplitBillCount > 99 ? "99+" : activeSplitBillCount}
                 </span>
               )}
               {!item.isComingSoon && item.id === "chat" && unreadChatCount > 0 && (

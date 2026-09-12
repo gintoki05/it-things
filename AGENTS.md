@@ -100,3 +100,25 @@ This version has breaking changes — APIs, conventions, and file structure may 
   - Badge teks hanya diperbolehkan untuk status non-angka yang memang berupa label sistem statis (contoh: `SOON`, `INFO`).
 <!-- END:ui-badge-rules -->
 
+<!-- BEGIN:ui-responsive-mobile-rules -->
+# Standar Desain Responsif & Mobile View (Retro Win98)
+
+## Breakpoint & Mobile Detection
+- **Breakpoint Utama**: Gunakan patokan `< 768px` (`md:` pada Tailwind) untuk membedakan mode desktop vs mobile.
+- **Mobile First & Adaptif**: Semua window, dialog, dan komponen baru harus diuji/dipastikan tetap utuh dan fungsional di layar mobile sekecil `360px - 390px`.
+
+## Jendela (Window) & Dialog di Mobile
+- **No Overflow Horizontal**: Jangan pernah hardcode fixed width yang melebihi viewport mobile (hindari `w-[600px]`, gunakan `w-full max-w-lg` atau `max-w-[95vw]`).
+- **Modal & ConfirmDialog**: Pada mobile, modal harus otomatis mengisi lebar layar secara aman (`w-[92vw]` sampai `w-[95vw]`) dengan margin yang cukup dari tepi layar.
+- **Virtual Keyboard Awareness**: Form input dan textarea di dalam window tidak boleh tertutup keyboard virtual. Pastikan body window memiliki `overflow-y-auto` yang scrollable.
+
+## Tabel & Grid Data
+- **Tabel Responsif**: Seluruh data tabular (tabel kas, pantry, polling, dll.) **WAJIB dibungkus** kontainer `overflow-x-auto` agar tidak merusak lebar parent window di mobile.
+- **Grid Collapse**: Kolom grid multi-kolom desktop harus runtuh (collapse) ke 1 atau 2 kolom pada mobile (misal: `grid-cols-1 sm:grid-cols-2 md:grid-cols-3`).
+
+## Touch Target & Interaksi
+- **Ukuran Tap Minimal**: Tombol dan icon aksi retro (`RetroActionButton`, icon navigasi) harus nyaman di-tap pada layar sentuh (minimal target `32px` s.d. `40px` dengan hit area memadai).
+- **Text Truncation & Wrap**: Header window, judul item, dan teks panjang harus menggunakan `truncate`, `line-clamp`, atau `break-words` agar tidak memaksa window melebar ke samping.
+<!-- END:ui-responsive-mobile-rules -->
+
+

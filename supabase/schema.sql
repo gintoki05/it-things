@@ -11,6 +11,10 @@ CREATE TABLE IF NOT EXISTS public.team_members (
     name TEXT NOT NULL,
     avatar_url TEXT,
     role TEXT NOT NULL DEFAULT 'member', -- 'member' | 'treasurer' | 'admin'
+    bank_name TEXT,
+    account_number TEXT,
+    account_holder TEXT,
+    qris_url TEXT,
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -106,6 +110,7 @@ CREATE TABLE IF NOT EXISTS public.split_bills (
     delivery_fee NUMERIC NOT NULL DEFAULT 0,
     discount NUMERIC NOT NULL DEFAULT 0,
     total_amount NUMERIC NOT NULL DEFAULT 0,
+    items JSONB DEFAULT '[]'::jsonb,
     is_settled BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -348,7 +353,31 @@ GRANT EXECUTE ON FUNCTION public.is_pantry_pic() TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION public.is_treasurer() TO authenticated, anon;
 
 -- ============================================================
--- HELPER FUNCTION: sync_user_profile_name
+-- HELPER FUNCTION: cleanup_expired_split_bills
+-- Pembersihan otomatis sesi split bill yang berumur lebih dari 7 hari
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.cleanup_expired_split_bills()
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  deleted_count integer;
+BEGIN
+  WITH deleted AS (
+    DELETE FROM public.split_bills
+    WHERE created_at < (timezone('utc'::text, now()) - interval '7 days')
+    RETURNING id
+  )
+  SELECT count(*) INTO deleted_count FROM deleted;
+  
+  RETURN deleted_count;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.cleanup_expired_split_bills() TO anon, authenticated, service_role;
+
 -- Sinkronisasi nama dan avatar pengguna ke seluruh aktivitas/data terkait
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.sync_user_profile_name(new_name TEXT, new_avatar TEXT DEFAULT NULL)
@@ -621,16 +650,18 @@ CREATE POLICY "split_bills_insert" ON public.split_bills
     AND created_by_id = auth.uid()::text
   );
 
+DROP POLICY IF EXISTS "split_bills_update" ON public.split_bills;
 CREATE POLICY "split_bills_update" ON public.split_bills
   FOR UPDATE USING (
     auth.uid() IS NOT NULL 
-    AND (created_by_id = auth.uid()::text OR public.is_treasurer())
+    AND (created_by_id = auth.uid()::text OR public.is_admin())
   );
 
+DROP POLICY IF EXISTS "split_bills_delete" ON public.split_bills;
 CREATE POLICY "split_bills_delete" ON public.split_bills
   FOR DELETE USING (
     auth.uid() IS NOT NULL 
-    AND (created_by_id = auth.uid()::text OR public.is_treasurer())
+    AND (created_by_id = auth.uid()::text OR public.is_admin())
   );
 
 -- ============================================================
@@ -639,19 +670,20 @@ CREATE POLICY "split_bills_delete" ON public.split_bills
 CREATE POLICY "split_bill_participants_select" ON public.split_bill_participants
   FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "split_bill_participants_insert" ON public.split_bill_participants;
 CREATE POLICY "split_bill_participants_insert" ON public.split_bill_participants
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL
     AND (
-      user_id = auth.uid()::text
-      OR EXISTS (
+      EXISTS (
         SELECT 1 FROM public.split_bills 
         WHERE id = bill_id AND created_by_id = auth.uid()::text
       )
-      OR public.is_treasurer()
+      OR public.is_admin()
     )
   );
 
+DROP POLICY IF EXISTS "split_bill_participants_update" ON public.split_bill_participants;
 CREATE POLICY "split_bill_participants_update" ON public.split_bill_participants
   FOR UPDATE USING (
     auth.uid() IS NOT NULL
@@ -661,20 +693,20 @@ CREATE POLICY "split_bill_participants_update" ON public.split_bill_participants
         SELECT 1 FROM public.split_bills 
         WHERE id = bill_id AND created_by_id = auth.uid()::text
       )
-      OR public.is_treasurer()
+      OR public.is_admin()
     )
   );
 
+DROP POLICY IF EXISTS "split_bill_participants_delete" ON public.split_bill_participants;
 CREATE POLICY "split_bill_participants_delete" ON public.split_bill_participants
   FOR DELETE USING (
     auth.uid() IS NOT NULL
     AND (
-      user_id = auth.uid()::text
-      OR EXISTS (
+      EXISTS (
         SELECT 1 FROM public.split_bills 
         WHERE id = bill_id AND created_by_id = auth.uid()::text
       )
-      OR public.is_treasurer()
+      OR public.is_admin()
     )
   );
 

@@ -21,6 +21,7 @@ interface NotificationContextType {
   activeVoteCount: number
   activePantryCount: number
   alertFridgeCount: number
+  activeSplitBillCount: number
   activeToast: NotificationToast | null
   toggleMute: () => void
   dismissToast: () => void
@@ -42,9 +43,29 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [activeVoteCount, setActiveVoteCount] = React.useState<number>(0)
   const [activePantryCount, setActivePantryCount] = React.useState<number>(0)
   const [alertFridgeCount, setAlertFridgeCount] = React.useState<number>(0)
+  const [activeSplitBillCount, setActiveSplitBillCount] = React.useState<number>(0)
   const [activeToast, setActiveToast] = React.useState<NotificationToast | null>(null)
   const [browserPermission, setBrowserPermission] = React.useState<NotificationPermission | "unsupported">("default")
   const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
+
+  // ─── Fetch Active Split Bill Count ──────────────────────────
+  const fetchActiveSplitBillCount = React.useCallback(async () => {
+    if (!isSupabaseConfigured || !supabase) return
+    try {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+      const { data, error } = await supabase
+        .from("split_bills")
+        .select("id, is_settled, created_at")
+        .eq("is_settled", false)
+        .gte("created_at", sevenDaysAgo)
+
+      if (!error && data) {
+        setActiveSplitBillCount(data.length)
+      }
+    } catch (err) {
+      console.warn("fetchActiveSplitBillCount error:", err)
+    }
+  }, [])
 
   // ─── Fetch Active Vote Count ────────────────────────────────
   const fetchActiveVoteCount = React.useCallback(async () => {
@@ -162,21 +183,19 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     fetchActiveVoteCount()
     fetchActivePantryCount()
     fetchAlertFridgeCount()
+    fetchActiveSplitBillCount()
     fetchInitialUnreadChat()
 
-    const handleVoteChanged = () => {
-      fetchActiveVoteCount()
-    }
-    const handlePantryChanged = () => {
-      fetchActivePantryCount()
-    }
-    const handleFridgeChanged = () => {
-      fetchAlertFridgeCount()
-    }
+    const handleVoteChanged = () => fetchActiveVoteCount()
+    const handlePantryChanged = () => fetchActivePantryCount()
+    const handleFridgeChanged = () => fetchAlertFridgeCount()
+    const handleSplitBillChanged = () => fetchActiveSplitBillCount()
+
     if (typeof window !== "undefined") {
       window.addEventListener("vote-changed", handleVoteChanged)
       window.addEventListener("pantry-changed", handlePantryChanged)
       window.addEventListener("fridge-changed", handleFridgeChanged)
+      window.addEventListener("splitbill-changed", handleSplitBillChanged)
     }
 
     if (!isSupabaseConfigured || !supabase) {
@@ -185,6 +204,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           window.removeEventListener("vote-changed", handleVoteChanged)
           window.removeEventListener("pantry-changed", handlePantryChanged)
           window.removeEventListener("fridge-changed", handleFridgeChanged)
+          window.removeEventListener("splitbill-changed", handleSplitBillChanged)
         }
       }
     }
@@ -222,19 +242,32 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       )
       .subscribe()
 
+    const splitbillChannel = supabase
+      .channel("global-splitbill-badges")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "split_bills" },
+        () => {
+          fetchActiveSplitBillCount()
+        }
+      )
+      .subscribe()
+
     return () => {
       if (supabase) {
         supabase.removeChannel(voteChannel)
         supabase.removeChannel(pantryChannel)
         supabase.removeChannel(fridgeChannel)
+        supabase.removeChannel(splitbillChannel)
       }
       if (typeof window !== "undefined") {
         window.removeEventListener("vote-changed", handleVoteChanged)
         window.removeEventListener("pantry-changed", handlePantryChanged)
         window.removeEventListener("fridge-changed", handleFridgeChanged)
+        window.removeEventListener("splitbill-changed", handleSplitBillChanged)
       }
     }
-  }, [fetchActiveVoteCount, fetchActivePantryCount, fetchAlertFridgeCount, fetchInitialUnreadChat])
+  }, [fetchActiveVoteCount, fetchActivePantryCount, fetchAlertFridgeCount, fetchActiveSplitBillCount, fetchInitialUnreadChat])
 
   const isMutedRef = React.useRef(isMuted)
   React.useEffect(() => {
@@ -486,6 +519,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         activeVoteCount,
         activePantryCount,
         alertFridgeCount,
+        activeSplitBillCount,
         activeToast,
         toggleMute,
         dismissToast,

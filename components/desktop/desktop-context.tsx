@@ -103,7 +103,6 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 760, height: 600 },
     defaultSize: { width: 760, height: 600 },
     defaultPos: { x: 245, y: 64 },
-    isComingSoon: true,
   },
   kas: {
     id: "kas",
