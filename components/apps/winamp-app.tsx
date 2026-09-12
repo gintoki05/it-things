@@ -1,7 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { useWinamp, WinampTrack } from "@/lib/winamp-store"
+import { useWinamp, WinampTrack, extractYouTubeId } from "@/lib/winamp-store"
+import { fetchYouTubeMeta } from "@/lib/youtube-meta"
 import { WinampVideoScreen } from "./winamp/winamp-video-screen"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { RetroActionButton } from "@/components/ui/retro-action-button"
@@ -53,10 +54,33 @@ export function WinampApp() {
 
   const [inputUrl, setInputUrl] = React.useState("")
   const [inputTitle, setInputTitle] = React.useState("")
+  const [isFetchingTitle, setIsFetchingTitle] = React.useState(false)
   const [isAdding, setIsAdding] = React.useState(playlist.length === 0)
   const [sharedNotice, setSharedNotice] = React.useState(false)
   const [trackToDelete, setTrackToDelete] = React.useState<WinampTrack | null>(null)
   const [showClearConfirm, setShowClearConfirm] = React.useState(false)
+
+  // Auto-detect YouTube video title when user pastes or types a link
+  React.useEffect(() => {
+    const trimmed = inputUrl.trim()
+    const ytId = extractYouTubeId(trimmed)
+    if (ytId && !inputTitle) {
+      let active = true
+      setIsFetchingTitle(true)
+      fetchYouTubeMeta(ytId)
+        .then((meta) => {
+          if (active && meta?.title) {
+            setInputTitle(meta.title)
+          }
+        })
+        .finally(() => {
+          if (active) setIsFetchingTitle(false)
+        })
+      return () => {
+        active = false
+      }
+    }
+  }, [inputUrl, inputTitle])
 
   // Dynamic Spectrum Equalizer: Reactive to playback, volume level, and mute
   const [spectrumHeights, setSpectrumHeights] = React.useState<number[]>(Array(16).fill(2))
@@ -130,7 +154,7 @@ export function WinampApp() {
             <button
               type="button"
               onClick={() => {
-                setIsPlaylistOpen(true)
+                if (!isPlaylistOpen) togglePlaylist()
                 setIsAdding(true)
               }}
               title="Tambah / Paste link musik atau video YouTube"
@@ -403,7 +427,11 @@ export function WinampApp() {
                 type="text"
                 value={inputTitle}
                 onChange={(e) => setInputTitle(e.target.value)}
-                placeholder="Judul lagu (opsional)"
+                placeholder={
+                  isFetchingTitle
+                    ? "⏳ Mendeteksi judul video YouTube..."
+                    : "Judul lagu / video (otomatis terdeteksi dari YouTube)"
+                }
                 className="w-full bg-black border border-[#555] px-2 py-1 text-white text-[11px] rounded-[2px] focus:outline-hidden focus:border-cyan-400 font-mono"
               />
               <div className="flex items-center justify-end gap-1.5 pt-1">

@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useChatStore } from "@/lib/chat-store"
 import { useAuth } from "@/lib/auth"
+import { fetchYouTubeMeta } from "@/lib/youtube-meta"
 
 export type VideoFilter = "crt" | "vhs" | "matrix" | "clean"
 
@@ -98,6 +99,32 @@ export function WinampProvider({ children }: { children: React.ReactNode }) {
         if (Array.isArray(parsed) && parsed.length > 0) {
           setPlaylist(parsed)
           setCurrentTrackId(parsed[0].id)
+
+          // Auto-resolve any existing YouTube tracks with placeholder titles
+          parsed.forEach((t: WinampTrack) => {
+            if (
+              t.youtubeId &&
+              (!t.title ||
+                t.title.startsWith("YouTube [") ||
+                t.title.startsWith("YouTube Audio [") ||
+                t.title.startsWith("YouTube Video [") ||
+                t.title === "YouTube Audio")
+            ) {
+              fetchYouTubeMeta(t.youtubeId).then((meta) => {
+                if (meta?.title) {
+                  setPlaylist((prev) => {
+                    const next = prev.map((item) =>
+                      item.id === t.id ? { ...item, title: meta.title } : item
+                    )
+                    try {
+                      localStorage.setItem(STORAGE_PLAYLIST_KEY, JSON.stringify(next))
+                    } catch {}
+                    return next
+                  })
+                }
+              })
+            }
+          })
         }
       }
       const savedFilter = localStorage.getItem(STORAGE_FILTER_KEY) as VideoFilter | null
@@ -407,7 +434,7 @@ export function WinampProvider({ children }: { children: React.ReactNode }) {
         id: `track-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
         title:
           customTitle?.trim() ||
-          (isYt ? `YouTube Audio [${ytId}]` : trimmedUrl.split("/").pop() || "Audio Stream"),
+          (isYt ? `YouTube [${ytId}]` : trimmedUrl.split("/").pop() || "Audio Stream"),
         url: trimmedUrl,
         sourceType: isYt ? "youtube" : "audio",
         youtubeId: ytId || undefined,
@@ -417,6 +444,20 @@ export function WinampProvider({ children }: { children: React.ReactNode }) {
       const updated = [...playlist, newTrack]
       savePlaylist(updated)
       playTrack(newTrack.id)
+
+      // Fetch real YouTube title in background if not provided
+      if (isYt && ytId && !customTitle?.trim()) {
+        fetchYouTubeMeta(ytId).then((meta) => {
+          if (meta?.title) {
+            setPlaylist((prev) => {
+              const next = prev.map((t) => (t.id === newTrack.id ? { ...t, title: meta.title } : t))
+              savePlaylist(next)
+              return next
+            })
+          }
+        })
+      }
+
       return newTrack
     },
     [playlist, savePlaylist, playTrack]
@@ -446,10 +487,31 @@ export function WinampProvider({ children }: { children: React.ReactNode }) {
 
   const shareCurrentTrackToChat = React.useCallback(async (): Promise<boolean> => {
     if (!currentTrack || !user || isGuest || user.isGuest) return false
-    const msg = `📻 [WINAMP 98] Lagi dengerin: "${currentTrack.title}" — ${currentTrack.url}`
+
+    let trackTitle = currentTrack.title
+    if (
+      currentTrack.youtubeId &&
+      (!trackTitle ||
+        trackTitle.startsWith("YouTube [") ||
+        trackTitle.startsWith("YouTube Audio [") ||
+        trackTitle.startsWith("YouTube Video [") ||
+        trackTitle === "YouTube Audio")
+    ) {
+      const meta = await fetchYouTubeMeta(currentTrack.youtubeId)
+      if (meta?.title) {
+        trackTitle = meta.title
+        setPlaylist((prev) => {
+          const next = prev.map((t) => (t.id === currentTrack.id ? { ...t, title: meta.title } : t))
+          savePlaylist(next)
+          return next
+        })
+      }
+    }
+
+    const msg = `📻 [WINAMP 98] Lagi dengerin: "${trackTitle}" — ${currentTrack.url}`
     const res = await sendMessage(msg, [], user)
     return res.success
-  }, [currentTrack, user, isGuest, sendMessage])
+  }, [currentTrack, user, isGuest, sendMessage, savePlaylist])
 
   return (
     <WinampContext.Provider

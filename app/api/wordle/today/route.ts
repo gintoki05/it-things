@@ -68,7 +68,7 @@ export async function GET(req: Request) {
         .order("completed_at", { ascending: true })
 
       if (!boardError && boardData) {
-        leaderboard = boardData.map((b) => ({
+        leaderboard = boardData.map((b: any) => ({
           id: b.id,
           userId: b.user_id,
           userName: b.user_name,

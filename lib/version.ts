@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.13"
+export const APP_VERSION = "v2.3.14"
 export const APP_BUILD = "2026.09.12"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.14",
+    date: "12 Sep 2026",
+    codename: "Chat Live Links, Quick Copy, Anti-Prank Video Title & Winamp Auto-Detect",
+    changes: [
+      "Auto-Detect & Clickable Live Links: Setiap tautan URL http/https di obrolan chat otomatis aktif sebagai link yang dapat diklik langsung dengan pemisahan tanda baca rapi.",
+      "Tombol Salin Link 1-Klik: Ditambahkan tombol retro mini [Salin] di samping tautan dengan indikator feedback [Tersalin!] selama 2 detik.",
+      "Kartu Pratinjau Judul Video YouTube (Anti-Prank / Anti-Rickroll): Menampilkan card judul resmi dan nama kanal YouTube pada setiap link obrolan sebelum dibuka atau diputar.",
+      "Tombol Putar Cepat di Winamp: Akses 1-klik [▶ Putar di Winamp] langsung dari balon chat yang otomatis memasukkan lagu ke playlist dan membuka jendela WINAMP.EXE.",
+      "Auto-Resolve & Metadata Cache Winamp: Deteksi otomatis judul video saat paste link ke form Winamp, sinkronisasi judul asli pada pesan 'Share ke Chat', serta client-side caching.",
+    ],
+  },
   {
     version: "v2.3.13",
     date: "12 Sep 2026",

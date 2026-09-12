@@ -170,7 +170,7 @@ function CreateBillModal({
           chosenMembers.push({
             name: cName,
             userId: undefined,
-            avatarUrl: null,
+            avatarUrl: undefined,
           })
         }
       }

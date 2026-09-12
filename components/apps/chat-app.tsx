@@ -38,12 +38,18 @@ import {
   SmilePlus,
   Bell,
   BellOff,
+  ExternalLink,
+  Copy,
+  Play,
 } from "lucide-react"
 import { useNotification } from "@/lib/notification-store"
 import { usePresence } from "@/lib/presence-store"
 import { usePicStore } from "@/lib/pic-store"
 import { useWordle } from "@/lib/wordle-store"
 import { useLapakStore } from "@/lib/lapak-store"
+import { useDesktop } from "@/components/desktop/desktop-context"
+import { useWinamp, extractYouTubeId } from "@/lib/winamp-store"
+import { fetchYouTubeMeta, YouTubeMeta } from "@/lib/youtube-meta"
 import { computeUserBadges } from "@/lib/user-badges"
 import { UserBadge } from "@/components/retro/user-badge"
 import { cn } from "@/lib/utils"
@@ -106,9 +112,159 @@ interface MentionOption {
   role?: string
 }
 
+function ChatLiveLink({
+  url,
+  isOwn,
+  onPlayInWinamp,
+}: {
+  url: string
+  isOwn?: boolean
+  onPlayInWinamp?: (url: string, title?: string) => void
+}) {
+  const [copied, setCopied] = React.useState(false)
+  const isYouTube = Boolean(extractYouTubeId(url))
+  const [ytMeta, setYtMeta] = React.useState<YouTubeMeta | null>(null)
+  const [isLoadingTitle, setIsLoadingTitle] = React.useState(false)
+
+  React.useEffect(() => {
+    if (!isYouTube) return
+    let active = true
+    setIsLoadingTitle(true)
+    fetchYouTubeMeta(url)
+      .then((meta) => {
+        if (active && meta) {
+          setYtMeta(meta)
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoadingTitle(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [url, isYouTube])
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  const handlePlay = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    if (onPlayInWinamp) {
+      onPlayInWinamp(url, ytMeta?.title || undefined)
+    }
+  }
+
+  return (
+    <span className="inline-flex flex-col my-1 max-w-full align-baseline">
+      {/* YouTube Title & Preview Card to prevent prank/rickroll */}
+      {isYouTube && (
+        <span
+          onClick={(e) => e.stopPropagation()}
+          className={cn(
+            "w-full mb-1.5 p-1.5 rounded-[3px] border shadow-2xs text-[11px] select-text flex flex-col gap-0.5 text-left transition-all",
+            isOwn
+              ? "bg-[#0B1E33] border-cyan-500/50 text-cyan-100"
+              : "bg-[#F8FAFC] border-[#94A3B8] text-[#0F172A]"
+          )}
+        >
+          <span className="flex items-center gap-1 font-mono text-[9px] uppercase tracking-wider opacity-80 select-none">
+            <span className="text-[11px]">🎬</span>
+            <span className="font-bold">
+              {ytMeta?.author ? `YouTube • ${ytMeta.author}` : "YouTube Video"}
+            </span>
+          </span>
+          <span className="font-bold leading-snug break-words text-[12px] text-left">
+            {ytMeta?.title ? (
+              `"${ytMeta.title}"`
+            ) : isLoadingTitle ? (
+              <span className="italic opacity-70 font-normal">Memuat judul video...</span>
+            ) : (
+              <span className="italic opacity-70 font-normal">Tautan Video YouTube</span>
+            )}
+          </span>
+        </span>
+      )}
+
+      <span className="inline-flex items-center flex-wrap gap-1 align-baseline max-w-full">
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          title={ytMeta?.title ? `Buka: ${ytMeta.title} (${url})` : `Buka tautan: ${url}`}
+          className={cn(
+            "inline-flex items-center gap-1 font-medium underline underline-offset-2 break-all rounded-[2px] px-1 py-0.2 transition-colors",
+            isOwn
+              ? "text-cyan-200 hover:text-white hover:bg-blue-800/60"
+              : "text-[#1E4E8C] hover:text-blue-900 hover:bg-blue-50"
+          )}
+        >
+          <ExternalLink className="size-3 shrink-0 inline opacity-80" />
+          <span className="break-all">{url}</span>
+        </a>
+
+        {/* Salin Button */}
+        <button
+          type="button"
+          onClick={handleCopy}
+          title="Salin link ke clipboard"
+          className={cn(
+            "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[2px] font-mono text-[10px] font-bold border transition-all cursor-pointer select-none active:translate-y-px shadow-2xs",
+            copied
+              ? "bg-emerald-600 text-white border-emerald-400"
+              : isOwn
+              ? "bg-[#102A45]/80 hover:bg-[#102A45] text-cyan-200 hover:text-white border-cyan-400/40"
+              : "bg-[#CBD5E1] hover:bg-white text-[#102A45] border-[#94A3B8]"
+          )}
+        >
+          {copied ? (
+            <>
+              <Check className="size-2.5 text-white" />
+              <span>Tersalin!</span>
+            </>
+          ) : (
+            <>
+              <Copy className="size-2.5" />
+              <span>Salin</span>
+            </>
+          )}
+        </button>
+
+        {/* Putar di Winamp Button (if YouTube / Audio) */}
+        {isYouTube && onPlayInWinamp && (
+          <button
+            type="button"
+            onClick={handlePlay}
+            title={ytMeta?.title ? `Putar "${ytMeta.title}" di WINAMP.EXE` : "Putar video/lagu ini di WINAMP.EXE"}
+            className={cn(
+              "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[2px] font-mono text-[10px] font-bold border transition-all cursor-pointer select-none active:translate-y-px shadow-2xs",
+              isOwn
+                ? "bg-amber-400 hover:bg-amber-300 text-black border-amber-300 font-bold"
+                : "bg-[#1E4E8C] hover:bg-[#2A65B2] text-white border-blue-400 font-bold"
+            )}
+          >
+            <Play className="size-2.5 fill-current" />
+            <span>Putar di Winamp</span>
+          </button>
+        )}
+      </span>
+    </span>
+  )
+}
+
 export function ChatApp() {
   const { user, isGuest, isAdmin, signInWithGoogle } = useAuth()
   const { members } = useTeamStore()
+  const { openWindow } = useDesktop()
+  const { addTrack } = useWinamp()
 
   // Map profil member terbaru berdasarkan user_id dan id untuk sinkronisasi realtime nama & avatar di chat
   const membersMap = React.useMemo(() => {
@@ -154,7 +310,7 @@ export function ChatApp() {
   const lapakSellerUserIds = React.useMemo(() => {
     const set = new Set<string>()
     lapakItems.forEach((item) => {
-      if (item.createdByUserId) set.add(item.createdByUserId)
+      if (item.createdById) set.add(item.createdById)
     })
     return set
   }, [lapakItems])
@@ -552,8 +708,8 @@ export function ChatApp() {
     textareaRef.current?.focus()
   }
 
-  // Render highlighted text with @mentions badges
-  const renderMessageContent = (text: string) => {
+  // Render highlighted text with @mentions badges and live URLs
+  const renderMessageContent = (text: string, isOwn?: boolean) => {
     // Ambil daftar nama yang valid, urutkan dari yang terpanjang agar nama lengkap diutamakan
     const knownNames = Array.from(
       new Set([
@@ -599,7 +755,40 @@ export function ChatApp() {
           </span>
         )
       }
-      return <span key={idx}>{part}</span>
+
+      // If not a mention, parse URLs
+      const urlPattern = /(https?:\/\/[^\s]+)/gi
+      const subParts = part.split(urlPattern)
+
+      return (
+        <React.Fragment key={idx}>
+          {subParts.map((subPart, subIdx) => {
+            if (/^https?:\/\/[^\s]+$/i.test(subPart)) {
+              // Separate trailing punctuation if any (like .,:;!?)
+              const trailingPunctMatch = subPart.match(/[.,;:!?)\]}>]+$/)
+              const trailingPunct = trailingPunctMatch ? trailingPunctMatch[0] : ""
+              const cleanUrl = trailingPunct
+                ? subPart.slice(0, subPart.length - trailingPunct.length)
+                : subPart
+
+              return (
+                <React.Fragment key={subIdx}>
+                  <ChatLiveLink
+                    url={cleanUrl}
+                    isOwn={isOwn}
+                    onPlayInWinamp={(u, title) => {
+                      addTrack(u, title)
+                      openWindow("winamp")
+                    }}
+                  />
+                  {trailingPunct}
+                </React.Fragment>
+              )
+            }
+            return <span key={subIdx}>{subPart}</span>
+          })}
+        </React.Fragment>
+      )
     })
   }
 
@@ -1036,7 +1225,7 @@ export function ChatApp() {
                         )}
                       >
                         <div className="break-words whitespace-pre-wrap select-text flow-root">
-                          {renderMessageContent(msg.message)}
+                          {renderMessageContent(msg.message, true)}
                           {/* WhatsApp-style inline timestamp */}
                           <span className="inline-flex items-center gap-1 float-right ml-2.5 mt-1 -mb-0.5 text-[10px] text-blue-200/90 font-mono select-none whitespace-nowrap">
                             {msg.isEdited && (
@@ -1139,7 +1328,7 @@ export function ChatApp() {
                           )}
                         >
                           <div className="break-words whitespace-pre-wrap select-text flow-root">
-                            {renderMessageContent(msg.message)}
+                            {renderMessageContent(msg.message, false)}
                             {/* WhatsApp-style inline timestamp */}
                             <span className="inline-flex items-center gap-1 float-right ml-2.5 mt-1 -mb-0.5 text-[10px] text-gray-400 font-mono select-none whitespace-nowrap">
                               {msg.isEdited && (

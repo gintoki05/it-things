@@ -67,7 +67,7 @@ export async function getUserBankProfile(userId: string): Promise<UserBankProfil
 
   if (isSupabaseConfigured && supabase) {
     try {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("team_members")
         .select("bank_name, account_number, account_holder, qris_url")
         .eq("user_id", userId)
@@ -110,7 +110,7 @@ export async function saveUserBankProfile(
 
   if (isSupabaseConfigured && supabase) {
     try {
-      await supabase
+      await (supabase as any)
         .from("team_members")
         .update({
           bank_name: profile.bank_name,
@@ -202,7 +202,7 @@ export function useSplitBillStore() {
 
     try {
       // Trigger background 7-day auto-purge
-      Promise.resolve(supabase.rpc("cleanup_expired_split_bills")).catch(() => {})
+      Promise.resolve((supabase as any).rpc("cleanup_expired_split_bills")).catch(() => {})
 
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
@@ -251,7 +251,7 @@ export function useSplitBillStore() {
             isPaid: Boolean(p.is_paid),
             paidAt: p.paid_at,
             isConfirmed: Boolean(p.is_confirmed),
-            items: Array.isArray(p.items) ? p.items : [],
+            items: Array.isArray(p.items) ? (p.items as unknown as string[]) : [],
             created_at: p.created_at,
           }))
           .sort((a, bPart) => {
@@ -268,7 +268,7 @@ export function useSplitBillStore() {
             return a.id.localeCompare(bPart.id)
           })
 
-        const items: ItemizedOrder[] = Array.isArray(b.items) ? b.items : []
+        const items: ItemizedOrder[] = Array.isArray((b as any).items) ? ((b as any).items as unknown as ItemizedOrder[]) : []
 
         return {
           id: b.id,
@@ -324,7 +324,9 @@ export function useSplitBillStore() {
       .subscribe()
 
     return () => {
-      supabase.removeChannel(channel)
+      if (supabase) {
+        supabase.removeChannel(channel)
+      }
     }
   }, [fetchBills])
 
@@ -357,7 +359,7 @@ export function useSplitBillStore() {
       const disc = Number(payload.discount) || 0
       const grandTotal = Math.max(0, sub + taxVal + deliv - disc)
 
-      const { data: newBill, error: billErr } = await supabase
+      const { data: newBill, error: billErr } = await (supabase as any)
         .from("split_bills")
         .insert({
           title: payload.title,
@@ -375,7 +377,7 @@ export function useSplitBillStore() {
           discount: disc,
           total_amount: grandTotal,
           is_settled: false,
-          items: [],
+          items: [] as any,
         })
         .select()
         .single()
@@ -677,11 +679,11 @@ export function useSplitBillStore() {
         .delete()
         .eq("id", participantId)
 
-      await supabase
+      await (supabase as any)
         .from("split_bills")
         .update({
           total_amount: grandTotal,
-          items: nextItems,
+          items: nextItems as any,
           is_settled: allRemainingConfirmed,
         })
         .eq("id", billId)
