@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.12"
+export const APP_VERSION = "v2.3.13"
 export const APP_BUILD = "2026.09.12"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.13",
+    date: "12 Sep 2026",
+    codename: "Welcome 98 What's New Hub & Start Pointer Balloon",
+    changes: [
+      "Peluncuran modul Welcome 98 (welcome98.exe) untuk pengumuman otomatis pembaruan sistem dan highlight fitur baru.",
+      "Showcase 4 fitur utama: Winamp 2.91 & CRT, Game Center 98, Status Online Tim, dan Properti Wallpaper dengan tombol peluncur langsung.",
+      "Balon Petunjuk Retro Windows 98 yang menunjuk ke tombol Start di taskbar dengan animasi pulse amber saat pengumuman selesai dibaca.",
+      "Integrasi menu What's New pada Start Menu, menu klik kanan desktop (Context Menu), dan dialog winver.exe.",
+      "Sanitasi event keyboard: isolasi tombol Escape khusus dialog tanpa mencegat Enter pada form login dan input teks.",
+    ],
+  },
   {
     version: "v2.3.12",
     date: "12 Sep 2026",

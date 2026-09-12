@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Monitor, RotateCw, Info, Laptop } from "lucide-react"
+import { Monitor, RotateCw, Info, Laptop, Sparkles } from "lucide-react"
 import { useWallpaper } from "@/lib/wallpaper-store"
 import { useDesktop } from "@/components/desktop/desktop-context"
 
@@ -13,7 +13,7 @@ interface DesktopContextMenuProps {
 
 export function DesktopContextMenu({ x, y, onClose }: DesktopContextMenuProps) {
   const { openDialog } = useWallpaper()
-  const { openAboutDialog, toggleShowDesktop, isAllMinimized } = useDesktop()
+  const { openAboutDialog, openWhatsNewDialog, toggleShowDesktop, isAllMinimized } = useDesktop()
   const menuRef = React.useRef<HTMLDivElement>(null)
 
   // Bounds checking to stay within viewport
@@ -104,6 +104,23 @@ export function DesktopContextMenu({ x, y, onClose }: DesktopContextMenuProps) {
       </button>
 
       <div className="my-1 border-t border-[#A4B5C6]/70 mx-1" />
+
+      <button
+        type="button"
+        onClick={() => {
+          onClose()
+          openWhatsNewDialog()
+        }}
+        className="w-full text-left px-3 py-1.5 hover:bg-[#1E4E8C] hover:text-white flex items-center justify-between text-[#14253D] group transition-colors cursor-pointer"
+      >
+        <div className="flex items-center gap-2 font-semibold">
+          <Sparkles className="size-3.5 text-amber-500 group-hover:text-yellow-300" />
+          <span>Apa yang Baru...</span>
+        </div>
+        <span className="text-[9px] font-mono font-bold bg-amber-400 group-hover:bg-yellow-300 text-slate-950 px-1 py-0.2 rounded leading-none">
+          NEW
+        </span>
+      </button>
 
       <button
         type="button"

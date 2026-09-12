@@ -1,11 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { X, Info, Monitor, History, ShieldCheck, User, Database } from "lucide-react"
+import { X, Info, Monitor, History, ShieldCheck, User, Database, Sparkles } from "lucide-react"
 import { RetroIcon } from "@/components/ui/retro-icon"
 import { APP_VERSION, APP_BUILD, APP_NAME, APP_EDITION, APP_CHANGELOG } from "@/lib/version"
 import { useAuth } from "@/lib/auth"
 import { usePicStore } from "@/lib/pic-store"
+import { useDesktop } from "@/components/desktop/desktop-context"
 
 interface AboutDialogProps {
   isOpen: boolean
@@ -15,6 +16,7 @@ interface AboutDialogProps {
 export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
   const { user, isAdmin, isGuest, isSupabaseConnected } = useAuth()
   const { isKasPic, isPantryPic } = usePicStore()
+  const { openWhatsNewDialog } = useDesktop()
   const [activeTab, setActiveTab] = React.useState<"info" | "changelog">("changelog")
   const okButtonRef = React.useRef<HTMLButtonElement>(null)
 
@@ -24,7 +26,17 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
     okButtonRef.current?.focus()
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" || e.key === "Enter") {
+      const target = e.target as HTMLElement | null
+      const isInput =
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+
+      if (isInput) return
+
+      if (e.key === "Escape") {
         e.preventDefault()
         onClose()
       }
@@ -207,9 +219,17 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
 
           {/* Action buttons */}
           <div className="flex items-center justify-between pt-1">
-            <span className="text-[10px] font-mono text-gray-600">
-              © 2026 IT Team Internal Suite
-            </span>
+            <button
+              type="button"
+              onClick={() => {
+                onClose()
+                openWhatsNewDialog()
+              }}
+              className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-mono font-bold text-[#1E4E8C] hover:text-[#153A6B] hover:underline cursor-pointer rounded-[2px]"
+            >
+              <Sparkles className="size-3 text-amber-500" />
+              <span>Lihat Ringkasan Fitur Baru</span>
+            </button>
             <button
               ref={okButtonRef}
               type="button"

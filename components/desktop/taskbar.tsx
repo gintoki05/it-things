@@ -25,7 +25,9 @@ import {
   Volume2,
   VolumeX,
   Monitor,
-  Music
+  Music,
+  X,
+  Lightbulb
 } from "lucide-react"
 import { EditProfileModal } from "@/components/auth/edit-profile-modal"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -37,13 +39,14 @@ import { usePicStore } from "@/lib/pic-store"
 import { useWallpaper } from "@/lib/wallpaper-store"
 import { usePresence } from "@/lib/presence-store"
 import { useWinamp } from "@/lib/winamp-store"
+import { playRetroNotificationSound } from "@/lib/sound-effects"
 
 interface TaskbarProps {
   onOpenLoginModal?: () => void
 }
 
 export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
-  const { windows, activeWindowId, openWindow, toggleWindow, openAboutDialog, toggleShowDesktop, isAllMinimized } = useDesktop()
+  const { windows, activeWindowId, openWindow, toggleWindow, openAboutDialog, openWhatsNewDialog, toggleShowDesktop, isAllMinimized } = useDesktop()
   const { openDialog: openWallpaperDialog } = useWallpaper()
   const { user, isAdmin, isTreasurer, isGuest, isSupabaseConnected, signOut, setDemoUserRole, lockApp, canSwitchRole } = useAuth()
   const { isKasPic, isPantryPic } = usePicStore()
@@ -70,8 +73,40 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
   const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false)
   const [time, setTime] = React.useState("12:00")
   const [isKeyboardOpen, setIsKeyboardOpen] = React.useState(false)
+  const [showStartTip, setShowStartTip] = React.useState(false)
+  const [isStartHighlighted, setIsStartHighlighted] = React.useState(false)
   const startMenuRef = React.useRef<HTMLDivElement>(null)
   const startBtnRef = React.useRef<HTMLButtonElement>(null)
+
+  // Tangkap event saat user selesai membaca What's New dialog (Opsi 1: Balon Petunjuk)
+  React.useEffect(() => {
+    const handleShowTip = () => {
+      setShowStartTip(true)
+      setIsStartHighlighted(true)
+      playRetroNotificationSound(0.25)
+    }
+
+    window.addEventListener("show-start-tip-balloon", handleShowTip)
+    return () => window.removeEventListener("show-start-tip-balloon", handleShowTip)
+  }, [])
+
+  // Auto-dismiss balon petunjuk setelah 8 detik
+  React.useEffect(() => {
+    if (!showStartTip) return
+    const timer = setTimeout(() => {
+      setShowStartTip(false)
+      setIsStartHighlighted(false)
+    }, 8000)
+    return () => clearTimeout(timer)
+  }, [showStartTip])
+
+  // Tutup balon petunjuk jika Start Menu dibuka oleh user
+  React.useEffect(() => {
+    if (isStartOpen) {
+      setShowStartTip(false)
+      setIsStartHighlighted(false)
+    }
+  }, [isStartOpen])
 
   // Track virtual keyboard on mobile to prevent taskbar from overlaying chat
   React.useEffect(() => {
@@ -356,6 +391,23 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                   type="button"
                   onClick={() => {
                     setIsStartOpen(false)
+                    openWhatsNewDialog()
+                  }}
+                  className="w-full flex items-center justify-between px-2 py-1.5 hover:bg-[#1E4E8C] hover:text-white text-[#14253D] rounded-[2px] transition-colors text-left font-semibold text-[11px] group"
+                >
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="size-3.5 text-amber-500 group-hover:text-yellow-300 shrink-0" />
+                    <span>Apa yang Baru (What&apos;s New)...</span>
+                  </div>
+                  <span className="text-[9px] font-mono font-bold bg-amber-400 group-hover:bg-yellow-300 text-slate-950 px-1 py-0.2 rounded leading-none">
+                    NEW
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsStartOpen(false)
                     openAboutDialog()
                   }}
                   className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[#1E4E8C] hover:text-white text-[#14253D] rounded-[2px] transition-colors text-left font-semibold text-[11px] group"
@@ -434,6 +486,8 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
             "h-8 px-2.5 flex items-center gap-1.5 font-sans font-bold text-xs text-[#14253D] rounded-[2px] transition-all border",
             isStartOpen
               ? "bg-[#BCC9D6] border-t-[#5E7287] border-l-[#5E7287] border-r-white border-b-white translate-y-px"
+              : isStartHighlighted
+              ? "bg-amber-200 border-t-amber-100 border-l-amber-100 border-r-amber-700 border-b-amber-700 shadow-[0_0_10px_rgba(245,158,11,0.85)] animate-pulse"
               : "bg-[#D4DDE6] border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] hover:bg-[#DEE6EE] shadow-[1px_1px_0px_#5E7287]"
           )}
         >
@@ -659,6 +713,71 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
           <div className="font-bold text-[11px] tracking-wider text-slate-800 shrink-0">{time}</div>
         </div>
       </footer>
+
+      {/* Windows 98 Start Tip Balloon (Opsi 1: Balon Petunjuk Retro) */}
+      {showStartTip && (
+        <div
+          role="status"
+          aria-live="polite"
+          onClick={() => {
+            setShowStartTip(false)
+            setIsStartHighlighted(false)
+            setIsStartOpen(true)
+          }}
+          className={cn(
+            "fixed bottom-[48px] left-2 sm:left-3 z-[999] w-[290px] sm:w-[320px] max-w-[92vw] cursor-pointer select-none",
+            "animate-in fade-in slide-in-from-bottom-2 duration-200"
+          )}
+        >
+          {/* Authentic Windows 98 Yellow Tooltip Box */}
+          <div className="relative bg-[#FFFFE1] border-2 border-black rounded-[2px] shadow-[4px_4px_0px_rgba(0,0,0,0.5)] p-2.5 flex flex-col gap-1.5 transition-transform hover:-translate-y-0.5">
+            {/* Header: Title & Close Button */}
+            <div className="flex items-center justify-between gap-1.5 border-b border-[#DCDCA0] pb-1">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Lightbulb className="size-3.5 text-amber-600 shrink-0" />
+                <span className="font-mono font-bold text-[11px] text-[#14253D] tracking-wide truncate">
+                  TIPS WINDOWS 98
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowStartTip(false)
+                  setIsStartHighlighted(false)
+                }}
+                className="size-5 hover:bg-black/10 rounded flex items-center justify-center text-gray-700 hover:text-black cursor-pointer leading-none shrink-0"
+                title="Tutup Petunjuk"
+              >
+                <X className="size-3" />
+              </button>
+            </div>
+
+            {/* Message Body */}
+            <div className="text-[11px] font-sans text-gray-800 leading-snug space-y-1">
+              <p>Butuh info fitur baru ini lagi nanti? Buka kapan saja lewat:</p>
+              <ul className="text-[10.5px] font-medium space-y-0.5 pl-1 text-gray-700">
+                <li className="flex items-center gap-1.5">
+                  <span className="text-[#1E4E8C] font-bold shrink-0">▸</span>
+                  <span>Tombol <strong>Start</strong> ➔ <strong>Apa yang Baru...</strong></span>
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span className="text-[#1E4E8C] font-bold shrink-0">▸</span>
+                  <span>Atau <strong>Klik Kanan</strong> di wallpaper Desktop</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="pt-1 border-t border-[#EBEBA0] text-[10px] font-mono text-[#1E4E8C] font-semibold flex items-center justify-between">
+              <span>👉 Klik balon untuk buka menu Start</span>
+            </div>
+
+            {/* Downward pointing arrow triangle pointing toward Start button */}
+            <div className="absolute -bottom-2 left-6 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-black" />
+            <div className="absolute -bottom-[5px] left-[25px] w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[7px] border-t-[#FFFFE1]" />
+          </div>
+        </div>
+      )}
 
       {/* Retro In-App Notification Toast */}
       <RetroNotificationToast />

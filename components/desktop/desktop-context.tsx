@@ -40,6 +40,9 @@ interface DesktopContextType {
   isAboutOpen: boolean
   openAboutDialog: () => void
   closeAboutDialog: () => void
+  isWhatsNewOpen: boolean
+  openWhatsNewDialog: () => void
+  closeWhatsNewDialog: () => void
   toggleShowDesktop: () => void
   isAllMinimized: boolean
 }
@@ -258,6 +261,7 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
   const [topZIndex, setTopZIndex] = React.useState(20)
   const [comingSoonApp, setComingSoonApp] = React.useState<WindowState | null>(null)
   const [isAboutOpen, setIsAboutOpen] = React.useState(false)
+  const [isWhatsNewOpen, setIsWhatsNewOpen] = React.useState(false)
 
   // Otomatis buka app dari URL query params atau load default desktop layout
   React.useEffect(() => {
@@ -408,6 +412,14 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
 
   const closeAboutDialog = React.useCallback(() => {
     setIsAboutOpen(false)
+  }, [])
+
+  const openWhatsNewDialog = React.useCallback(() => {
+    setIsWhatsNewOpen(true)
+  }, [])
+
+  const closeWhatsNewDialog = React.useCallback(() => {
+    setIsWhatsNewOpen(false)
   }, [])
 
   const openWindow = React.useCallback(
@@ -639,6 +651,9 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
       isAboutOpen,
       openAboutDialog,
       closeAboutDialog,
+      isWhatsNewOpen,
+      openWhatsNewDialog,
+      closeWhatsNewDialog,
       toggleShowDesktop,
       isAllMinimized,
     }),
@@ -658,6 +673,9 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
       isAboutOpen,
       openAboutDialog,
       closeAboutDialog,
+      isWhatsNewOpen,
+      openWhatsNewDialog,
+      closeWhatsNewDialog,
       toggleShowDesktop,
       isAllMinimized,
     ]

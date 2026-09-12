@@ -12,6 +12,7 @@ import { GoogleLoginModal } from "@/components/auth/google-login-modal"
 import { PasscodeScreen } from "@/components/auth/passcode-screen"
 import { ComingSoonDialog } from "@/components/desktop/coming-soon-dialog"
 import { AboutDialog } from "@/components/desktop/about-dialog"
+import { WhatsNewDialog } from "@/components/desktop/whats-new-dialog"
 import { TeamWidget } from "@/components/desktop/team-widget"
 import { StickyNoteWidget } from "@/components/desktop/sticky-note-widget"
 import { APP_VERSION } from "@/lib/version"
@@ -57,11 +58,37 @@ const MemoizedStickyNoteWidget = React.memo(StickyNoteWidget)
 
 function DesktopWorkspace() {
   const { isPasscodeVerified, isPasscodeLoading, isGuest, isAdmin, isRecoveryMode } = useAuth()
-  const { comingSoonApp, closeComingSoonDialog, isAboutOpen, closeAboutDialog, closeWindow } = useDesktop()
+  const {
+    comingSoonApp,
+    closeComingSoonDialog,
+    isAboutOpen,
+    closeAboutDialog,
+    isWhatsNewOpen,
+    openWhatsNewDialog,
+    closeWhatsNewDialog,
+    closeWindow,
+  } = useDesktop()
   const { wallpaper, getBackgroundStyle } = useWallpaper()
   const [showLoginModal, setShowLoginModal] = React.useState(false)
   const [showExitGameConfirm, setShowExitGameConfirm] = React.useState(false)
   const [contextMenuPos, setContextMenuPos] = React.useState<{ x: number; y: number } | null>(null)
+
+  // Otomatis munculkan What's New dialog saat user pertama kali berkunjung / ada update rilis baru
+  // Tahan kemunculan jika modal login Google/password sedang aktif
+  React.useEffect(() => {
+    if (!isPasscodeVerified || showLoginModal) return
+
+    const lastSeenVersion = typeof window !== "undefined" ? localStorage.getItem("it-things_last_seen_version") : null
+
+    if (lastSeenVersion !== APP_VERSION) {
+      const timer = setTimeout(() => {
+        if (!showLoginModal) {
+          openWhatsNewDialog()
+        }
+      }, 700)
+      return () => clearTimeout(timer)
+    }
+  }, [isPasscodeVerified, showLoginModal, openWhatsNewDialog])
 
   const handleDesktopContextMenu = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement
@@ -253,6 +280,12 @@ function DesktopWorkspace() {
       <AboutDialog
         isOpen={isAboutOpen}
         onClose={closeAboutDialog}
+      />
+
+      {/* Retro Welcome / What's New Dialog (welcome98.exe) */}
+      <WhatsNewDialog
+        isOpen={isWhatsNewOpen}
+        onClose={closeWhatsNewDialog}
       />
 
       {/* Google Login / Access Gate Modal */}
