@@ -18,6 +18,7 @@ import { APP_VERSION } from "@/lib/version"
 import { WallpaperProvider, useWallpaper } from "@/lib/wallpaper-store"
 import { DisplayPropertiesDialog } from "@/components/desktop/display-properties-dialog"
 import { DesktopContextMenu } from "@/components/desktop/desktop-context-menu"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 // Apps
 import { VoteApp } from "@/components/apps/vote-app"
@@ -32,6 +33,7 @@ import { LapakApp } from "@/components/apps/lapak-app"
 import { IExploreApp } from "@/components/apps/iexplore-app"
 import { PaintWarApp } from "@/components/apps/paint-war-app"
 import { GameApp } from "@/components/apps/game-app"
+import { UsageApp } from "@/components/apps/usage-app"
 
 const MemoizedReadmeApp = React.memo(ReadmeApp)
 const MemoizedVoteApp = React.memo(VoteApp)
@@ -45,15 +47,17 @@ const MemoizedChatApp = React.memo(ChatApp)
 const MemoizedIExploreApp = React.memo(IExploreApp)
 const MemoizedPaintWarApp = React.memo(PaintWarApp)
 const MemoizedGameApp = React.memo(GameApp)
+const MemoizedUsageApp = React.memo(UsageApp)
 const MemoizedDesktopIcons = React.memo(DesktopIcons)
 const MemoizedTeamWidget = React.memo(TeamWidget)
 const MemoizedStickyNoteWidget = React.memo(StickyNoteWidget)
 
 function DesktopWorkspace() {
   const { isPasscodeVerified, isPasscodeLoading, isGuest, isAdmin, isRecoveryMode } = useAuth()
-  const { comingSoonApp, closeComingSoonDialog, isAboutOpen, closeAboutDialog } = useDesktop()
+  const { comingSoonApp, closeComingSoonDialog, isAboutOpen, closeAboutDialog, closeWindow } = useDesktop()
   const { wallpaper, getBackgroundStyle } = useWallpaper()
   const [showLoginModal, setShowLoginModal] = React.useState(false)
+  const [showExitGameConfirm, setShowExitGameConfirm] = React.useState(false)
   const [contextMenuPos, setContextMenuPos] = React.useState<{ x: number; y: number } | null>(null)
 
   const handleDesktopContextMenu = (e: React.MouseEvent) => {
@@ -203,13 +207,22 @@ function DesktopWorkspace() {
       </DesktopWindow>
 
       {/* Retro Window: paintwar.exe (Paint War - Multiplayer Gartic 98) */}
-      <DesktopWindow id="paintwar" bodyClassName="p-0 overflow-hidden flex flex-col">
+      <DesktopWindow
+        id="paintwar"
+        bodyClassName="p-0 overflow-hidden flex flex-col"
+        onCloseRequest={() => setShowExitGameConfirm(true)}
+      >
         <MemoizedPaintWarApp />
       </DesktopWindow>
 
       {/* Retro Window: game.exe (Koleksi Game & Arcade 98) */}
       <DesktopWindow id="game" bodyClassName="p-0 overflow-hidden flex flex-col">
         <MemoizedGameApp />
+      </DesktopWindow>
+
+      {/* Retro Window: sysinfo.exe (Supabase Kuota Monitor) */}
+      <DesktopWindow id="usage">
+        <MemoizedUsageApp />
       </DesktopWindow>
 
       {/* Floating Retro Team Widget */}
@@ -250,6 +263,21 @@ function DesktopWorkspace() {
 
       {/* Retro Display Properties / Wallpaper Dialog */}
       <DisplayPropertiesDialog />
+
+      {/* Retro Confirm Dialog: Keluar dari game PAINT_WAR.EXE */}
+      <ConfirmDialog
+        isOpen={showExitGameConfirm}
+        onClose={() => setShowExitGameConfirm(false)}
+        onConfirm={() => {
+          closeWindow("paintwar")
+          setShowExitGameConfirm(false)
+        }}
+        title="KELUAR_GAME.EXE"
+        message="Yakin ingin keluar dari game PAINT_WAR? Sesi gambar atau tebakan yang sedang berlangsung akan kamu tinggalkan."
+        confirmText="Keluar Game"
+        cancelText="Lanjut Main"
+        variant="warning"
+      />
     </div>
   )
 }

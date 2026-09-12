@@ -11,23 +11,35 @@ const ITEM_GRID_POSITIONS: Record<AppId, string> = {
   readme: "col-start-1 row-start-1",
   vote: "col-start-1 row-start-2",
   chat: "col-start-1 row-start-3",
-  team: "col-start-1 row-start-4",
+  game: "col-start-1 row-start-4",
   wheel: "col-start-2 row-start-5",
   splitbill: "col-start-2 row-start-1",
   kas: "col-start-2 row-start-2",
   pantry: "col-start-2 row-start-3",
   lapak: "col-start-2 row-start-4",
   iexplore: "col-start-1 row-start-5",
+  team: "col-start-1 row-start-4",
+  paintwar: "col-start-3 row-start-1",
+  usage: "col-start-3 row-start-2",
 }
 
 export function DesktopIcons() {
   const { windows, openWindow } = useDesktop()
   const { isAdmin } = useAuth()
-  const { unreadChatCount, activeVoteCount, activePantryCount, activeSplitBillCount, clearUnreadChat } = useNotification()
+  const {
+    unreadChatCount,
+    activeVoteCount,
+    activePantryCount,
+    activeSplitBillCount,
+    activePaintWarCount,
+    clearUnreadChat,
+  } = useNotification()
   const [selectedId, setSelectedId] = React.useState<AppId | null>(null)
 
   // Hanya tampilkan modul yang tidak disembunyikan dan bukan adminOnly (kecuali admin)
-  const items = Object.values(windows).filter((item) => !item.isHidden && (!item.adminOnly || isAdmin))
+  const items = Object.values(windows).filter(
+    (item) => !item.isHidden && !item.hideFromDesktop && (!item.adminOnly || isAdmin)
+  )
 
   const handleOpen = (id: AppId) => {
     if (id === "chat") {
@@ -119,6 +131,14 @@ export function DesktopIcons() {
                   className="absolute -top-1.5 -right-2 bg-rose-500 text-white font-mono text-[9px] font-black min-w-[16px] text-center px-1 py-0.5 rounded border border-rose-600 shadow leading-none animate-pulse"
                 >
                   {unreadChatCount > 99 ? "99+" : unreadChatCount}
+                </span>
+              )}
+              {!item.isComingSoon && item.id === "game" && activePaintWarCount > 0 && (
+                <span
+                  title={`${activePaintWarCount} Pemain Online di Paint War`}
+                  className="absolute -top-1.5 -right-2 bg-purple-600 text-white font-mono text-[9px] font-black min-w-[16px] text-center px-1 py-0.5 rounded border border-purple-400 shadow leading-none animate-pulse"
+                >
+                  {activePaintWarCount > 99 ? "99+" : activePaintWarCount}
                 </span>
               )}
             </div>

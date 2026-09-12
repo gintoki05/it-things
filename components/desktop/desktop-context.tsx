@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
 
-export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore"
+export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "usage"
 
 export interface WindowState {
   id: AppId
@@ -21,6 +21,7 @@ export interface WindowState {
   isComingSoon?: boolean
   adminOnly?: boolean
   isHidden?: boolean
+  hideFromDesktop?: boolean
 }
 
 interface DesktopContextType {
@@ -159,6 +160,7 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 740, height: 560 },
     defaultSize: { width: 740, height: 560 },
     defaultPos: { x: 295, y: 104 },
+    hideFromDesktop: true,
   },
   chat: {
     id: "chat",
@@ -188,6 +190,50 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     defaultSize: { width: 840, height: 600 },
     defaultPos: { x: 210, y: 30 },
     isHidden: true,
+  },
+  paintwar: {
+    id: "paintwar",
+    title: "PAINT_WAR.EXE - Retro Gartic 98",
+    icon: "game",
+    filename: "paintwar.exe",
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    zIndex: 14,
+    position: { x: 180, y: 30 },
+    size: { width: 880, height: 600 },
+    defaultSize: { width: 880, height: 600 },
+    defaultPos: { x: 180, y: 30 },
+    hideFromDesktop: true,
+  },
+  game: {
+    id: "game",
+    title: "Game.exe - Koleksi Game IT-Things",
+    icon: "game",
+    filename: "game.exe",
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    zIndex: 14,
+    position: { x: 230, y: 60 },
+    size: { width: 560, height: 420 },
+    defaultSize: { width: 560, height: 420 },
+    defaultPos: { x: 230, y: 60 },
+  },
+  usage: {
+    id: "usage",
+    title: "SysInfo.exe - Supabase Kuota Monitor",
+    icon: "info",
+    filename: "sysinfo.exe",
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    zIndex: 14,
+    position: { x: 260, y: 70 },
+    size: { width: 520, height: 540 },
+    defaultSize: { width: 520, height: 540 },
+    defaultPos: { x: 260, y: 70 },
+    adminOnly: true,
   },
 }
 
