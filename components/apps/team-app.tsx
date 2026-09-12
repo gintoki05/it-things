@@ -103,7 +103,7 @@ export function TeamApp() {
   const openEditModal = (member: TeamMember) => {
     setEditingMember(member)
     setFormName(member.name)
-    setFormEmail(member.email)
+    setFormEmail(member.email || "")
     setFormRole(member.role)
     setFormEmoji(
       member.avatar_url || (member.role === "admin" ? "🛡️" : "👤")
@@ -585,7 +585,7 @@ export function TeamApp() {
               ) : (
                 filteredMembers.map((member, idx) => {
                   const isItemAdmin = member.role === "admin"
-                  const isMe = user?.id === member.user_id || user?.email === member.email
+                  const isMe = user?.id === member.user_id
                   const isOnline = isUserOnline(member.user_id, member.name)
                   const picTags = getUserPicTags(member.user_id || member.id)
 

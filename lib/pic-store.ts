@@ -46,34 +46,35 @@ export const DEFAULT_PICS: Record<string, ModulePic[]> = {
   ],
 }
 
-export function usePicStore() {
-  const { user, isAdmin, isGuest } = useAuth()
-  const [pics, setPics] = React.useState<Record<string, ModulePic[]>>(DEFAULT_PICS)
-  const [isLoading, setIsLoading] = React.useState(true)
-  const [isUpdating, setIsUpdating] = React.useState(false)
+// ─── Shared In-Memory State & Deduplication ───────────────────
+let cachedPics: Record<string, ModulePic[]> = DEFAULT_PICS
+let inFlightPicPromise: Promise<Record<string, ModulePic[]>> | null = null
+const picListeners = new Set<(pics: Record<string, ModulePic[]>) => void>()
 
-  // 1. Load PIC assignments from Supabase or localStorage
-  const loadPics = React.useCallback(async () => {
-    setIsLoading(true)
-
-    // Check localStorage cache
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY)
-        if (raw) {
-          const cached = JSON.parse(raw)
-          if (cached && typeof cached === "object") {
-            setPics((prev) => ({ ...prev, ...cached }))
-          }
+function getInitialCachedPics(): Record<string, ModulePic[]> {
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (parsed && typeof parsed === "object") {
+          cachedPics = { ...DEFAULT_PICS, ...parsed }
+          return cachedPics
         }
-      } catch (err) {
-        console.warn("Gagal membaca module_pics dari localStorage:", err)
       }
-    }
+    } catch {}
+  }
+  return cachedPics
+}
 
+async function fetchPicsDeduplicated(): Promise<Record<string, ModulePic[]>> {
+  if (inFlightPicPromise) {
+    return inFlightPicPromise
+  }
+
+  inFlightPicPromise = (async () => {
     if (!isSupabaseConfigured || !supabase) {
-      setIsLoading(false)
-      return
+      return cachedPics
     }
 
     try {
@@ -103,47 +104,71 @@ export function usePicStore() {
           })
         })
 
-        setPics(grouped)
+        cachedPics = grouped
         if (typeof window !== "undefined") {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(grouped))
         }
+        picListeners.forEach((listener) => listener(grouped))
       }
     } catch (err) {
       console.warn("Gagal mengambil data module_pics dari Supabase:", err)
     } finally {
-      setIsLoading(false)
+      inFlightPicPromise = null
     }
+
+    return cachedPics
+  })()
+
+  return inFlightPicPromise
+}
+
+export function usePicStore() {
+  const { user, isAdmin, isGuest } = useAuth()
+  const [pics, setPics] = React.useState<Record<string, ModulePic[]>>(() => getInitialCachedPics())
+  const [isLoading, setIsLoading] = React.useState(false)
+  const [isUpdating, setIsUpdating] = React.useState(false)
+
+  const loadPics = React.useCallback(async () => {
+    setIsLoading(true)
+    const result = await fetchPicsDeduplicated()
+    setPics(result)
+    setIsLoading(false)
   }, [])
 
-  // 2. Realtime listener
+  // Realtime & shared listener
   React.useEffect(() => {
+    const listener = (newPics: Record<string, ModulePic[]>) => {
+      setPics(newPics)
+    }
+    picListeners.add(listener)
+
     loadPics()
 
-    if (!isSupabaseConfigured || !supabase) return
-
-    let channel: RealtimeChannel | null = null
-    try {
-      const channelName = `module-pics-realtime-${Math.random().toString(36).substring(2, 9)}`
-      channel = supabase
-        .channel(channelName)
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "module_pics",
-          },
-          () => {
-            loadPics()
-            playRetroNotificationSound()
-          }
-        )
-        .subscribe()
-    } catch (err) {
-      console.warn("Gagal subscribe realtime module_pics:", err)
+    if (!isSupabaseConfigured || !supabase) {
+      return () => {
+        picListeners.delete(listener)
+      }
     }
 
+    const channelName = `module-pics-realtime-${Math.random().toString(36).substring(2, 9)}`
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "module_pics",
+        },
+        () => {
+          fetchPicsDeduplicated()
+          playRetroNotificationSound()
+        }
+      )
+      .subscribe()
+
     return () => {
+      picListeners.delete(listener)
       if (channel && supabase) {
         supabase.removeChannel(channel)
       }

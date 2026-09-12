@@ -37,36 +37,35 @@ const DEFAULT_MEMO: DesktopMemo = normalizeMemo({
   updated_at: new Date().toISOString(),
 })
 
-export function useMemoStore() {
-  const { user, isGuest, isAdmin } = useAuth()
-  const { isKasPic, isPantryPic } = usePicStore()
-  const [memo, setMemo] = React.useState<DesktopMemo>(DEFAULT_MEMO)
-  const [isLoading, setIsLoading] = React.useState(true)
-  const [isSaving, setIsSaving] = React.useState(false)
+// ─── Shared In-Memory State & Deduplication ───────────────────
+let cachedMemo: DesktopMemo = DEFAULT_MEMO
+let inFlightMemoPromise: Promise<DesktopMemo> | null = null
+const memoListeners = new Set<(memo: DesktopMemo) => void>()
 
-  const canManageMemo = Boolean(!isGuest && (isAdmin || isKasPic || isPantryPic))
-
-  // 1. Fetch memo from Supabase or localStorage
-  const loadMemo = React.useCallback(async () => {
-    setIsLoading(true)
-
-    // Check localStorage first
-    let cached: DesktopMemo | null = null
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY)
-        if (raw) {
-          cached = JSON.parse(raw)
-          if (cached) setMemo(normalizeMemo(cached))
+function getInitialCachedMemo(): DesktopMemo {
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (parsed) {
+          cachedMemo = normalizeMemo(parsed)
+          return cachedMemo
         }
-      } catch (err) {
-        console.warn("Gagal membaca memo dari localStorage:", err)
       }
-    }
+    } catch {}
+  }
+  return cachedMemo
+}
 
+async function fetchMemoDeduplicated(): Promise<DesktopMemo> {
+  if (inFlightMemoPromise) {
+    return inFlightMemoPromise
+  }
+
+  inFlightMemoPromise = (async () => {
     if (!isSupabaseConfigured || !supabase) {
-      setIsLoading(false)
-      return
+      return cachedMemo
     }
 
     try {
@@ -79,25 +78,52 @@ export function useMemoStore() {
 
       if (!error && data) {
         const normalized = normalizeMemo(data)
-        setMemo(normalized)
+        cachedMemo = normalized
         if (typeof window !== "undefined") {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
         }
-      } else if (!data && !cached) {
-        setMemo(DEFAULT_MEMO)
+        memoListeners.forEach((listener) => listener(normalized))
       }
     } catch (err) {
-      console.warn("Gagal mengambil data desktop_memos dari Supabase:", err)
+      console.warn("fetchMemoDeduplicated error:", err)
     } finally {
-      setIsLoading(false)
+      inFlightMemoPromise = null
     }
+
+    return cachedMemo
+  })()
+
+  return inFlightMemoPromise
+}
+
+export function useMemoStore() {
+  const { user, isGuest, isAdmin } = useAuth()
+  const { isKasPic, isPantryPic } = usePicStore()
+  const [memo, setMemo] = React.useState<DesktopMemo>(() => getInitialCachedMemo())
+  const [isLoading, setIsLoading] = React.useState(false)
+  const [isSaving, setIsSaving] = React.useState(false)
+
+  const canManageMemo = Boolean(!isGuest && (isAdmin || isKasPic || isPantryPic))
+
+  const loadMemo = React.useCallback(async () => {
+    setIsLoading(true)
+    const result = await fetchMemoDeduplicated()
+    setMemo(result)
+    setIsLoading(false)
   }, [])
 
-  // 2. Realtime subscription
+  // Realtime subscription & shared listener
   React.useEffect(() => {
+    const listener = (newMemo: DesktopMemo) => setMemo(newMemo)
+    memoListeners.add(listener)
+
     loadMemo()
 
-    if (!isSupabaseConfigured || !supabase) return
+    if (!isSupabaseConfigured || !supabase) {
+      return () => {
+        memoListeners.delete(listener)
+      }
+    }
 
     let channel: RealtimeChannel | null = null
 
@@ -108,16 +134,9 @@ export function useMemoStore() {
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "desktop_memos" },
-          (payload) => {
-            if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
-              const updated = normalizeMemo(payload.new as DesktopMemo)
-              setMemo(updated)
-              if (typeof window !== "undefined") {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-              }
-              // Play subtle sound on external update
-              playRetroNotificationSound(0.2)
-            }
+          () => {
+            fetchMemoDeduplicated()
+            playRetroNotificationSound()
           }
         )
         .subscribe()

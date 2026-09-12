@@ -41,6 +41,11 @@ import {
 } from "lucide-react"
 import { useNotification } from "@/lib/notification-store"
 import { usePresence } from "@/lib/presence-store"
+import { usePicStore } from "@/lib/pic-store"
+import { useWordle } from "@/lib/wordle-store"
+import { useLapakStore } from "@/lib/lapak-store"
+import { computeUserBadges } from "@/lib/user-badges"
+import { UserBadge } from "@/components/retro/user-badge"
 import { cn } from "@/lib/utils"
 
 const QUICK_EMOJIS = ["👍", "☕", "🚀", "😂", "❤️", "🔥", "🙏"]
@@ -137,6 +142,38 @@ export function ChatApp() {
     requestNotificationPermission,
   } = useNotification()
   const { isUserOnline, onlineTeamCount } = usePresence()
+  const { getUserPicTags } = usePicStore()
+  const { leaderboard: wordleLeaderboard } = useWordle()
+  const { activeItems: lapakItems } = useLapakStore()
+
+  const topWordleUserId = React.useMemo(() => {
+    const top = wordleLeaderboard.find((e) => e.isSolved)
+    return top ? top.userId : null
+  }, [wordleLeaderboard])
+
+  const lapakSellerUserIds = React.useMemo(() => {
+    const set = new Set<string>()
+    lapakItems.forEach((item) => {
+      if (item.createdByUserId) set.add(item.createdByUserId)
+    })
+    return set
+  }, [lapakItems])
+
+  const getBadgesForUser = React.useCallback(
+    (userId?: string, userRole?: string) => {
+      if (!userId) return []
+      const picTags = getUserPicTags(userId)
+      const isLapakSeller = lapakSellerUserIds.has(userId)
+      return computeUserBadges({
+        userId,
+        userRole,
+        picTags,
+        topWordleUserId,
+        isLapakSeller,
+      })
+    },
+    [getUserPicTags, lapakSellerUserIds, topWordleUserId]
+  )
 
   React.useEffect(() => {
     clearUnreadChat()
@@ -691,9 +728,9 @@ export function ChatApp() {
                               ON
                             </span>
                           )}
-                          <span className="text-[9px] font-mono text-gray-500">
-                            {m.role === "admin" ? "🛡️" : "👤"}
-                          </span>
+                          {getBadgesForUser(m.user_id || m.id, m.role).slice(0, 1).map((b) => (
+                            <UserBadge key={b.id} badge={b} size="xs" />
+                          ))}
                         </div>
                       </button>
                     )
@@ -968,6 +1005,28 @@ export function ChatApp() {
 
                     {/* Own Bubble Body & Reaction Pills */}
                     <div className="max-w-[85%] sm:max-w-[76%] flex flex-col items-end">
+                      {/* Name Header for Own Message */}
+                      <div className="flex items-center gap-1.5 mb-0.5 mr-1 flex-wrap justify-end">
+                        {getBadgesForUser(msg.userId, authorRole).slice(0, 2).map((b) => (
+                          <UserBadge key={b.id} badge={b} size="xs" />
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setActiveProfileMember({
+                              name: authorName,
+                              avatarUrl: authorAvatar,
+                              role: authorRole,
+                              userId: msg.userId,
+                            })
+                          }
+                          title={`Lihat profil Anda (${authorName})`}
+                          className="member-profile-trigger font-bold text-[11px] text-blue-900 hover:underline cursor-pointer text-right shrink-0"
+                        >
+                          {authorName.split(" ")[0]} (Kamu)
+                        </button>
+                      </div>
+
                       <div
                         onClick={() => setActiveMessageId((prev) => (prev === msg.id ? null : msg.id))}
                         className={cn(
@@ -1038,7 +1097,7 @@ export function ChatApp() {
 
                     <div className="max-w-[85%] sm:max-w-[76%] flex flex-col items-start">
                       {/* Name Header */}
-                      <div className="flex items-center gap-1.5 mb-0.5 ml-1">
+                      <div className="flex items-center gap-1.5 mb-0.5 ml-1 flex-wrap">
                         <button
                           type="button"
                           onClick={() =>
@@ -1050,12 +1109,18 @@ export function ChatApp() {
                             })
                           }
                           title={`Lihat profil ${authorName}`}
-                          className="member-profile-trigger font-bold text-[11px] text-[#1E3A8A] hover:underline cursor-pointer text-left"
+                          className="member-profile-trigger font-bold text-[11px] text-[#1E3A8A] hover:underline cursor-pointer text-left shrink-0"
                         >
                           {authorName}
                         </button>
+
+                        {/* User Badges (Max 2 for compact chat view) */}
+                        {getBadgesForUser(msg.userId, authorRole).slice(0, 2).map((b) => (
+                          <UserBadge key={b.id} badge={b} size="xs" />
+                        ))}
+
                         {isMentioned && (
-                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-[#FEF08A] text-[#854D0E] border border-[#FACC15]">
+                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-[#FEF08A] text-[#854D0E] border border-[#FACC15] shrink-0">
                             Mentioned
                           </span>
                         )}
@@ -1404,13 +1469,12 @@ export function ChatApp() {
                 {activeProfileMember.name}
               </div>
 
-              {/* Role Badge */}
-              <div className="mb-3">
-                {activeProfileMember.role === "admin" ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-900 border border-purple-300">
-                    <ShieldCheck className="size-3 text-purple-700" />
-                    <span>Administrator</span>
-                  </span>
+              {/* Badges & Roles */}
+              <div className="flex flex-wrap items-center justify-center gap-1 mb-3 max-w-[220px]">
+                {getBadgesForUser(activeProfileMember.userId, activeProfileMember.role).length > 0 ? (
+                  getBadgesForUser(activeProfileMember.userId, activeProfileMember.role).map((b) => (
+                    <UserBadge key={b.id} badge={b} size="sm" />
+                  ))
                 ) : (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-300">
                     <User className="size-3 text-slate-500" />

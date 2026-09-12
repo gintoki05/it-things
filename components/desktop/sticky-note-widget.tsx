@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth"
 import { UserAvatar } from "@/components/retro/user-avatar"
 import { cn } from "@/lib/utils"
 import { formatDisplayPrice } from "@/components/apps/lapak-app"
+import { useWordle } from "@/lib/wordle-store"
 import {
   ChevronUp,
   ChevronDown,
@@ -23,6 +24,8 @@ import {
   Sparkles,
   Flame,
   Plus,
+  Trophy,
+  Play,
 } from "lucide-react"
 
 interface Position {
@@ -38,9 +41,14 @@ export function StickyNoteWidget() {
   const { activeItems } = useLapakStore()
   const { openWindow } = useDesktop()
   const { isGuest } = useAuth()
+  const { leaderboard, puzzle } = useWordle()
 
-  const [activeTab, setActiveTab] = React.useState<"memo" | "lapak">("memo")
+  const [activeTab, setActiveTab] = React.useState<"memo" | "lapak" | "rank">("memo")
   const [lapakIndex, setLapakIndex] = React.useState<number>(0)
+
+  const solvers = React.useMemo(() => {
+    return leaderboard.filter((entry) => entry.isSolved)
+  }, [leaderboard])
 
   const [isMinimized, setIsMinimized] = React.useState<boolean>(false)
   const [isEditing, setIsEditing] = React.useState<boolean>(false)
@@ -310,7 +318,15 @@ export function StickyNoteWidget() {
             <span className="size-2 rounded-full bg-red-600 border border-black shrink-0 shadow-xs" />
             <span className="font-bold flex items-center gap-1">
               <span className="text-[11px]">📌</span>
-              <span className="truncate max-w-[100px]">{memo.title || "PENGUMUMAN"}</span>
+              <span className="truncate max-w-[90px]">{memo.title || "PENGUMUMAN"}</span>
+              {solvers.length > 0 && (
+                <span
+                  title={`${solvers.length} orang berhasil memecahkan Wordle hari ini`}
+                  className="bg-[#047857] text-white text-[9px] px-1 py-0.2 rounded-xs font-black"
+                >
+                  🏆 {solvers.length}
+                </span>
+              )}
               {activeItems.length > 0 && (
                 <span className="bg-amber-600 text-white text-[9px] px-1 py-0.2 rounded-xs font-black">
                   🔥 {activeItems.length}
@@ -354,7 +370,7 @@ export function StickyNoteWidget() {
         className="pt-2 px-2 pb-1 flex items-center justify-between border-b border-[#E8DF7E] text-gray-800 cursor-grab active:cursor-grabbing hover:bg-black/[0.02]"
       >
         {/* Tab Buttons */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 min-w-0 flex-1 overflow-x-auto no-scrollbar py-0.5">
           <button
             type="button"
             onClick={() => {
@@ -362,14 +378,14 @@ export function StickyNoteWidget() {
               setActiveTab("memo")
             }}
             className={cn(
-              "px-2 py-0.5 text-[10px] font-bold rounded-[2px] border transition-colors cursor-pointer flex items-center gap-1",
+              "px-1.5 sm:px-2 py-0.5 text-[10px] font-bold rounded-[2px] border transition-colors cursor-pointer flex items-center gap-1 shrink-0",
               activeTab === "memo"
                 ? "bg-[#1E4E8C] text-white border-[#102A45] shadow-xs"
                 : "bg-[#F4EC8E] hover:bg-[#ECE276] text-gray-800 border-[#D4CB68]"
             )}
           >
             <FileText className="size-2.5 shrink-0" />
-            <span>Memo Tim</span>
+            <span>Memo</span>
           </button>
 
           <button
@@ -379,20 +395,45 @@ export function StickyNoteWidget() {
               setActiveTab("lapak")
             }}
             className={cn(
-              "px-2 py-0.5 text-[10px] font-bold rounded-[2px] border transition-colors cursor-pointer flex items-center gap-1",
+              "px-1.5 sm:px-2 py-0.5 text-[10px] font-bold rounded-[2px] border transition-colors cursor-pointer flex items-center gap-1 shrink-0",
               activeTab === "lapak"
                 ? "bg-[#D97706] text-white border-[#92400E] shadow-xs"
                 : "bg-[#F4EC8E] hover:bg-[#ECE276] text-amber-900 border-[#D4CB68]"
             )}
           >
             <Flame className="size-2.5 text-red-500 fill-current shrink-0" />
-            <span>Lapak Teman</span>
+            <span>Lapak</span>
             {activeItems.length > 0 && (
               <span className={cn(
                 "text-[8px] px-1 rounded-xs font-black",
                 activeTab === "lapak" ? "bg-black/30 text-white" : "bg-red-600 text-white"
               )}>
                 {activeItems.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setIsEditing(false)
+              setActiveTab("rank")
+            }}
+            className={cn(
+              "px-1.5 sm:px-2 py-0.5 text-[10px] font-bold rounded-[2px] border transition-colors cursor-pointer flex items-center gap-1 shrink-0",
+              activeTab === "rank"
+                ? "bg-[#047857] text-white border-[#065F46] shadow-xs"
+                : "bg-[#F4EC8E] hover:bg-[#ECE276] text-emerald-900 border-[#D4CB68]"
+            )}
+          >
+            <Trophy className="size-2.5 text-yellow-600 shrink-0" />
+            <span>Klasemen</span>
+            {solvers.length > 0 && (
+              <span className={cn(
+                "text-[8px] px-1 rounded-xs font-black",
+                activeTab === "rank" ? "bg-black/30 text-white" : "bg-emerald-700 text-white"
+              )}>
+                {solvers.length}
               </span>
             )}
           </button>
@@ -641,6 +682,91 @@ export function StickyNoteWidget() {
               </div>
             </div>
           ) : null}
+        </div>
+      )}
+
+      {/* ==================== TAB 3: KLASEMEN WORDLE ==================== */}
+      {activeTab === "rank" && (
+        <div className="p-2.5 flex flex-col justify-between min-h-[120px] gap-2">
+          {/* Header Info */}
+          <div className="flex items-center justify-between pb-1 border-b border-[#E8DF7E] text-[10px] text-gray-800">
+            <div className="flex items-center gap-1 font-bold">
+              <Trophy className="size-3 text-amber-600" />
+              <span>Wordle #{puzzle.dayNumber}</span>
+              <span className="text-[9px] text-gray-600 font-normal">({puzzle.targetDate})</span>
+            </div>
+            <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded border border-emerald-300">
+              {solvers.length} Solved
+            </span>
+          </div>
+
+          {/* Solvers List / Empty State */}
+          {solvers.length === 0 ? (
+            <div className="text-center py-2.5 flex flex-col items-center justify-center bg-white/70 rounded-[2px] border border-[#DCD36A] p-2">
+              <span className="text-lg mb-0.5">🎯</span>
+              <div className="text-xs font-bold text-gray-900">Belum ada pemenang hari ini</div>
+              <p className="text-[10px] text-gray-600 mt-0.5">Jadilah yang pertama memecahkan tebak kata 98!</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1 max-h-[135px] overflow-y-auto pr-0.5">
+              {solvers.slice(0, 3).map((entry, idx) => {
+                const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉"
+                const bgRank =
+                  idx === 0
+                    ? "bg-amber-100/90 border-amber-300"
+                    : idx === 1
+                    ? "bg-slate-100/90 border-slate-300"
+                    : "bg-orange-50/90 border-orange-200"
+
+                return (
+                  <div
+                    key={entry.id}
+                    className={cn(
+                      "flex items-center justify-between gap-1.5 p-1.5 rounded-[2px] border text-xs shadow-2xs",
+                      bgRank
+                    )}
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                      <span className="text-xs font-bold shrink-0">{medal}</span>
+                      <UserAvatar
+                        src={entry.userAvatar || undefined}
+                        name={entry.userName}
+                        size="size-4"
+                        textClass="text-[8px]"
+                        className="shrink-0"
+                      />
+                      <span className="font-bold text-[11px] text-gray-900 truncate">
+                        {entry.userName}
+                      </span>
+                    </div>
+                    <div className="shrink-0 font-mono text-[10px] font-bold bg-[#1E4E8C] text-white px-1.5 py-0.2 rounded-[2px]">
+                      {entry.attempts}/6
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-1 pt-1 border-t border-[#E8DF7E]">
+            <button
+              type="button"
+              onClick={() => openWindow("wordle")}
+              className="flex-1 bg-[#1E4E8C] hover:bg-[#153A6B] text-white text-[10px] font-bold py-1 px-2 rounded-[2px] border border-[#102A45] flex items-center justify-center gap-1 cursor-pointer transition-colors shadow-xs active:translate-y-px"
+            >
+              <Play className="size-2.5 fill-current text-yellow-300" />
+              <span>Main Wordle Sekarang</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => openWindow("game")}
+              title="Buka Koleksi Game Lengkap (game.exe)"
+              className="bg-[#F4EC8E] hover:bg-[#ECE276] text-gray-800 text-[10px] font-bold py-1 px-2 rounded-[2px] border border-[#D4CB68] flex items-center justify-center cursor-pointer shadow-xs active:translate-y-px"
+            >
+              Arcade
+            </button>
+          </div>
         </div>
       )}
     </aside>

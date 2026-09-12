@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useWordle, evaluateGuess } from "@/lib/wordle-store"
+import { useWordle } from "@/lib/wordle-store"
 import { cn } from "@/lib/utils"
 import { RetroIcon } from "@/components/ui/retro-icon"
 import { Trophy, HelpCircle, Share2, Check, RefreshCw, Sparkles, Award } from "lucide-react"
@@ -16,6 +16,7 @@ export function WordleApp() {
   const {
     puzzle,
     guesses,
+    evaluatedGuesses,
     currentGuess,
     isSolved,
     isGameOver,
@@ -150,7 +151,7 @@ export function WordleApp() {
                   : ""
 
                 const evaluated = isSubmitted
-                  ? evaluateGuess(guessWord, puzzle.word)
+                  ? evaluatedGuesses[rowIndex] || []
                   : []
 
                 return (
@@ -198,7 +199,7 @@ export function WordleApp() {
                 ) : (
                   <div className="text-red-700 font-bold text-xs">
                     KESEMPATAN HABIS! KATA HARI INI:{" "}
-                    <span className="font-mono text-sm underline text-black">{puzzle.word}</span>
+                    <span className="font-mono text-sm underline text-black">{puzzle.word || "???"}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2">

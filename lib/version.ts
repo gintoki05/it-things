@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.10"
+export const APP_VERSION = "v2.3.11"
 export const APP_BUILD = "2026.09.12"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.11",
+    date: "12 Sep 2026",
+    codename: "Server-Side Anti-Cheat, Team Privacy & In-Flight Request Deduplication",
+    changes: [
+      "Arsitektur Anti-Cheat Server-Side Wordle 98: Memindahkan 200+ bank kata dan kalkulasi harian ke server-only module, serta validasi tebakan via route handlers (/api/wordle/today & /api/wordle/guess).",
+      "Sanitasi Papan Skor Wordle: Implementasi PostgreSQL view public.wordle_leaderboard di Supabase untuk mengisolasi riwayat tebakan (guesses) pemain lain dari network response.",
+      "Team Member Privacy & Email Masking: Proxy data tim melalui /api/team dan /api/team/[id] dengan pembatasan akses email hanya untuk akun Administrator.",
+      "Pembersihan Legacy Fridge: Menghapus total query, counter badge, dan subscription realtime fridge_items yang tidak digunakan.",
+      "In-Flight Request Deduplication: Penerapan shared in-memory caching & request deduplication pada pic-store, lapak-store, wordle-store, team-store, dan memo-store untuk mereduksi duplikasi fetch pada saat mount desktop.",
+    ],
+  },
   {
     version: "v2.3.10",
     date: "12 Sep 2026",

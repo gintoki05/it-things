@@ -1260,4 +1260,21 @@ GRANT ALL ON public.wordle_daily_entries TO anon, authenticated, service_role;
 
 ALTER PUBLICATION supabase_realtime ADD TABLE public.wordle_daily_entries;
 
+-- View: wordle_leaderboard
+-- Anti-cheat leaderboard view (excluding guesses column to prevent answer leak)
+CREATE OR REPLACE VIEW public.wordle_leaderboard AS
+SELECT
+    id,
+    user_id,
+    user_name,
+    user_avatar,
+    target_date,
+    is_solved,
+    attempts,
+    created_at,
+    completed_at
+FROM public.wordle_daily_entries;
+
+GRANT SELECT ON public.wordle_leaderboard TO anon, authenticated, service_role;
+
 

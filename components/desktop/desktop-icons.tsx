@@ -12,16 +12,15 @@ const ITEM_GRID_POSITIONS: Record<AppId, string> = {
   vote: "col-start-1 row-start-2",
   chat: "col-start-1 row-start-3",
   game: "col-start-1 row-start-4",
-  wheel: "col-start-2 row-start-5",
+  iexplore: "col-start-1 row-start-5",
   splitbill: "col-start-2 row-start-1",
   kas: "col-start-2 row-start-2",
   pantry: "col-start-2 row-start-3",
   lapak: "col-start-2 row-start-4",
-  iexplore: "col-start-1 row-start-5",
-  team: "col-start-1 row-start-4",
-  paintwar: "col-start-3 row-start-1",
-  usage: "col-start-3 row-start-2",
-  wordle: "col-start-3 row-start-3",
+  wheel: "col-start-2 row-start-5",
+  wordle: "col-start-3 row-start-1",
+  paintwar: "col-start-3 row-start-2",
+  team: "col-start-3 row-start-3",
 }
 
 export function DesktopIcons() {

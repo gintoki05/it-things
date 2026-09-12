@@ -9,7 +9,7 @@ export interface TeamMember {
   id: string
   user_id?: string
   name: string
-  email: string
+  email?: string // optional — only visible to admin via server
   avatar_url?: string
   role: UserRole
   created_at?: string
@@ -22,7 +22,6 @@ const DEFAULT_MEMBERS: TeamMember[] = [
     id: "tm-1",
     user_id: "m1",
     name: "Ajie Saputra",
-    email: "ajie@office.internal",
     avatar_url: "🛡️",
     role: "admin",
     created_at: new Date(Date.now() - 86400000 * 30).toISOString(),
@@ -31,7 +30,6 @@ const DEFAULT_MEMBERS: TeamMember[] = [
     id: "tm-2",
     user_id: "m2",
     name: "Budi Santoso",
-    email: "budi@office.internal",
     avatar_url: "👨‍💻",
     role: "member",
     created_at: new Date(Date.now() - 86400000 * 25).toISOString(),
@@ -40,7 +38,6 @@ const DEFAULT_MEMBERS: TeamMember[] = [
     id: "tm-3",
     user_id: "m3",
     name: "Citra Lestari",
-    email: "citra@office.internal",
     avatar_url: "👩‍💼",
     role: "member",
     created_at: new Date(Date.now() - 86400000 * 20).toISOString(),
@@ -49,7 +46,6 @@ const DEFAULT_MEMBERS: TeamMember[] = [
     id: "tm-4",
     user_id: "m4",
     name: "Dimas Pratama",
-    email: "dimas@office.internal",
     avatar_url: "👨‍🔬",
     role: "member",
     created_at: new Date(Date.now() - 86400000 * 15).toISOString(),
@@ -58,81 +54,117 @@ const DEFAULT_MEMBERS: TeamMember[] = [
     id: "tm-5",
     user_id: "m5",
     name: "Eko Prasetyo",
-    email: "eko@office.internal",
     avatar_url: "🧑‍💻",
     role: "member",
     created_at: new Date(Date.now() - 86400000 * 10).toISOString(),
   },
 ]
 
-export function useTeamStore() {
-  const { user, isGuest } = useAuth()
-  const [members, setMembers] = React.useState<TeamMember[]>(DEFAULT_MEMBERS)
-  const [isLoading, setIsLoading] = React.useState(true)
+// ─── Helper: get access token for API calls ──────────────────
+async function getToken(): Promise<string | null> {
+  if (!isSupabaseConfigured || !supabase) return null
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.access_token || null
+  } catch {
+    return null
+  }
+}
 
-  // Load members from Supabase or localStorage
-  const loadMembers = React.useCallback(async () => {
-    setIsLoading(true)
+async function teamFetch(path: string, init?: RequestInit) {
+  const token = await getToken()
+  return fetch(path, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(init?.headers || {}),
+    },
+  })
+}
 
-    // First check localStorage for offline / guest mode edits
-    let localData: TeamMember[] | null = null
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY)
-        if (raw) {
-          localData = JSON.parse(raw)
+// ─── Shared In-Memory State & Deduplication ───────────────────
+let cachedTeamMembers: TeamMember[] = DEFAULT_MEMBERS
+let inFlightTeamPromise: Promise<TeamMember[]> | null = null
+const teamListeners = new Set<(members: TeamMember[]) => void>()
+
+function getInitialCachedTeamMembers(): TeamMember[] {
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          cachedTeamMembers = parsed
+          return cachedTeamMembers
         }
-      } catch (e) {
-        console.warn("Failed to parse local team members:", e)
       }
-    }
+    } catch {}
+  }
+  return DEFAULT_MEMBERS
+}
 
-    if (isSupabaseConfigured && supabase && !isGuest && user && user.id !== "guest-user") {
-      try {
-        const { data, error } = await supabase
-          .from("team_members")
-          .select("*")
-          .order("created_at", { ascending: true })
+async function fetchTeamMembersDeduplicated(): Promise<TeamMember[]> {
+  if (inFlightTeamPromise) {
+    return inFlightTeamPromise
+  }
 
-        if (!error && data && data.length > 0) {
-          const mapped: TeamMember[] = data.map((d) => ({
+  inFlightTeamPromise = (async () => {
+    try {
+      const res = await teamFetch("/api/team")
+      if (res.ok) {
+        const json = await res.json()
+        if (Array.isArray(json.members) && json.members.length > 0) {
+          const mapped: TeamMember[] = json.members.map((d: any) => ({
             id: d.id,
             user_id: d.user_id,
             name: d.name,
-            email: d.email || "",
+            email: d.email,
             avatar_url: d.avatar_url || "👤",
             role: (d.role as UserRole) || "member",
             created_at: d.created_at,
           }))
-          setMembers(mapped)
+          cachedTeamMembers = mapped
           if (typeof window !== "undefined") {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(mapped))
           }
-          setIsLoading(false)
-          return
+          teamListeners.forEach((listener) => listener(mapped))
         }
-      } catch (e) {
-        console.warn("Could not fetch team_members from Supabase:", e)
       }
+    } catch (err) {
+      console.warn("fetchTeamMembersDeduplicated error:", err)
+    } finally {
+      inFlightTeamPromise = null
     }
 
-    // Fallback to local data or default
-    if (localData && localData.length > 0) {
-      setMembers(localData)
-    } else {
-      setMembers(DEFAULT_MEMBERS)
-      if (typeof window !== "undefined") {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_MEMBERS))
-      }
-    }
+    return cachedTeamMembers
+  })()
+
+  return inFlightTeamPromise
+}
+
+export function useTeamStore() {
+  const { user, isGuest } = useAuth()
+  const [members, setMembers] = React.useState<TeamMember[]>(() => getInitialCachedTeamMembers())
+  const [isLoading, setIsLoading] = React.useState(false)
+
+  // ─── Load members via API ─────
+  const loadMembers = React.useCallback(async () => {
+    if (isGuest || !user || user.id === "guest-user") return
+    setIsLoading(true)
+    const result = await fetchTeamMembersDeduplicated()
+    setMembers(result)
     setIsLoading(false)
   }, [isGuest, user])
 
   React.useEffect(() => {
+    const listener = (newMembers: TeamMember[]) => setMembers(newMembers)
+    teamListeners.add(listener)
+
     loadMembers()
 
     const handleProfileUpdated = () => {
-      loadMembers()
+      fetchTeamMembersDeduplicated()
     }
 
     let channel: RealtimeChannel | null = null
@@ -142,13 +174,9 @@ export function useTeamStore() {
         .channel(channelName)
         .on(
           "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "team_members",
-          },
+          { event: "*", schema: "public", table: "team_members" },
           () => {
-            loadMembers()
+            fetchTeamMembersDeduplicated()
           }
         )
         .subscribe()
@@ -159,16 +187,15 @@ export function useTeamStore() {
     }
 
     return () => {
+      teamListeners.delete(listener)
       if (typeof window !== "undefined") {
         window.removeEventListener("profile-updated", handleProfileUpdated)
       }
-      if (channel && supabase) {
-        supabase.removeChannel(channel)
-      }
+      if (channel && supabase) supabase.removeChannel(channel)
     }
   }, [loadMembers])
 
-  // Save changes to localStorage helper
+  // ─── Save to localStorage helper ─────────────────────────────
   const saveLocal = (updated: TeamMember[]) => {
     setMembers(updated)
     if (typeof window !== "undefined") {
@@ -176,7 +203,7 @@ export function useTeamStore() {
     }
   }
 
-  // Add new member
+  // ─── Add member ──────────────────────────────────────────────
   const addMember = async (memberData: {
     name: string
     email: string
@@ -185,7 +212,7 @@ export function useTeamStore() {
   }) => {
     const newId = `tm-${Date.now()}`
     const defaultAvatar = memberData.role === "admin" ? "🛡️" : "👤"
-    const newMember: TeamMember = {
+    const optimistic: TeamMember = {
       id: newId,
       user_id: `user-${Date.now()}`,
       name: memberData.name.trim(),
@@ -195,98 +222,93 @@ export function useTeamStore() {
       created_at: new Date().toISOString(),
     }
 
-    const updated = [...members, newMember]
+    const updated = [...members, optimistic]
     saveLocal(updated)
 
-    if (isSupabaseConfigured && supabase && !isGuest && user && user.id !== "guest-user") {
-      try {
-        const { data, error } = await supabase
-          .from("team_members")
-          .insert({
-            user_id: newMember.user_id!,
-            name: newMember.name,
-            email: newMember.email,
-            role: newMember.role,
-            avatar_url: newMember.avatar_url,
-          })
-          .select()
-          .maybeSingle()
-
-        if (error) {
-          console.error("Gagal menambah team member di Supabase:", error.message)
-        } else if (data) {
+    try {
+      const res = await teamFetch("/api/team", {
+        method: "POST",
+        body: JSON.stringify({
+          name: memberData.name.trim(),
+          email: memberData.email.trim(),
+          role: memberData.role,
+          avatar_url: memberData.avatar_url || defaultAvatar,
+        }),
+      })
+      if (res.ok) {
+        const json = await res.json()
+        if (json.member) {
           const inserted: TeamMember = {
-            id: data.id,
-            user_id: data.user_id,
-            name: data.name,
-            email: data.email || "",
-            role: (data.role as UserRole) || "member",
-            avatar_url: data.avatar_url || defaultAvatar,
-            created_at: data.created_at,
+            id: json.member.id,
+            user_id: json.member.user_id,
+            name: json.member.name,
+            email: json.member.email,
+            role: (json.member.role as UserRole) || "member",
+            avatar_url: json.member.avatar_url || defaultAvatar,
+            created_at: json.member.created_at,
           }
-          const updatedWithRealId = updated.map((m) => (m.id === newId ? inserted : m))
-          saveLocal(updatedWithRealId)
+          const final = updated.map(m => m.id === newId ? inserted : m)
+          saveLocal(final)
           return inserted
         }
-      } catch (e) {
-        console.warn("Could not insert team member to Supabase:", e)
+      } else {
+        console.error("Failed to add member:", await res.text())
       }
+    } catch (e) {
+      console.warn("Could not insert team member:", e)
     }
 
-    return newMember
+    return optimistic
   }
 
-  // Update member
+  // ─── Update member ───────────────────────────────────────────
   const updateMember = async (id: string, updates: Partial<Omit<TeamMember, "id">>) => {
-    const target = members.find((m) => m.id === id)
+    const target = members.find(m => m.id === id)
     if (!target) return
 
-    const updated = members.map((m) => (m.id === id ? { ...m, ...updates } : m))
+    const updated = members.map(m => m.id === id ? { ...m, ...updates } : m)
     saveLocal(updated)
 
-    if (isSupabaseConfigured && supabase && !isGuest && user && user.id !== "guest-user") {
-      try {
-        const { error } = await supabase
-          .from("team_members")
-          .update(updates)
-          .eq("id", id)
-
-        if (error) {
-          console.error("Gagal update team member di Supabase:", error.message)
-          // Rollback ke state sebelumnya jika update gagal
-          loadMembers()
-        }
-      } catch (e) {
-        console.warn("Could not update team member in Supabase:", e)
+    try {
+      const res = await teamFetch(`/api/team/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(updates),
+      })
+      if (!res.ok) {
+        console.error("Failed to update member:", await res.text())
+        loadMembers() // rollback
       }
+    } catch (e) {
+      console.warn("Could not update team member:", e)
     }
   }
 
-  // Set member role explicitly
+  // ─── Set role ────────────────────────────────────────────────
   const setMemberRole = async (id: string, role: UserRole) => {
     const avatar = role === "admin" ? "🛡️" : "👤"
     await updateMember(id, { role, avatar_url: avatar })
   }
 
-  // Toggle role between 'member' and 'admin'
+  // ─── Toggle role ─────────────────────────────────────────────
   const toggleMemberRole = async (id: string) => {
-    const target = members.find((m) => m.id === id)
+    const target = members.find(m => m.id === id)
     if (!target) return
     const nextRole: UserRole = target.role === "member" ? "admin" : "member"
     await setMemberRole(id, nextRole)
   }
 
-  // Delete member
+  // ─── Delete member ───────────────────────────────────────────
   const deleteMember = async (id: string) => {
-    const updated = members.filter((m) => m.id !== id)
+    const updated = members.filter(m => m.id !== id)
     saveLocal(updated)
 
-    if (isSupabaseConfigured && supabase && !isGuest && user && user.id !== "guest-user") {
-      try {
-        await supabase.from("team_members").delete().eq("id", id)
-      } catch (e) {
-        console.warn("Could not delete team member in Supabase:", e)
+    try {
+      const res = await teamFetch(`/api/team/${id}`, { method: "DELETE" })
+      if (!res.ok) {
+        console.error("Failed to delete member:", await res.text())
       }
+    } catch (e) {
+      console.warn("Could not delete team member:", e)
     }
   }
 

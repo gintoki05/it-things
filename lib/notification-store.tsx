@@ -20,7 +20,6 @@ interface NotificationContextType {
   unreadChatCount: number
   activeVoteCount: number
   activePantryCount: number
-  alertFridgeCount: number
   activeSplitBillCount: number
   activePaintWarCount: number
   activeToast: NotificationToast | null
@@ -43,7 +42,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [unreadChatCount, setUnreadChatCount] = React.useState<number>(0)
   const [activeVoteCount, setActiveVoteCount] = React.useState<number>(0)
   const [activePantryCount, setActivePantryCount] = React.useState<number>(0)
-  const [alertFridgeCount, setAlertFridgeCount] = React.useState<number>(0)
   const [activeSplitBillCount, setActiveSplitBillCount] = React.useState<number>(0)
   const [activePaintWarCount, setActivePaintWarCount] = React.useState<number>(0)
   const [activeToast, setActiveToast] = React.useState<NotificationToast | null>(null)
@@ -124,29 +122,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [])
 
-  // ─── Fetch Fridge Alert Count (expired + expiring soon) ────
-  const fetchAlertFridgeCount = React.useCallback(async () => {
-    if (!isSupabaseConfigured || !supabase) return
-    try {
-      const todayStr = new Date().toISOString().split("T")[0]
-      const threeDaysLater = new Date()
-      threeDaysLater.setDate(threeDaysLater.getDate() + 3)
-      const soonStr = threeDaysLater.toISOString().split("T")[0]
-
-      const { data, error } = await supabase
-        .from("fridge_items")
-        .select("id, expired_at")
-        .not("expired_at", "is", null)
-        .lte("expired_at", soonStr)
-
-      if (!error && data) {
-        setAlertFridgeCount(data.length)
-      }
-    } catch (err) {
-      console.warn("fetchAlertFridgeCount error:", err)
-    }
-  }, [])
-
   // ─── Fetch Initial Unread Chat Count ────────────────────────
   const fetchInitialUnreadChat = React.useCallback(async () => {
     if (!isSupabaseConfigured || !supabase) return
@@ -199,24 +174,21 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [])
 
-  // Sync active votes, pantry, fridge alerts, and initial unread on mount
+  // Sync active votes, pantry, and initial unread on mount
   React.useEffect(() => {
     fetchActiveVoteCount()
     fetchActivePantryCount()
-    fetchAlertFridgeCount()
     fetchActiveSplitBillCount()
     fetchActivePaintWarCount()
     fetchInitialUnreadChat()
 
     const handleVoteChanged = () => fetchActiveVoteCount()
     const handlePantryChanged = () => fetchActivePantryCount()
-    const handleFridgeChanged = () => fetchAlertFridgeCount()
     const handleSplitBillChanged = () => fetchActiveSplitBillCount()
 
     if (typeof window !== "undefined") {
       window.addEventListener("vote-changed", handleVoteChanged)
       window.addEventListener("pantry-changed", handlePantryChanged)
-      window.addEventListener("fridge-changed", handleFridgeChanged)
       window.addEventListener("splitbill-changed", handleSplitBillChanged)
     }
 
@@ -225,7 +197,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         if (typeof window !== "undefined") {
           window.removeEventListener("vote-changed", handleVoteChanged)
           window.removeEventListener("pantry-changed", handlePantryChanged)
-          window.removeEventListener("fridge-changed", handleFridgeChanged)
           window.removeEventListener("splitbill-changed", handleSplitBillChanged)
         }
       }
@@ -249,17 +220,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         { event: "*", schema: "public", table: "pantry_items" },
         () => {
           fetchActivePantryCount()
-        }
-      )
-      .subscribe()
-
-    const fridgeChannel = supabase
-      .channel("global-fridge-badges")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "fridge_items" },
-        () => {
-          fetchAlertFridgeCount()
         }
       )
       .subscribe()
@@ -290,18 +250,16 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       if (supabase) {
         supabase.removeChannel(voteChannel)
         supabase.removeChannel(pantryChannel)
-        supabase.removeChannel(fridgeChannel)
         supabase.removeChannel(splitbillChannel)
         supabase.removeChannel(paintwarChannel)
       }
       if (typeof window !== "undefined") {
         window.removeEventListener("vote-changed", handleVoteChanged)
         window.removeEventListener("pantry-changed", handlePantryChanged)
-        window.removeEventListener("fridge-changed", handleFridgeChanged)
         window.removeEventListener("splitbill-changed", handleSplitBillChanged)
       }
     }
-  }, [fetchActiveVoteCount, fetchActivePantryCount, fetchAlertFridgeCount, fetchActiveSplitBillCount, fetchActivePaintWarCount, fetchInitialUnreadChat])
+  }, [fetchActiveVoteCount, fetchActivePantryCount, fetchActiveSplitBillCount, fetchActivePaintWarCount, fetchInitialUnreadChat])
 
   const isMutedRef = React.useRef(isMuted)
   React.useEffect(() => {
@@ -585,7 +543,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         unreadChatCount,
         activeVoteCount,
         activePantryCount,
-        alertFridgeCount,
         activeSplitBillCount,
         activePaintWarCount,
         activeToast,

@@ -129,50 +129,39 @@ function mapDbToLapakItem(row: Record<string, unknown>): LapakItem {
   }
 }
 
-export function useLapakStore() {
-  const { user, isGuest, isAdmin } = useAuth()
-  const [items, setItems] = React.useState<LapakItem[]>([])
-  const [isLoading, setIsLoading] = React.useState(true)
-  const [tableMissing, setTableMissing] = React.useState(false)
-  const [isUsingSupabase, setIsUsingSupabase] = React.useState(false)
+// ─── Shared In-Memory State & Deduplication ───────────────────
+let cachedLapakItems: LapakItem[] = []
+let inFlightLapakPromise: Promise<LapakItem[]> | null = null
+const lapakListeners = new Set<(items: LapakItem[]) => void>()
 
-  const isTableMissingError = (err: { code?: string; message?: string } | null | undefined) =>
-    err?.code === "PGRST205" ||
-    err?.code === "PGRST204" ||
-    err?.code === "42P01" ||
-    err?.message?.includes("schema cache") ||
-    err?.message?.includes("does not exist")
-
-  // Load from local storage or Supabase
-  const fetchItems = React.useCallback(async () => {
-    setIsLoading(true)
-
-    // Check localStorage cache first
-    let cached: LapakItem[] = []
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY)
-        if (raw) {
-          cached = JSON.parse(raw)
-          if (Array.isArray(cached) && cached.length > 0) {
-            setItems(cached)
-          }
+function getInitialCachedLapakItems(): LapakItem[] {
+  if (cachedLapakItems.length > 0) return cachedLapakItems
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          cachedLapakItems = parsed
+          return cachedLapakItems
         }
-      } catch (e) {
-        console.warn("Gagal membaca cache lapak dari localStorage:", e)
       }
-    }
+    } catch {}
+  }
+  return DEMO_LAPAK_ITEMS
+}
 
+async function fetchLapakItemsDeduplicated(): Promise<LapakItem[]> {
+  if (inFlightLapakPromise) {
+    return inFlightLapakPromise
+  }
+
+  inFlightLapakPromise = (async () => {
     if (!isSupabaseConfigured || !supabase) {
-      if (cached.length === 0) {
-        setItems(DEMO_LAPAK_ITEMS)
-        if (typeof window !== "undefined") {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(DEMO_LAPAK_ITEMS))
-        }
+      if (cachedLapakItems.length === 0) {
+        cachedLapakItems = DEMO_LAPAK_ITEMS
       }
-      setIsUsingSupabase(false)
-      setIsLoading(false)
-      return
+      return cachedLapakItems
     }
 
     try {
@@ -181,37 +170,59 @@ export function useLapakStore() {
         .select("*")
         .order("created_at", { ascending: false })
 
-      if (error) {
-        if (isTableMissingError(error)) {
-          setTableMissing(true)
-        }
-        if (cached.length === 0) {
-          setItems(DEMO_LAPAK_ITEMS)
-        }
-      } else if (data) {
+      if (!error && data) {
         const mapped = data.map(mapDbToLapakItem)
-        setItems(mapped)
-        setIsUsingSupabase(true)
-        setTableMissing(false)
+        cachedLapakItems = mapped
         if (typeof window !== "undefined") {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(mapped))
         }
+        lapakListeners.forEach((listener) => listener(mapped))
       }
     } catch (err) {
-      console.warn("Error fetching lapak_items:", err)
-      if (cached.length === 0) {
-        setItems(DEMO_LAPAK_ITEMS)
-      }
+      console.warn("fetchLapakItemsDeduplicated error:", err)
     } finally {
-      setIsLoading(false)
+      inFlightLapakPromise = null
     }
+
+    return cachedLapakItems
+  })()
+
+  return inFlightLapakPromise
+}
+
+export function useLapakStore() {
+  const { user, isGuest, isAdmin } = useAuth()
+  const [items, setItems] = React.useState<LapakItem[]>(() => getInitialCachedLapakItems())
+  const [isLoading, setIsLoading] = React.useState(false)
+  const [tableMissing, setTableMissing] = React.useState(false)
+  const [isUsingSupabase, setIsUsingSupabase] = React.useState(true)
+
+  const isTableMissingError = (err: { code?: string; message?: string } | null | undefined) =>
+    err?.code === "PGRST205" ||
+    err?.code === "PGRST204" ||
+    err?.code === "42P01" ||
+    err?.message?.includes("schema cache") ||
+    err?.message?.includes("does not exist")
+
+  const fetchItems = React.useCallback(async () => {
+    setIsLoading(true)
+    const result = await fetchLapakItemsDeduplicated()
+    setItems(result)
+    setIsLoading(false)
   }, [])
 
-  // Realtime subscription
+  // Realtime subscription & shared listener
   React.useEffect(() => {
+    const listener = (newItems: LapakItem[]) => setItems(newItems)
+    lapakListeners.add(listener)
+
     fetchItems()
 
-    if (!isSupabaseConfigured || !supabase) return
+    if (!isSupabaseConfigured || !supabase) {
+      return () => {
+        lapakListeners.delete(listener)
+      }
+    }
 
     const channelName = `lapak-realtime-${Math.random().toString(36).substring(2, 8)}`
     const channel = supabase
@@ -220,12 +231,13 @@ export function useLapakStore() {
         "postgres_changes",
         { event: "*", schema: "public", table: "lapak_items" },
         () => {
-          fetchItems()
+          fetchLapakItemsDeduplicated()
         }
       )
       .subscribe()
 
     return () => {
+      lapakListeners.delete(listener)
       if (supabase) {
         supabase.removeChannel(channel)
       }

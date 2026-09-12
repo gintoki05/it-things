@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
 
-export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "usage" | "wordle"
+export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "wordle"
 
 export interface WindowState {
   id: AppId
@@ -220,21 +220,6 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     defaultSize: { width: 560, height: 420 },
     defaultPos: { x: 230, y: 60 },
   },
-  usage: {
-    id: "usage",
-    title: "SysInfo.exe - Supabase Kuota Monitor",
-    icon: "info",
-    filename: "sysinfo.exe",
-    isOpen: false,
-    isMinimized: false,
-    isMaximized: false,
-    zIndex: 14,
-    position: { x: 260, y: 70 },
-    size: { width: 520, height: 540 },
-    defaultSize: { width: 520, height: 540 },
-    defaultPos: { x: 260, y: 70 },
-    adminOnly: true,
-  },
   wordle: {
     id: "wordle",
     title: "Wordle98.exe - Tebak Kata Harian 98",
@@ -248,7 +233,7 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 440, height: 620 },
     defaultSize: { width: 440, height: 620 },
     defaultPos: { x: 260, y: 50 },
-    hideFromDesktop: true,
+    hideFromDesktop: false,
   },
 }
 
@@ -289,7 +274,6 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
       "paintwar",
       "game",
       "wordle",
-      "usage",
     ]
     const targetApp = requestedApp && validApps.includes(requestedApp) ? requestedApp : null
 
