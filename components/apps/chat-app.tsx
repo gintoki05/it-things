@@ -116,10 +116,12 @@ function ChatLiveLink({
   url,
   isOwn,
   onPlayInWinamp,
+  hideRawUrl = false,
 }: {
   url: string
   isOwn?: boolean
   onPlayInWinamp?: (url: string, title?: string) => void
+  hideRawUrl?: boolean
 }) {
   const [copied, setCopied] = React.useState(false)
   const isYouTube = Boolean(extractYouTubeId(url))
@@ -166,22 +168,29 @@ function ChatLiveLink({
     <span className="inline-flex flex-col my-1 max-w-full align-baseline">
       {/* YouTube Title & Preview Card to prevent prank/rickroll */}
       {isYouTube && (
-        <span
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
+          title={ytMeta?.title ? `Buka di YouTube: ${ytMeta.title}` : `Buka tautan YouTube: ${url}`}
           className={cn(
-            "w-full mb-1.5 p-1.5 rounded-[3px] border shadow-2xs text-[11px] select-text flex flex-col gap-0.5 text-left transition-all",
+            "w-full mb-1.5 p-1.5 rounded-[3px] border shadow-2xs text-[11px] select-text flex flex-col gap-0.5 text-left transition-all hover:opacity-95 cursor-pointer block group",
             isOwn
-              ? "bg-[#0B1E33] border-cyan-500/50 text-cyan-100"
-              : "bg-[#F8FAFC] border-[#94A3B8] text-[#0F172A]"
+              ? "bg-[#0B1E33] border-cyan-500/50 text-cyan-100 hover:border-cyan-400"
+              : "bg-[#F8FAFC] border-[#94A3B8] text-[#0F172A] hover:border-[#64748B]"
           )}
         >
-          <span className="flex items-center gap-1 font-mono text-[9px] uppercase tracking-wider opacity-80 select-none">
-            <span className="text-[11px]">🎬</span>
-            <span className="font-bold">
-              {ytMeta?.author ? `YouTube • ${ytMeta.author}` : "YouTube Video"}
+          <span className="flex items-center justify-between gap-1 font-mono text-[9px] uppercase tracking-wider opacity-80 select-none">
+            <span className="flex items-center gap-1">
+              <span className="text-[11px]">🎬</span>
+              <span className="font-bold">
+                {ytMeta?.author ? `YouTube • ${ytMeta.author}` : "YouTube Video"}
+              </span>
             </span>
+            <ExternalLink className="size-3 opacity-60 group-hover:opacity-100 shrink-0" />
           </span>
-          <span className="font-bold leading-snug break-words text-[12px] text-left">
+          <span className="font-bold leading-snug break-words text-[12px] text-left group-hover:underline">
             {ytMeta?.title ? (
               `"${ytMeta.title}"`
             ) : isLoadingTitle ? (
@@ -190,26 +199,28 @@ function ChatLiveLink({
               <span className="italic opacity-70 font-normal">Tautan Video YouTube</span>
             )}
           </span>
-        </span>
+        </a>
       )}
 
       <span className="inline-flex items-center flex-wrap gap-1 align-baseline max-w-full">
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          title={ytMeta?.title ? `Buka: ${ytMeta.title} (${url})` : `Buka tautan: ${url}`}
-          className={cn(
-            "inline-flex items-center gap-1 font-medium underline underline-offset-2 break-all rounded-[2px] px-1 py-0.2 transition-colors",
-            isOwn
-              ? "text-cyan-200 hover:text-white hover:bg-blue-800/60"
-              : "text-[#1E4E8C] hover:text-blue-900 hover:bg-blue-50"
-          )}
-        >
-          <ExternalLink className="size-3 shrink-0 inline opacity-80" />
-          <span className="break-all">{url}</span>
-        </a>
+        {!hideRawUrl && (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            title={ytMeta?.title ? `Buka: ${ytMeta.title} (${url})` : `Buka tautan: ${url}`}
+            className={cn(
+              "inline-flex items-center gap-1 font-medium underline underline-offset-2 break-all rounded-[2px] px-1 py-0.2 transition-colors",
+              isOwn
+                ? "text-cyan-200 hover:text-white hover:bg-blue-800/60"
+                : "text-[#1E4E8C] hover:text-blue-900 hover:bg-blue-50"
+            )}
+          >
+            <ExternalLink className="size-3 shrink-0 inline opacity-80" />
+            <span className="break-all">{url}</span>
+          </a>
+        )}
 
         {/* Salin Button */}
         <button
@@ -710,6 +721,8 @@ export function ChatApp() {
 
   // Render highlighted text with @mentions badges and live URLs
   const renderMessageContent = (text: string, isOwn?: boolean) => {
+    const isWinampShare = /📻\s*\[WINAMP\s*98\]\s*Lagi dengerin:/i.test(text)
+
     // Ambil daftar nama yang valid, urutkan dari yang terpanjang agar nama lengkap diutamakan
     const knownNames = Array.from(
       new Set([
@@ -776,6 +789,7 @@ export function ChatApp() {
                   <ChatLiveLink
                     url={cleanUrl}
                     isOwn={isOwn}
+                    hideRawUrl={isWinampShare}
                     onPlayInWinamp={(u, title) => {
                       addTrack(u, title)
                       openWindow("winamp")
@@ -785,7 +799,11 @@ export function ChatApp() {
                 </React.Fragment>
               )
             }
-            return <span key={subIdx}>{subPart}</span>
+            let textToDisplay = subPart
+            if (isWinampShare) {
+              textToDisplay = textToDisplay.replace(/\s*[—–-]\s*$/, "").trimEnd()
+            }
+            return <span key={subIdx}>{textToDisplay}</span>
           })}
         </React.Fragment>
       )

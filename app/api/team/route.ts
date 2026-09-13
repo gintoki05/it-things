@@ -15,7 +15,8 @@ export async function GET(req: Request) {
     // Resolve caller identity
     let isAdmin = false
     if (authHeader) {
-      const { data: { user } } = await supabase.auth.getUser()
+      const token = authHeader.replace(/^Bearer\s+/i, "")
+      const { data: { user } } = await supabase.auth.getUser(token)
       if (user) {
         const { data: self } = await supabase
           .from("team_members")
@@ -55,7 +56,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Supabase not configured" }, { status: 503 })
     }
 
-    const { data: { user } } = await supabase.auth.getUser()
+    const token = authHeader ? authHeader.replace(/^Bearer\s+/i, "") : undefined
+    const { data: { user } } = await supabase.auth.getUser(token)
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }

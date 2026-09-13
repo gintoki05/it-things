@@ -29,11 +29,11 @@ Skill ini terdiri dari 4 tahapan berurutan:
    ```bash
    npm run typecheck
    ```
-3. *(Opsional / Jika diminta user)* Jalankan build Next.js:
+3. Jalankan build produksi Next.js untuk memvalidasi bundling dan SSR/Turbopack:
    ```bash
    npm run build
    ```
-   *Jika typecheck atau build gagal, HENTIKAN proses dan perbaiki error terlebih dahulu sebelum melanjutkan rilis.*
+   *Jika typecheck atau build gagal, HENTIKAN proses dan selesaikan perbaikan kode terlebih dahulu sebelum melanjutkan rilis.*
 
 ---
 

@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.14"
-export const APP_BUILD = "2026.09.12"
+export const APP_VERSION = "v2.3.15"
+export const APP_BUILD = "2026.09.13"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.15",
+    date: "13 Sep 2026",
+    codename: "Supabase Key Resolution, Live Team Sync, Dummy Data Purge & Chat Video Card Enhancement",
+    changes: [
+      "Supabase Server Key Resolution: Perbaikan urutan pembacaan key di lib/server/supabase-server.ts yang memprioritaskan NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY dan memfilter placeholder dummy ('...'), memperbaiki kendala HTTP 500 pada route /api/team.",
+      "Live Team Directory & Dummy Data Purge: Menghapus total DEFAULT_MEMBERS dummy lokal (Budi Santoso, Citra Lestari, Dimas Pratama, Eko Prasetyo) di lib/team-store.ts dan membersihkan legacy cache localStorage, sehingga team.exe langsung menampilkan 20 anggota tim asli secara live dari Supabase.",
+      "Sanitasi Fallback Demo Lapak: Menjaga DEMO_LAPAK_ITEMS di lib/lapak-store.ts agar tidak menimpa listing asli saat Supabase telah terhubung.",
+      "Peningkatan Chat & Pratinjau Video YouTube: Kartu judul YouTube pada chat sekarang menjadi tautan langsung yang dapat diklik membuka video di tab baru, serta pembersihan format judul pada pesan lagu Winamp.",
+      "Otomatisasi Release Workflow Skill: Memperbarui prosedur release (.agents/skills/release) dengan standardisasi pre-flight mandatory npm run build, typecheck, bump version, changelog, dan git push.",
+    ],
+  },
   {
     version: "v2.3.14",
     date: "12 Sep 2026",

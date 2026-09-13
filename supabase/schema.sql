@@ -1262,7 +1262,8 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.wordle_daily_entries;
 
 -- View: wordle_leaderboard
 -- Anti-cheat leaderboard view (excluding guesses column to prevent answer leak)
-CREATE OR REPLACE VIEW public.wordle_leaderboard AS
+CREATE OR REPLACE VIEW public.wordle_leaderboard
+WITH (security_invoker = true) AS
 SELECT
     id,
     user_id,

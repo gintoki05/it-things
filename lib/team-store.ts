@@ -17,48 +17,7 @@ export interface TeamMember {
 
 const STORAGE_KEY = "it_things_team_members_v1"
 
-const DEFAULT_MEMBERS: TeamMember[] = [
-  {
-    id: "tm-1",
-    user_id: "m1",
-    name: "Ajie Saputra",
-    avatar_url: "🛡️",
-    role: "admin",
-    created_at: new Date(Date.now() - 86400000 * 30).toISOString(),
-  },
-  {
-    id: "tm-2",
-    user_id: "m2",
-    name: "Budi Santoso",
-    avatar_url: "👨‍💻",
-    role: "member",
-    created_at: new Date(Date.now() - 86400000 * 25).toISOString(),
-  },
-  {
-    id: "tm-3",
-    user_id: "m3",
-    name: "Citra Lestari",
-    avatar_url: "👩‍💼",
-    role: "member",
-    created_at: new Date(Date.now() - 86400000 * 20).toISOString(),
-  },
-  {
-    id: "tm-4",
-    user_id: "m4",
-    name: "Dimas Pratama",
-    avatar_url: "👨‍🔬",
-    role: "member",
-    created_at: new Date(Date.now() - 86400000 * 15).toISOString(),
-  },
-  {
-    id: "tm-5",
-    user_id: "m5",
-    name: "Eko Prasetyo",
-    avatar_url: "🧑‍💻",
-    role: "member",
-    created_at: new Date(Date.now() - 86400000 * 10).toISOString(),
-  },
-]
+const DEFAULT_MEMBERS: TeamMember[] = []
 
 // ─── Helper: get access token for API calls ──────────────────
 async function getToken(): Promise<string | null> {
@@ -84,7 +43,7 @@ async function teamFetch(path: string, init?: RequestInit) {
 }
 
 // ─── Shared In-Memory State & Deduplication ───────────────────
-let cachedTeamMembers: TeamMember[] = DEFAULT_MEMBERS
+let cachedTeamMembers: TeamMember[] = []
 let inFlightTeamPromise: Promise<TeamMember[]> | null = null
 const teamListeners = new Set<(members: TeamMember[]) => void>()
 
@@ -95,8 +54,18 @@ function getInitialCachedTeamMembers(): TeamMember[] {
       if (raw) {
         const parsed = JSON.parse(raw)
         if (Array.isArray(parsed) && parsed.length > 0) {
-          cachedTeamMembers = parsed
-          return cachedTeamMembers
+          // Bersihkan legacy dummy members (m1-m5 / tm-1 - tm-5) jika tersisa di localStorage
+          const clean = parsed.filter(
+            (m: any) =>
+              !["m1", "m2", "m3", "m4", "m5"].includes(m.user_id) &&
+              !["tm-1", "tm-2", "tm-3", "tm-4", "tm-5"].includes(m.id)
+          )
+          if (clean.length > 0) {
+            cachedTeamMembers = clean
+            return clean
+          } else {
+            localStorage.removeItem(STORAGE_KEY)
+          }
         }
       }
     } catch {}
@@ -114,7 +83,7 @@ async function fetchTeamMembersDeduplicated(): Promise<TeamMember[]> {
       const res = await teamFetch("/api/team")
       if (res.ok) {
         const json = await res.json()
-        if (Array.isArray(json.members) && json.members.length > 0) {
+        if (Array.isArray(json.members)) {
           const mapped: TeamMember[] = json.members.map((d: any) => ({
             id: d.id,
             user_id: d.user_id,

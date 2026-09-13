@@ -5,9 +5,10 @@ export const dynamic = "force-dynamic"
 
 type RouteContext = { params: Promise<{ id: string }> }
 
-async function resolveAdminStatus(supabase: ReturnType<typeof createServerSupabase>) {
+async function resolveAdminStatus(supabase: ReturnType<typeof createServerSupabase>, authHeader?: string | null) {
   if (!supabase) return false
-  const { data: { user } } = await supabase.auth.getUser()
+  const token = authHeader ? authHeader.replace(/^Bearer\s+/i, "") : undefined
+  const { data: { user } } = await supabase.auth.getUser(token)
   if (!user) return false
   const { data: self } = await supabase
     .from("team_members")
@@ -25,7 +26,7 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 
     if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 503 })
 
-    const isAdmin = await resolveAdminStatus(supabase)
+    const isAdmin = await resolveAdminStatus(supabase, authHeader)
     if (!isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
     const body = await req.json()
@@ -56,7 +57,7 @@ export async function DELETE(req: Request, ctx: RouteContext) {
 
     if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 503 })
 
-    const isAdmin = await resolveAdminStatus(supabase)
+    const isAdmin = await resolveAdminStatus(supabase, authHeader)
     if (!isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
     const { error } = await supabase.from("team_members").delete().eq("id", id)

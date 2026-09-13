@@ -3,10 +3,13 @@ import type { Database } from "@/lib/database.types"
 
 export function createServerSupabase(authHeader?: string | null) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
-  const supabaseKey =
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  const candidateKey =
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
     ""
+  const supabaseKey = candidateKey.endsWith("...")
+    ? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || ""
+    : candidateKey
 
   if (!supabaseUrl || !supabaseKey) {
     return null

@@ -142,13 +142,18 @@ function getInitialCachedLapakItems(): LapakItem[] {
       if (raw) {
         const parsed = JSON.parse(raw)
         if (Array.isArray(parsed) && parsed.length > 0) {
-          cachedLapakItems = parsed
-          return cachedLapakItems
+          const clean = parsed.filter(
+            (i: any) => !i.id?.startsWith("00000000-0000-0000-0000-00000000010")
+          )
+          if (clean.length > 0) {
+            cachedLapakItems = clean
+            return cachedLapakItems
+          }
         }
       }
     } catch {}
   }
-  return DEMO_LAPAK_ITEMS
+  return isSupabaseConfigured ? [] : DEMO_LAPAK_ITEMS
 }
 
 async function fetchLapakItemsDeduplicated(): Promise<LapakItem[]> {
