@@ -1,6 +1,6 @@
 {
   "name": "it-things",
-  "version": "2.3.16",
+  "version": "2.3.17",
   "type": "module",
   "private": true,
   "scripts": {
@@ -19,6 +19,7 @@
     "lucide-react": "^1.43.0",
     "next": "16.2.6",
     "next-themes": "^0.4.6",
+    "planck": "1.4.2",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "shadcn": "^4.21.0",

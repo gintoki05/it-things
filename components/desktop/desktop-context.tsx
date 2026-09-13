@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
 
-export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "wordle" | "winamp"
+export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "wordle" | "winamp" | "tower"
 
 export interface WindowState {
   id: AppId
@@ -197,7 +197,7 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
   paintwar: {
     id: "paintwar",
     title: "PAINT_WAR.EXE - Retro Gartic 98",
-    icon: "game",
+    icon: "paint",
     filename: "paintwar.exe",
     isOpen: false,
     isMinimized: false,
@@ -236,6 +236,21 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 440, height: 620 },
     defaultSize: { width: 440, height: 620 },
     defaultPos: { x: 260, y: 50 },
+    hideFromDesktop: true,
+  },
+  tower: {
+    id: "tower",
+    title: "TOWER.EXE - Tower 98",
+    icon: "tower",
+    filename: "tower.exe",
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    zIndex: 14,
+    position: { x: 260, y: 30 },
+    size: { width: 460, height: 680 },
+    defaultSize: { width: 460, height: 680 },
+    defaultPos: { x: 260, y: 30 },
     hideFromDesktop: true,
   },
   winamp: {
@@ -291,6 +306,7 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
       "paintwar",
       "game",
       "wordle",
+      "tower",
       "winamp",
     ]
     const targetApp = requestedApp && validApps.includes(requestedApp) ? requestedApp : null

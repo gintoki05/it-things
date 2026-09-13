@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-13T00:00:00Z",
+  "title": "Design System: Tower 98",
+  "extensions": {
+    "shadows": [
+      { "name": "shared-small-action", "value": "1px 1px 0px #CBD5E1", "purpose": "Existing shared small labeled action-button depth." },
+      { "name": "shared-medium-action", "value": "1px 1px 0px #102A45", "purpose": "Existing shared medium labeled action-button depth." }
+    ],
+    "motion": [
+      { "name": "pressed-action", "value": "translateY(1px)", "purpose": "Shared labeled action-button pressed response." },
+      { "name": "pressed-icon", "value": "scale(0.95)", "purpose": "Shared icon action-button pressed response." }
+    ],
+    "breakpoints": [{ "name": "desktop", "value": "768px" }]
+  },
+  "components": [],
+  "narrative": {
+    "northStar": "Existing Windows 98 arcade",
+    "overview": "Scoped to the shipped Tower 98 game. Compact utility chrome surrounds original pixel construction artwork; this is an extension of the existing IT Things identity.",
+    "keyCharacteristics": ["Blue sky and shaded red pixel floors", "Physics-linked trussed crane and trolley", "Compact monospace controls and readable numeric HUD", "Shared retro actions and confirmation dialog", "Leaderboard replaces the playfield and suspends gameplay"],
+    "rules": [{ "name": "Scope", "body": "These scene and layout decisions apply only to Tower 98, not the global application.", "section": "colors" }],
+    "dos": ["Preserve shared controls, mobile tap targets, and focused canvas keyboard input.", "Draw crane attachments and floors from physics coordinates."],
+    "donts": ["Do not introduce native browser dialogs or independent action-button styling.", "Do not duplicate nearby status copy or promote the scene palette to a global identity."]
+  }
+}

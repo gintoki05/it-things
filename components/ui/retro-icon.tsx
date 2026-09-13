@@ -21,6 +21,7 @@ export const RETRO_ICON_NAMES = [
   "kas",
   "like",
   "list",
+  "paint",
   "pantry",
   "poll",
   "search",
@@ -28,6 +29,7 @@ export const RETRO_ICON_NAMES = [
   "splitbill",
   "task",
   "team",
+  "tower",
   "trophy",
   "vote",
   "wheel",
@@ -63,6 +65,12 @@ export const EMOJI_TO_RETRO_ICON: Record<string, RetroIconName> = {
   "🎮": "game",
   "⚙️": "settings",
   "🔍": "search",
+  "🎨": "paint",
+  "🖌️": "paint",
+  "🖌": "paint",
+  "🏗️": "tower",
+  "🏗": "tower",
+  "🏢": "tower",
 }
 
 export function resolveRetroIcon(nameOrEmoji?: string | null): RetroIconName | null {
@@ -73,6 +81,9 @@ export function resolveRetroIcon(nameOrEmoji?: string | null): RetroIconName | n
   if ((RETRO_ICON_NAMES as readonly string[]).includes(trimmed)) {
     return trimmed as RetroIconName
   }
+
+  // Alias matches
+  if (trimmed === "paintwar") return "paint"
 
   // Exact match with emoji
   if (EMOJI_TO_RETRO_ICON[nameOrEmoji]) {
@@ -101,6 +112,15 @@ export function getRetroIconSrc(
 ): string | null {
   const iconName = resolveRetroIcon(nameOrEmoji)
   if (!iconName) return null
+
+  // Custom vector icons for games / apps
+  if (iconName === "tower") {
+    return "/icons/tower.svg"
+  }
+  if (iconName === "paint") {
+    return "/icons/paint.svg"
+  }
+
   const normalizedSize = getClosestIconSize(size)
   return `/IT-THINGS-icon-pack/it-things-icon-pack/png-${normalizedSize}/${iconName}.png`
 }

@@ -19,6 +19,7 @@ const ITEM_GRID_POSITIONS: Record<AppId, string> = {
   lapak: "col-start-2 row-start-4",
   winamp: "col-start-2 row-start-5",
   wordle: "",
+  tower: "",
   paintwar: "",
   wheel: "",
   iexplore: "",

@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.16"
+export const APP_VERSION = "v2.3.17"
 export const APP_BUILD = "2026.09.13"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.17",
+    date: "13 Sep 2026",
+    codename: "Tower 98 Physics Game, Anti-Spam Drop, Varied Citizen Inhabitants & Difficulty Levels",
+    changes: [
+      "Peluncuran Game Tower 98 (TOWER.EXE): Game susun menara retro berbasis fisika Planck.js (Box2D) dengan crane berayun, efek getaran gedung bertingkat, dan rekor combo.",
+      "Tingkat Kesulitan Fisika (Santai / Normal / Ekstrim): Menambahkan 3 mode level kesulitan yang dapat dipilih dari dialog awal maupun header toolbar. Mode Santai menawarkan redaman goyangan tinggi (angularDamping: 0.75) dan ayunan tenang agar menara tidak mudah oleng.",
+      "Penghuni Warga Masuk Lantai (Random Variatif): Setiap lantai yang berhasil mendarat stabil diramaikan warga kota pixel art lucu yang masuk dengan cara acak (terjun payung berayun, terbang balon gas, meluncur roket jetpack 98, ngebut skateboard di balkon, atau lari). Jendela menyala hangat dan warga menetap di dalamnya.",
+      "Pencegahan Exploit Enter-Spam: Crane spawn dari pinggir layar secara bergantian (kiri/kanan via cosine motion) dengan arming window 250ms, memastikan spam tombol Enter langsung jatuh meleset dan gugur.",
+      "Leaderboard Harian Supabase & UI Polish: Papan peringkat harian tersinkronisasi ke database Supabase (tower_daily_scores), Retro LED Digital Scoreboard (Skor, Warga, Lantai), dialog Windows 98 terstandarisasi, dan ikon desktop SVG kustom untuk TOWER.EXE dan PAINT.EXE.",
+    ],
+  },
   {
     version: "v2.3.16",
     date: "13 Sep 2026",

@@ -9,12 +9,12 @@ import { Play, Sparkles, Users, Gamepad2, Award } from "lucide-react"
 
 interface GameItem {
   id: string
-  appId?: "paintwar" | "wordle"
+  appId?: "paintwar" | "wordle" | "tower"
   title: string
   filename: string
   category: string
   description: string
-  iconName: "game" | "task" | "idea" | "edit"
+  iconName: "game" | "task" | "idea" | "edit" | "tower" | "paint"
   isLive?: boolean
   isComingSoon?: boolean
 }
@@ -24,6 +24,15 @@ export function GameApp() {
   const { activePaintWarCount } = useNotification()
 
   const games: GameItem[] = [
+    {
+      id: "tower",
+      appId: "tower",
+      title: "Tower 98",
+      filename: "TOWER.EXE",
+      category: "Single Player Physics Arcade",
+      description: "Lepas lantai dari crane, susun setinggi mungkin. Hati-hati, beban menara bisa bikin tumpukannya roboh!",
+      iconName: "tower",
+    },
     {
       id: "wordle",
       appId: "wordle",
@@ -42,7 +51,7 @@ export function GameApp() {
       category: "Multiplayer Tebak Gambar",
       description:
         "Adu tebak gambar live bareng tim IT pakai kanvas MS Paint. Timer 60 detik, sound effect retro, dan leaderboard realtime!",
-      iconName: "game",
+      iconName: "paint",
       isLive: activePaintWarCount > 0,
     },
     {
@@ -67,7 +76,7 @@ export function GameApp() {
     },
   ]
 
-  const handleLaunchGame = (appId?: "paintwar" | "wordle") => {
+  const handleLaunchGame = (appId?: "paintwar" | "wordle" | "tower") => {
     if (appId) {
       openWindow(appId)
     }

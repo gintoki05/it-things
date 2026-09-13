@@ -14,6 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      tower_daily_scores: {
+        Row: { user_id: string; target_date: string; user_name: string; score: number; floors: number; achieved_at: string }
+        Insert: { user_id: string; target_date?: string; user_name: string; score: number; floors: number; achieved_at?: string }
+        Update: { user_name?: string; score?: number; floors?: number; achieved_at?: string }
+        Relationships: []
+      }
       wordle_daily_entries: {
         Row: {
           id: string

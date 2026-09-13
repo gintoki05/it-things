@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import dynamic from "next/dynamic"
 import { AuthProvider, useAuth } from "@/lib/auth"
 import { NotificationProvider } from "@/lib/notification-store"
 import { PresenceProvider } from "@/lib/presence-store"
@@ -51,6 +52,10 @@ const MemoizedIExploreApp = React.memo(IExploreApp)
 const MemoizedPaintWarApp = React.memo(PaintWarApp)
 const MemoizedGameApp = React.memo(GameApp)
 const MemoizedWordleApp = React.memo(WordleApp)
+const TowerApp = dynamic(() => import("@/components/apps/tower-app").then(module => module.TowerApp), {
+  ssr: false,
+  loading: () => <p role="status" className="p-4 font-mono text-xs">Memuat Tower 98...</p>,
+})
 const MemoizedWinampApp = React.memo(WinampApp)
 const MemoizedDesktopIcons = React.memo(DesktopIcons)
 const MemoizedTeamWidget = React.memo(TeamWidget)
@@ -254,6 +259,10 @@ function DesktopWorkspace() {
       {/* Retro Window: wordle.exe (Wordle 98 - Tebak Kata Harian IT-Things) */}
       <DesktopWindow id="wordle" bodyClassName="p-0 overflow-hidden flex flex-col">
         <MemoizedWordleApp />
+      </DesktopWindow>
+
+      <DesktopWindow id="tower" keepMountedOnMinimize bodyClassName="p-0 overflow-hidden flex flex-col">
+        <TowerApp />
       </DesktopWindow>
 
       {/* Retro Window: winamp.exe (Winamp 2.91 Media Player) */}
