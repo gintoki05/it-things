@@ -9,7 +9,7 @@ import { Play, Sparkles, Users, Gamepad2, Award } from "lucide-react"
 
 interface GameItem {
   id: string
-  appId?: "paintwar" | "wordle"
+  appId?: "paintwar" | "wordle" | "towerbloxx"
   title: string
   filename: string
   category: string
@@ -24,6 +24,16 @@ export function GameApp() {
   const { activePaintWarCount } = useNotification()
 
   const games: GameItem[] = [
+    {
+      id: "towerbloxx",
+      appId: "towerbloxx",
+      title: "Tower Bloxx 98",
+      filename: "TOWER_BLOXX.EXE",
+      category: "Arcade Crane Tower Stacker",
+      description:
+        "Susun blok apartemen setinggi langit dengan ayunan crane! Raih combo perfect drop, jaga gedung biar gak oleng, dan kumpulkan ribuan warga.",
+      iconName: "game",
+    },
     {
       id: "wordle",
       appId: "wordle",
@@ -67,7 +77,7 @@ export function GameApp() {
     },
   ]
 
-  const handleLaunchGame = (appId?: "paintwar" | "wordle") => {
+  const handleLaunchGame = (appId?: "paintwar" | "wordle" | "towerbloxx") => {
     if (appId) {
       openWindow(appId)
     }

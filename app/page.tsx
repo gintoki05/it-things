@@ -35,6 +35,7 @@ import { IExploreApp } from "@/components/apps/iexplore-app"
 import { PaintWarApp } from "@/components/apps/paint-war-app"
 import { GameApp } from "@/components/apps/game-app"
 import { WordleApp } from "@/components/apps/wordle-app"
+import { TowerBloxxApp } from "@/components/apps/tower-bloxx-app"
 import { WinampApp } from "@/components/apps/winamp-app"
 import { WinampProvider } from "@/lib/winamp-store"
 
@@ -51,6 +52,7 @@ const MemoizedIExploreApp = React.memo(IExploreApp)
 const MemoizedPaintWarApp = React.memo(PaintWarApp)
 const MemoizedGameApp = React.memo(GameApp)
 const MemoizedWordleApp = React.memo(WordleApp)
+const MemoizedTowerBloxxApp = React.memo(TowerBloxxApp)
 const MemoizedWinampApp = React.memo(WinampApp)
 const MemoizedDesktopIcons = React.memo(DesktopIcons)
 const MemoizedTeamWidget = React.memo(TeamWidget)
@@ -254,6 +256,11 @@ function DesktopWorkspace() {
       {/* Retro Window: wordle.exe (Wordle 98 - Tebak Kata Harian IT-Things) */}
       <DesktopWindow id="wordle" bodyClassName="p-0 overflow-hidden flex flex-col">
         <MemoizedWordleApp />
+      </DesktopWindow>
+
+      {/* Retro Window: towerbloxx.exe (Tower Bloxx 98 - Arcade Stacker) */}
+      <DesktopWindow id="towerbloxx" bodyClassName="p-0 overflow-hidden flex flex-col">
+        <MemoizedTowerBloxxApp />
       </DesktopWindow>
 
       {/* Retro Window: winamp.exe (Winamp 2.91 Media Player) */}

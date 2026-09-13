@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
 
-export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "wordle" | "winamp"
+export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "wordle" | "winamp" | "towerbloxx"
 
 export interface WindowState {
   id: AppId
@@ -251,6 +251,21 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 540, height: 680 },
     defaultSize: { width: 540, height: 680 },
     defaultPos: { x: 260, y: 30 },
+  },
+  towerbloxx: {
+    id: "towerbloxx",
+    title: "TOWER_BLOXX.EXE - Retro Tower Stacker 98",
+    icon: "game",
+    filename: "towerbloxx.exe",
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    zIndex: 14,
+    position: { x: 280, y: 25 },
+    size: { width: 400, height: 620 },
+    defaultSize: { width: 400, height: 620 },
+    defaultPos: { x: 280, y: 25 },
+    hideFromDesktop: true,
   },
 }
 

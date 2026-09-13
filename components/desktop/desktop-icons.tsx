@@ -22,6 +22,7 @@ const ITEM_GRID_POSITIONS: Record<AppId, string> = {
   paintwar: "",
   wheel: "",
   iexplore: "",
+  towerbloxx: "",
 }
 
 export function DesktopIcons() {
