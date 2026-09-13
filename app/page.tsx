@@ -37,6 +37,7 @@ import { PaintWarApp } from "@/components/apps/paint-war-app"
 import { GameApp } from "@/components/apps/game-app"
 import { WordleApp } from "@/components/apps/wordle-app"
 import { WinampApp } from "@/components/apps/winamp-app"
+import { SwissToolsApp } from "@/components/apps/swiss-tools-app"
 import { WinampProvider } from "@/lib/winamp-store"
 
 const MemoizedReadmeApp = React.memo(ReadmeApp)
@@ -57,6 +58,7 @@ const TowerApp = dynamic(() => import("@/components/apps/tower-app").then(module
   loading: () => <p role="status" className="p-4 font-mono text-xs">Memuat Tower 98...</p>,
 })
 const MemoizedWinampApp = React.memo(WinampApp)
+const MemoizedSwissToolsApp = React.memo(SwissToolsApp)
 const MemoizedDesktopIcons = React.memo(DesktopIcons)
 const MemoizedTeamWidget = React.memo(TeamWidget)
 const MemoizedStickyNoteWidget = React.memo(StickyNoteWidget)
@@ -268,6 +270,11 @@ function DesktopWorkspace() {
       {/* Retro Window: winamp.exe (Winamp 2.91 Media Player) */}
       <DesktopWindow id="winamp" keepMountedOnMinimize bodyClassName="p-0 overflow-hidden flex flex-col bg-[#1C1C1C]">
         <MemoizedWinampApp />
+      </DesktopWindow>
+
+      {/* Retro Window: SwissTools.exe */}
+      <DesktopWindow id="swisstools" bodyClassName="p-0 overflow-hidden flex flex-col">
+        <MemoizedSwissToolsApp />
       </DesktopWindow>
 
       {/* Floating Retro Team Widget */}

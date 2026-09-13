@@ -5,12 +5,23 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.17"
+export const APP_VERSION = "v2.3.18"
 export const APP_BUILD = "2026.09.13"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.18",
+    date: "13 Sep 2026",
+    codename: "SwissTools.exe IT Swiss Army Knife, Multi-Timezone Converter & Desktop Two-Column Layout",
+    changes: [
+      "Peluncuran SwissTools.exe (tools.exe): Modul utilitas harian teknis tim IT yang berjalan 100% offline & client-side tanpa risiko kebocoran data ke server.",
+      "8 Utilitas Teknis Esensial: Termasuk JSON Formatter & Validator (prettify, minify, auto-fix quotes), JWT Inspector (parsing header/payload/signature & live expiration countdown), Hash Generator (MD5, SHA-1, SHA-256, SHA-512 & checksum matcher), Base64 & URL Encoder/Decoder, UUID v4 & NanoID generator, Case Converter (camelCase, snake_case, kebab-case, dll.), dan Regex Tester dengan capture groups.",
+      "Konversi Waktu & Zona Dunia (TIME_CONV.EXE): Ticker epoch realtime detik/ms, konversi bolak-balik Timestamp <-> Tanggal WIB/UTC/ISO, perbandingan serentak 10 zona waktu dunia dalam ListView Windows 98, serta kalkulator durasi & selisih waktu.",
+      "Penataan Ulang Desktop Grid (2 Kolom Seimbang): Penyesuaian grid desktop ke grid-rows-6 sehingga seluruh 11 ikon tersusun rapi dalam 2 kolom vertikal tanpa kolom ke-3 yang ganjil di layar mobile, serta penamaan file tools.exe yang tidak terpotong.",
+    ],
+  },
   {
     version: "v2.3.17",
     date: "13 Sep 2026",

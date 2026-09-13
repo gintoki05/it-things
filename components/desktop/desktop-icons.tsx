@@ -23,6 +23,7 @@ const ITEM_GRID_POSITIONS: Record<AppId, string> = {
   paintwar: "",
   wheel: "",
   iexplore: "",
+  swisstools: "col-start-1 row-start-6",
 }
 
 export function DesktopIcons() {
@@ -51,7 +52,7 @@ export function DesktopIcons() {
   }
 
   return (
-    <div className="absolute top-3 sm:top-4 left-3 sm:left-4 grid grid-flow-col grid-rows-5 auto-cols-max gap-y-2.5 sm:gap-y-3.5 gap-x-2 select-none z-0">
+    <div className="absolute top-3 sm:top-4 left-3 sm:left-4 grid grid-flow-col grid-rows-6 auto-cols-max gap-y-2.5 sm:gap-y-3.5 gap-x-2 select-none z-0">
       {items.map((item) => {
         const isSelected = selectedId === item.id
 

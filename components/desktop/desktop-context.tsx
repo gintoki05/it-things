@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
 
-export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "wordle" | "winamp" | "tower"
+export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "wordle" | "winamp" | "tower" | "swisstools"
 
 export interface WindowState {
   id: AppId
@@ -266,6 +266,20 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 540, height: 680 },
     defaultSize: { width: 540, height: 680 },
     defaultPos: { x: 260, y: 30 },
+  },
+  swisstools: {
+    id: "swisstools",
+    title: "SwissTools.exe - Utilitas & DevTools IT",
+    icon: "settings",
+    filename: "tools.exe",
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    zIndex: 14,
+    position: { x: 190, y: 35 },
+    size: { width: 840, height: 600 },
+    defaultSize: { width: 840, height: 600 },
+    defaultPos: { x: 190, y: 35 },
   },
 }
 
