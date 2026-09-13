@@ -27,19 +27,7 @@ export function computeUserBadges({
 }: ComputeBadgesParams): UserBadgeItem[] {
   const badges: UserBadgeItem[] = []
 
-  // 1. Role: Admin
-  if (userRole === "admin") {
-    badges.push({
-      id: "admin",
-      label: "Admin",
-      icon: "🛡️",
-      description: "Sysadmin & Pengelola Utama IT-Things",
-      color: "bg-purple-100 text-purple-900 border-purple-300",
-      priority: 1,
-    })
-  }
-
-  // 2. PIC Kas & Pantry
+  // 1. PIC Kas & Pantry
   picTags.forEach((tag) => {
     if (tag.module === "kas") {
       badges.push({

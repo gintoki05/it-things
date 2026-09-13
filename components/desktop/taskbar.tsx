@@ -287,14 +287,7 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
               ) : canSwitchRole ? (
                 <div className="p-1.5 bg-[#E8EEF5] border border-[#A4B5C6] rounded text-[10px]">
                   <div className="font-bold flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-1">
-                      <span>Mode Peran:</span>
-                      {user?.role !== (user?.realRole || "admin") && (
-                        <span className="text-[8px] bg-amber-100 text-amber-800 border border-amber-300 px-1 rounded font-mono font-normal">
-                          Simulasi
-                        </span>
-                      )}
-                    </div>
+                    <span>Peran Akun:</span>
                     <span
                       className={
                         isAdmin

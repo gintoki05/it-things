@@ -41,6 +41,7 @@ interface AuthContextType {
   signInAsGuest: () => void
   signOut: () => Promise<void>
   setDemoUserRole?: (role: UserRole) => void
+  switchRole?: (role: UserRole) => Promise<void>
   updateProfile: (updates: { name: string; avatarUrl?: string }) => Promise<{ success: boolean; error?: string }>
 }
 
@@ -353,13 +354,10 @@ const ROOT_ADMIN_EMAILS = [
           .maybeSingle()
 
         if (data) {
-          if (isRootAdmin) {
-            role = "admin"
-            if (data.role !== "admin") {
-              supabase.from("team_members").update({ role: "admin" }).eq("user_id", sbUser.id).then(() => {})
-            }
-          } else if (data.role) {
+          if (data.role) {
             role = data.role as UserRole
+          } else if (isRootAdmin) {
+            role = "admin"
           }
           if (data.name) displayName = data.name
           if (data.avatar_url !== undefined && data.avatar_url !== null) {
@@ -382,6 +380,14 @@ const ROOT_ADMIN_EMAILS = [
       console.warn("Could not sync team_member data:", e)
     }
 
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("it_things_user_role", role)
+      } catch (e) {
+        console.warn("Storage write error:", e)
+      }
+    }
+
     const authUser: AuthUser = {
       id: sbUser.id,
       email: sbUser.email || "",
@@ -397,18 +403,38 @@ const ROOT_ADMIN_EMAILS = [
 
   const isGuest = !!user?.isGuest || user?.id === "guest-user" || user?.role === "guest"
   const isRootAdmin = !!(user?.email && ROOT_ADMIN_EMAILS.includes(user.email.toLowerCase()))
-  const realRole: UserRole = user?.realRole || (isRootAdmin ? "admin" : (user?.role || "member"))
-  const canSwitchRole = !isGuest && (isRootAdmin || realRole === "admin")
+  const canSwitchRole = !isGuest && (isRootAdmin || user?.role === "admin" || user?.realRole === "admin")
   const isAdmin = !isGuest && (user?.role === "admin" || (!user?.role && isRootAdmin))
   const isTreasurer = isAdmin
 
-  const setDemoUserRole = async (role: UserRole) => {
+  const switchRole = async (role: UserRole) => {
     if (isGuest || !canSwitchRole) return
-    setUser((prev) => (prev ? { ...prev, role } : prev))
+    setUser((prev) => (prev ? { ...prev, role, realRole: role } : prev))
     if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("it_things_user_role", role)
+      } catch (e) {
+        console.warn("Storage save error:", e)
+      }
       window.dispatchEvent(new CustomEvent("profile-updated"))
     }
+
+    if (supabase && user?.id && !isGuest) {
+      try {
+        const { error } = await supabase
+          .from("team_members")
+          .update({ role })
+          .eq("user_id", user.id)
+        if (error) {
+          console.error("Failed to persist role update to team_members:", error)
+        }
+      } catch (e) {
+        console.error("Error updating role in team_members:", e)
+      }
+    }
   }
+
+  const setDemoUserRole = switchRole
 
   const signInWithGoogle = async () => {
     if (!isSupabaseConfigured || !supabase) {
@@ -743,6 +769,7 @@ const ROOT_ADMIN_EMAILS = [
         localStorage.removeItem("it_things_guest_avatar")
         localStorage.removeItem("it_things_passcode_verified")
         sessionStorage.removeItem("it_things_passcode_verified")
+        localStorage.removeItem("it_things_user_role")
         window.history.pushState({ locked: true, loggedOut: true }, "", window.location.href)
       } catch (e) {
         console.warn("Local storage remove error:", e)
@@ -813,6 +840,7 @@ const ROOT_ADMIN_EMAILS = [
         signInAsGuest,
         signOut,
         setDemoUserRole,
+        switchRole,
         updateProfile,
       }}
     >

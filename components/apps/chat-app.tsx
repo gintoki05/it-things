@@ -168,29 +168,22 @@ function ChatLiveLink({
     <span className="inline-flex flex-col my-1 max-w-full align-baseline">
       {/* YouTube Title & Preview Card to prevent prank/rickroll */}
       {isYouTube && (
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
+        <span
           onClick={(e) => e.stopPropagation()}
-          title={ytMeta?.title ? `Buka di YouTube: ${ytMeta.title}` : `Buka tautan YouTube: ${url}`}
           className={cn(
-            "w-full mb-1.5 p-1.5 rounded-[3px] border shadow-2xs text-[11px] select-text flex flex-col gap-0.5 text-left transition-all hover:opacity-95 cursor-pointer block group",
+            "w-full mb-1.5 p-1.5 rounded-[3px] border shadow-2xs text-[11px] select-text flex flex-col gap-0.5 text-left transition-all",
             isOwn
-              ? "bg-[#0B1E33] border-cyan-500/50 text-cyan-100 hover:border-cyan-400"
-              : "bg-[#F8FAFC] border-[#94A3B8] text-[#0F172A] hover:border-[#64748B]"
+              ? "bg-[#0B1E33] border-cyan-500/50 text-cyan-100"
+              : "bg-[#F8FAFC] border-[#94A3B8] text-[#0F172A]"
           )}
         >
-          <span className="flex items-center justify-between gap-1 font-mono text-[9px] uppercase tracking-wider opacity-80 select-none">
-            <span className="flex items-center gap-1">
-              <span className="text-[11px]">🎬</span>
-              <span className="font-bold">
-                {ytMeta?.author ? `YouTube • ${ytMeta.author}` : "YouTube Video"}
-              </span>
+          <span className="flex items-center gap-1 font-mono text-[9px] uppercase tracking-wider opacity-80 select-none">
+            <span className="text-[11px]">🎬</span>
+            <span className="font-bold">
+              {ytMeta?.author ? `YouTube • ${ytMeta.author}` : "YouTube Video"}
             </span>
-            <ExternalLink className="size-3 opacity-60 group-hover:opacity-100 shrink-0" />
           </span>
-          <span className="font-bold leading-snug break-words text-[12px] text-left group-hover:underline">
+          <span className="font-bold leading-snug break-words text-[12px] text-left">
             {ytMeta?.title ? (
               `"${ytMeta.title}"`
             ) : isLoadingTitle ? (
@@ -199,7 +192,7 @@ function ChatLiveLink({
               <span className="italic opacity-70 font-normal">Tautan Video YouTube</span>
             )}
           </span>
-        </a>
+        </span>
       )}
 
       <span className="inline-flex items-center flex-wrap gap-1 align-baseline max-w-full">
@@ -1065,7 +1058,6 @@ export function ChatApp() {
             const authorName = (isOwn && user ? user.name : member?.name) || msg.userName
             const authorAvatar = (isOwn && user ? user.avatarUrl : member?.avatar_url) ?? msg.userAvatar
             const authorRole = (isOwn && user ? user.role : member?.role) || msg.userRole
-
             const canDelete = isMessageDeletable(msg, user?.id || "", isAdmin)
             const canEdit = isMessageEditable(msg, user?.id || "")
             const remainingMins = getRemainingDeleteMinutes(msg)
@@ -1497,16 +1489,6 @@ export function ChatApp() {
                     <span className="truncate">{opt.name}</span>
                   </div>
 
-                  {opt.role === "admin" && (
-                    <span
-                      className={cn(
-                        "text-[9px] font-mono px-1 rounded",
-                        isActive ? "bg-white/20 text-white" : "bg-purple-100 text-purple-800"
-                      )}
-                    >
-                      Admin
-                    </span>
-                  )}
                   {opt.id === "all" && (
                     <span
                       className={cn(
