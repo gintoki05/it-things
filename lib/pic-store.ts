@@ -5,6 +5,11 @@ import type { RealtimeChannel } from "@supabase/supabase-js"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth"
 import { playRetroNotificationSound } from "@/lib/sound-effects"
+import {
+  fetchModulePicsAction,
+  assignModulePicAction,
+  removeModulePicAction,
+} from "@/app/actions/pic"
 
 export type ModuleKey = "kas" | "pantry"
 
@@ -67,21 +72,48 @@ function getInitialCachedPics(): Record<string, ModulePic[]> {
   return cachedPics
 }
 
+export function hydratePics(rows: any[] | null) {
+  if (!rows || !Array.isArray(rows)) return
+  const grouped: Record<string, ModulePic[]> = {
+    kas: [],
+    pantry: [],
+  }
+
+  rows.forEach((row) => {
+    const mod = row.module
+    if (!grouped[mod]) grouped[mod] = []
+    grouped[mod].push({
+      id: row.id,
+      module: row.module,
+      user_id: row.user_id,
+      user_name: row.user_name,
+      user_avatar: row.user_avatar,
+      assigned_by_id: row.assigned_by_id,
+      assigned_by_name: row.assigned_by_name,
+      updated_at: row.updated_at,
+    })
+  })
+
+  cachedPics = grouped
+  if (typeof window !== "undefined") {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(grouped))
+  }
+  picListeners.forEach((listener) => listener(grouped))
+}
+
 async function fetchPicsDeduplicated(): Promise<Record<string, ModulePic[]>> {
   if (inFlightPicPromise) {
     return inFlightPicPromise
   }
 
   inFlightPicPromise = (async () => {
-    if (!isSupabaseConfigured || !supabase) {
+    if (!isSupabaseConfigured) {
       return cachedPics
     }
 
     try {
-      const { data, error } = await supabase
-        .from("module_pics")
-        .select("*")
-        .order("updated_at", { ascending: true })
+      const token = (await supabase?.auth.getSession())?.data.session?.access_token || null
+      const { data, error } = await fetchModulePicsAction(token)
 
       if (!error && data) {
         const grouped: Record<string, ModulePic[]> = {
@@ -226,29 +258,27 @@ export function usePicStore() {
         return updated
       })
 
-      if (!isSupabaseConfigured || !supabase || !user) {
+      if (!isSupabaseConfigured || !user) {
         return { success: true }
       }
 
       setIsUpdating(true)
       try {
-        const { error } = await supabase.from("module_pics").upsert(
-          {
-            module,
-            user_id: targetUserId,
-            user_name: targetUser.name,
-            user_avatar: targetUser.avatar_url || "👤",
-            assigned_by_id: user.id,
-            assigned_by_name: user.name,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "module,user_id" }
-        )
+        const token = (await supabase?.auth.getSession())?.data.session?.access_token || null
+        const res = await assignModulePicAction({
+          module,
+          targetUserId,
+          targetUserName: targetUser.name,
+          targetUserAvatar: targetUser.avatar_url || "👤",
+          assignedById: user.id,
+          assignedByName: user.name,
+          token,
+        })
 
-        if (error) {
-          console.error("Gagal tambah module_pics di Supabase:", error)
+        if (!res.success) {
+          console.error("Gagal tambah module_pics di Supabase:", res.error)
           setPics(prevPics)
-          return { success: false, error: error.message }
+          return { success: false, error: res.error }
         }
 
         return { success: true }
@@ -286,21 +316,23 @@ export function usePicStore() {
         return updated
       })
 
-      if (!isSupabaseConfigured || !supabase || !user) {
+      if (!isSupabaseConfigured || !user) {
         return { success: true }
       }
 
       setIsUpdating(true)
       try {
-        const { error } = await supabase
-          .from("module_pics")
-          .delete()
-          .match({ module, user_id: targetUserId })
+        const token = (await supabase?.auth.getSession())?.data.session?.access_token || null
+        const res = await removeModulePicAction({
+          module,
+          targetUserId,
+          token,
+        })
 
-        if (error) {
-          console.error("Gagal hapus module_pics di Supabase:", error)
+        if (!res.success) {
+          console.error("Gagal hapus module_pics di Supabase:", res.error)
           setPics(prevPics)
-          return { success: false, error: error.message }
+          return { success: false, error: res.error }
         }
 
         return { success: true }

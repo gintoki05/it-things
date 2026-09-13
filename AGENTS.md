@@ -121,4 +121,21 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - **Text Truncation & Wrap**: Header window, judul item, dan teks panjang harus menggunakan `truncate`, `line-clamp`, atau `break-words` agar tidak memaksa window melebar ke samping.
 <!-- END:ui-responsive-mobile-rules -->
 
+<!-- BEGIN:server-actions-data-privacy-rules -->
+# Standar Server-Side Fetching & Network Privacy (Anti-Inspect Leak)
 
+## Wajib Menggunakan Server Actions (`"use server"`)
+- **DILARANG direct REST fetch dari Client ke tabel database**: Hindari query langsung ke tabel Supabase dari browser (`supabase.from('nama_tabel')`) untuk read/write data penting, team member, chat, atau inisialisasi awal.
+- **Sembunyikan Endpoint & Nama Tabel**: Selalu gunakan Next.js Server Actions di `app/actions/*.ts` (`"use server"`).
+  - Tujuannya agar nama tabel database (`chat_messages`, `team_members`, `module_pics`, dll.) serta URL internal tidak terekspos di Inspect Element (DevTools Network Fetch/XHR).
+  - Di browser, Server Action hanya terlihat sebagai request POST Next.js internal, menjaga keamanan dan privasi skema database dari end-user.
+
+## Master Desktop Bootstrap
+- **Anti-Waterfall & Anti-Spam Request**: Jangan biarkan tiap widget atau badge desktop nembak request server sendiri-sendiri secara serentak saat app dibuka.
+- **Konsolidasi Batch Fetch**: Gunakan master bootstrap action (`getDesktopBootstrapAction` di `app/actions/bootstrap.ts`) untuk memuat data awal (Badges Vote/Pantry/Kas/SplitBill, Memo, PIC, Lapak, Unread Chat) dalam **1 single server call**.
+- **Hydrate Shared Cache**: Hasil bootstrap di-hydrate ke store masing-masing (`hydrateMemo`, `hydratePics`, `hydrateLapakItems`) sehingga widget langsung siap pakai tanpa fetch ulang.
+
+## Sanitasi Data & Privacy di Level Server
+- **Soft-Delete Redaction**: Data yang di-soft-delete (`is_deleted = true`) WAJIB disanitasi/dikosongkan di level database (via database trigger atau server action). DILARANG membiarkan konten sensitif terkirim ke client hanya untuk difilter secara visual.
+- **Field Whitelisting**: Hanya return kolom yang memang boleh dilihat user (misal: sembunyikan email member untuk non-admin, sembunyikan kata jawaban Wordle sebelum game selesai). Filter ketat di Server Action sebelum dikirim ke client.
+<!-- END:server-actions-data-privacy-rules -->

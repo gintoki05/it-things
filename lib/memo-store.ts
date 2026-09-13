@@ -6,6 +6,7 @@ import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth"
 import { usePicStore } from "@/lib/pic-store"
 import { playRetroNotificationSound } from "@/lib/sound-effects"
+import { fetchDesktopMemoAction, saveDesktopMemoAction } from "@/app/actions/memo"
 
 export interface DesktopMemo {
   id: string
@@ -58,26 +59,32 @@ function getInitialCachedMemo(): DesktopMemo {
   return cachedMemo
 }
 
+export function hydrateMemo(data: DesktopMemo | null) {
+  if (!data) return
+  const normalized = normalizeMemo(data)
+  cachedMemo = normalized
+  if (typeof window !== "undefined") {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
+  }
+  memoListeners.forEach((listener) => listener(normalized))
+}
+
 async function fetchMemoDeduplicated(): Promise<DesktopMemo> {
   if (inFlightMemoPromise) {
     return inFlightMemoPromise
   }
 
   inFlightMemoPromise = (async () => {
-    if (!isSupabaseConfigured || !supabase) {
+    if (!isSupabaseConfigured) {
       return cachedMemo
     }
 
     try {
-      const { data, error } = await supabase
-        .from("desktop_memos")
-        .select("*")
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle()
+      const token = (await supabase?.auth.getSession())?.data.session?.access_token || null
+      const { data, error } = await fetchDesktopMemoAction(token)
 
       if (!error && data) {
-        const normalized = normalizeMemo(data)
+        const normalized = normalizeMemo(data as DesktopMemo)
         cachedMemo = normalized
         if (typeof window !== "undefined") {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
@@ -177,26 +184,33 @@ export function useMemoStore() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedRow))
       }
 
-      if (!isSupabaseConfigured || !supabase) {
+      if (!isSupabaseConfigured) {
         setIsSaving(false)
         playRetroNotificationSound(0.25)
         return { success: true }
       }
 
       try {
-        const { error } = await supabase
-          .from("desktop_memos")
-          .upsert(updatedRow)
+        const token = (await supabase?.auth.getSession())?.data.session?.access_token || null
+        const res = await saveDesktopMemoAction({
+          id: updatedRow.id,
+          title: updatedRow.title,
+          content: updatedRow.content,
+          updatedById: updatedRow.updated_by_id,
+          updatedByName: updatedRow.updated_by_name,
+          updatedByAvatar: updatedRow.updated_by_avatar,
+          token,
+        })
 
-        if (error) {
-          console.error("Gagal menyimpan memo ke Supabase:", error)
+        if (!res.success) {
+          console.error("Gagal menyimpan memo ke Supabase:", res.error)
           // Rollback on error
           setMemo(prevMemo)
           if (typeof window !== "undefined") {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(prevMemo))
           }
           setIsSaving(false)
-          return { success: false, error: error.message }
+          return { success: false, error: res.error }
         }
 
         playRetroNotificationSound(0.28)

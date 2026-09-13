@@ -535,7 +535,7 @@ export function ChatApp() {
         id: m.id,
         name: m.name,
         label: `@${m.name}`,
-        avatarUrl: m.avatar_url,
+        avatarUrl: m.avatar_url || undefined,
         role: m.role,
       })
     })

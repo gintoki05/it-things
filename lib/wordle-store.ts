@@ -8,6 +8,7 @@ import {
   playRetroBuzzerSound,
   playRetroNotificationSound,
 } from "@/lib/sound-effects"
+import { fetchWordleTodayAction, submitWordleGuessAction } from "@/app/actions/wordle"
 
 // ─── 1. Date Helper ─────────────────────────────────────────
 export function getTodayDateString(): string {
@@ -124,12 +125,8 @@ async function fetchWordleDataDeduplicated(): Promise<WordleSharedState> {
         token = session?.access_token || null
       }
 
-      const res = await fetch("/api/wordle/today", {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-
-      if (res.ok) {
-        const data = await res.json()
+      const data = await fetchWordleTodayAction(token)
+      if (!data.error) {
         cachedWordleState = {
           puzzle: data.puzzle || cachedWordleState.puzzle,
           entry: data.entry || null,
@@ -297,22 +294,14 @@ export function useWordle() {
 
       const cleanGuess = currentGuess.toUpperCase().trim()
 
-      const res = await fetch("/api/wordle/guess", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          guess: cleanGuess,
-          userName: user?.name,
-          userAvatar: user?.avatarUrl || user?.googleAvatarUrl,
-        }),
+      const data = await submitWordleGuessAction({
+        guess: cleanGuess,
+        userName: user?.name,
+        userAvatar: user?.avatarUrl || user?.googleAvatarUrl,
+        token,
       })
 
-      const data = await res.json()
-
-      if (!res.ok || !data.success) {
+      if (!data.success) {
         setErrorMessage(data.error || "Gagal memproses tebakan.")
         playRetroBuzzerSound()
         return
@@ -320,7 +309,8 @@ export function useWordle() {
 
       // Update state with server-verified evaluations
       const newGuesses = data.guesses || [...guesses, cleanGuess]
-      const newEvaluations = data.allEvaluations || [...evaluatedGuesses, data.evaluation]
+      const newEvaluations: EvaluatedLetter[][] =
+        data.allEvaluations || (data.evaluation ? [...evaluatedGuesses, data.evaluation] : evaluatedGuesses)
 
       setGuesses(newGuesses)
       setEvaluatedGuesses(newEvaluations)

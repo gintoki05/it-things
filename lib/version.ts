@@ -5,12 +5,23 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.15"
+export const APP_VERSION = "v2.3.16"
 export const APP_BUILD = "2026.09.13"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.16",
+    date: "13 Sep 2026",
+    codename: "Server Actions Migration, DevTools Inspect Shield & Master Desktop Bootstrap",
+    changes: [
+      "Server Actions Migration: Migrasi fetch data Chat, Team, Wordle, Memo, PIC, dan Lapak ke Next.js Server Actions ('use server'), mengeliminasi keterpaparan nama tabel database Supabase dan route API pada tab Network Inspect Element.",
+      "Master Desktop Bootstrap: Mengonsolidasikan inisialisasi awal desktop (Badges Vote, Pantry, Kas, Split Bill, Paint War, Memo, PIC, Lapak, serta Unread Chat Count) ke dalam 1 panggilan Server Action tunggal (getDesktopBootstrapAction).",
+      "Database Soft-Delete Privacy & Auto-Sanitize: Sanitasi 33 pesan terhapus historis dan pemasangan trigger database Postgres otomatis (trg_chat_message_soft_delete) untuk meredaksi konten pesan dan menghapus reaksi terkait saat pesan di-soft-delete.",
+      "Standardisasi Dokumen Arsitektur: Menambahkan aturan standar Server-Side Fetching & Network Privacy (Anti-Inspect Leak) ke dalam AGENTS.md.",
+    ],
+  },
   {
     version: "v2.3.15",
     date: "13 Sep 2026",

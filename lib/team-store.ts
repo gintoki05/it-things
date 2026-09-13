@@ -4,13 +4,19 @@ import * as React from "react"
 import type { RealtimeChannel } from "@supabase/supabase-js"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { useAuth, UserRole } from "@/lib/auth"
+import {
+  fetchTeamMembersAction,
+  createTeamMemberAction,
+  updateTeamMemberAction,
+  deleteTeamMemberAction,
+} from "@/app/actions/team"
 
 export interface TeamMember {
   id: string
   user_id?: string
   name: string
-  email?: string // optional — only visible to admin via server
-  avatar_url?: string
+  email?: string | null // optional — only visible to admin via server
+  avatar_url?: string | null
   role: UserRole
   created_at?: string
 }
@@ -80,25 +86,23 @@ async function fetchTeamMembersDeduplicated(): Promise<TeamMember[]> {
 
   inFlightTeamPromise = (async () => {
     try {
-      const res = await teamFetch("/api/team")
-      if (res.ok) {
-        const json = await res.json()
-        if (Array.isArray(json.members)) {
-          const mapped: TeamMember[] = json.members.map((d: any) => ({
-            id: d.id,
-            user_id: d.user_id,
-            name: d.name,
-            email: d.email,
-            avatar_url: d.avatar_url || "👤",
-            role: (d.role as UserRole) || "member",
-            created_at: d.created_at,
-          }))
-          cachedTeamMembers = mapped
-          if (typeof window !== "undefined") {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(mapped))
-          }
-          teamListeners.forEach((listener) => listener(mapped))
+      const token = await getToken()
+      const { members, error } = await fetchTeamMembersAction(token)
+      if (!error && Array.isArray(members)) {
+        const mapped: TeamMember[] = members.map((d) => ({
+          id: d.id,
+          user_id: d.user_id,
+          name: d.name,
+          email: d.email,
+          avatar_url: d.avatar_url || "👤",
+          role: (d.role as UserRole) || "member",
+          created_at: d.created_at,
+        }))
+        cachedTeamMembers = mapped
+        if (typeof window !== "undefined") {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(mapped))
         }
+        teamListeners.forEach((listener) => listener(mapped))
       }
     } catch (err) {
       console.warn("fetchTeamMembersDeduplicated error:", err)
@@ -195,33 +199,32 @@ export function useTeamStore() {
     saveLocal(updated)
 
     try {
-      const res = await teamFetch("/api/team", {
-        method: "POST",
-        body: JSON.stringify({
+      const token = await getToken()
+      const res = await createTeamMemberAction(
+        {
           name: memberData.name.trim(),
           email: memberData.email.trim(),
           role: memberData.role,
           avatar_url: memberData.avatar_url || defaultAvatar,
-        }),
-      })
-      if (res.ok) {
-        const json = await res.json()
-        if (json.member) {
-          const inserted: TeamMember = {
-            id: json.member.id,
-            user_id: json.member.user_id,
-            name: json.member.name,
-            email: json.member.email,
-            role: (json.member.role as UserRole) || "member",
-            avatar_url: json.member.avatar_url || defaultAvatar,
-            created_at: json.member.created_at,
-          }
-          const final = updated.map(m => m.id === newId ? inserted : m)
-          saveLocal(final)
-          return inserted
+        },
+        token
+      )
+
+      if (res.success && res.member) {
+        const inserted: TeamMember = {
+          id: res.member.id,
+          user_id: res.member.user_id,
+          name: res.member.name,
+          email: res.member.email,
+          role: (res.member.role as UserRole) || "member",
+          avatar_url: res.member.avatar_url || defaultAvatar,
+          created_at: res.member.created_at,
         }
+        const final = updated.map((m) => (m.id === newId ? inserted : m))
+        saveLocal(final)
+        return inserted
       } else {
-        console.error("Failed to add member:", await res.text())
+        console.error("Failed to add member:", res.error)
       }
     } catch (e) {
       console.warn("Could not insert team member:", e)
@@ -232,19 +235,17 @@ export function useTeamStore() {
 
   // ─── Update member ───────────────────────────────────────────
   const updateMember = async (id: string, updates: Partial<Omit<TeamMember, "id">>) => {
-    const target = members.find(m => m.id === id)
+    const target = members.find((m) => m.id === id)
     if (!target) return
 
-    const updated = members.map(m => m.id === id ? { ...m, ...updates } : m)
+    const updated = members.map((m) => (m.id === id ? { ...m, ...updates } : m))
     saveLocal(updated)
 
     try {
-      const res = await teamFetch(`/api/team/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify(updates),
-      })
-      if (!res.ok) {
-        console.error("Failed to update member:", await res.text())
+      const token = await getToken()
+      const res = await updateTeamMemberAction(id, updates as any, token)
+      if (!res.success) {
+        console.error("Failed to update member:", res.error)
         loadMembers() // rollback
       }
     } catch (e) {
@@ -260,7 +261,7 @@ export function useTeamStore() {
 
   // ─── Toggle role ─────────────────────────────────────────────
   const toggleMemberRole = async (id: string) => {
-    const target = members.find(m => m.id === id)
+    const target = members.find((m) => m.id === id)
     if (!target) return
     const nextRole: UserRole = target.role === "member" ? "admin" : "member"
     await setMemberRole(id, nextRole)
@@ -268,13 +269,14 @@ export function useTeamStore() {
 
   // ─── Delete member ───────────────────────────────────────────
   const deleteMember = async (id: string) => {
-    const updated = members.filter(m => m.id !== id)
+    const updated = members.filter((m) => m.id !== id)
     saveLocal(updated)
 
     try {
-      const res = await teamFetch(`/api/team/${id}`, { method: "DELETE" })
-      if (!res.ok) {
-        console.error("Failed to delete member:", await res.text())
+      const token = await getToken()
+      const res = await deleteTeamMemberAction(id, token)
+      if (!res.success) {
+        console.error("Failed to delete member:", res.error)
       }
     } catch (e) {
       console.warn("Could not delete team member:", e)

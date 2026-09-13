@@ -4,6 +4,12 @@ import * as React from "react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth"
 import { playRetroNotificationSound } from "@/lib/sound-effects"
+import {
+  fetchLapakItemsAction,
+  createLapakItemAction,
+  updateLapakItemAction,
+  deleteLapakItemAction,
+} from "@/app/actions/lapak"
 
 export interface LapakItem {
   id: string
@@ -156,13 +162,23 @@ function getInitialCachedLapakItems(): LapakItem[] {
   return isSupabaseConfigured ? [] : DEMO_LAPAK_ITEMS
 }
 
+export function hydrateLapakItems(rows: any[] | null) {
+  if (!rows || !Array.isArray(rows)) return
+  const mapped = rows.map((r) => mapDbToLapakItem(r))
+  cachedLapakItems = mapped
+  if (typeof window !== "undefined") {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(mapped))
+  }
+  lapakListeners.forEach((listener) => listener(mapped))
+}
+
 async function fetchLapakItemsDeduplicated(): Promise<LapakItem[]> {
   if (inFlightLapakPromise) {
     return inFlightLapakPromise
   }
 
   inFlightLapakPromise = (async () => {
-    if (!isSupabaseConfigured || !supabase) {
+    if (!isSupabaseConfigured) {
       if (cachedLapakItems.length === 0) {
         cachedLapakItems = DEMO_LAPAK_ITEMS
       }
@@ -170,10 +186,8 @@ async function fetchLapakItemsDeduplicated(): Promise<LapakItem[]> {
     }
 
     try {
-      const { data, error } = await supabase
-        .from("lapak_items")
-        .select("*")
-        .order("created_at", { ascending: false })
+      const token = (await supabase?.auth.getSession())?.data.session?.access_token || null
+      const { data, error } = await fetchLapakItemsAction(token)
 
       if (!error && data) {
         const mapped = data.map(mapDbToLapakItem)
@@ -304,34 +318,38 @@ export function useLapakStore() {
       updateLocalState([newItem, ...previousItems])
       playRetroNotificationSound()
 
-      if (!isSupabaseConfigured || !supabase) {
+      if (!isSupabaseConfigured) {
         return { success: true, item: newItem }
       }
 
       try {
-        const { error } = await supabase.from("lapak_items").insert({
-          id: newItem.id,
-          title: newItem.title,
-          tagline: newItem.tagline,
-          description: newItem.description,
-          category: newItem.category,
-          price_range: newItem.priceRange,
-          contact_name: newItem.contactName,
-          contact_wa: newItem.contactWa,
-          contact_link: newItem.contactLink,
-          badge: newItem.badge,
-          image_url: newItem.imageUrl,
-          is_active: newItem.isActive,
-          created_by_id: newItem.createdById,
-          created_by_name: newItem.createdByName,
-          created_by_avatar: newItem.createdByAvatar,
-        })
+        const token = (await supabase?.auth.getSession())?.data.session?.access_token || null
+        const res = await createLapakItemAction(
+          {
+            id: newItem.id,
+            title: newItem.title,
+            tagline: newItem.tagline,
+            description: newItem.description,
+            category: newItem.category,
+            price_range: newItem.priceRange,
+            contact_name: newItem.contactName,
+            contact_wa: newItem.contactWa,
+            contact_link: newItem.contactLink,
+            badge: newItem.badge,
+            image_url: newItem.imageUrl,
+            is_active: newItem.isActive,
+            created_by_id: newItem.createdById,
+            created_by_name: newItem.createdByName,
+            created_by_avatar: newItem.createdByAvatar,
+          },
+          token
+        )
 
-        if (error) {
-          console.error("Gagal menyimpan lapak ke Supabase:", error)
+        if (!res.success) {
+          console.error("Gagal menyimpan lapak ke Supabase:", res.error)
           // Rollback on error
           updateLocalState(previousItems)
-          return { success: false, message: error.message }
+          return { success: false, message: res.error || "Gagal menyimpan iklan." }
         }
 
         return { success: true, item: newItem }
@@ -345,35 +363,24 @@ export function useLapakStore() {
 
   // 2. Update Lapak Item
   const updateItem = React.useCallback(
-    async (
-      id: string,
-      itemData: Partial<{
-        title: string
-        tagline: string
-        description: string
-        category: string
-        priceRange: string
-        contactName: string
-        contactWa: string
-        contactLink: string
-        badge: string
-        imageUrl: string
-        isActive: boolean
-      }>
-    ) => {
+    async (id: string, itemData: Partial<LapakItem>) => {
       if (isGuest) {
-        return { success: false, message: "Mode tamu tidak dapat mengubah iklan." }
-      }
-
-      const target = items.find((i) => i.id === id)
-      if (!target) return { success: false, message: "Iklan tidak ditemukan." }
-
-      const isOwner = target.createdById === user?.id
-      if (!isOwner && !isAdmin) {
-        return { success: false, message: "Hanya pemilik iklan atau Admin yang dapat mengubahnya." }
+        return { success: false, message: "Mode tamu tidak dapat mengedit iklan." }
       }
 
       const previousItems = [...items]
+      const existing = items.find((i) => i.id === id)
+      if (!existing) {
+        return { success: false, message: "Iklan tidak ditemukan." }
+      }
+
+      // Pastikan hanya pemilik atau Admin yang boleh edit
+      const isOwner = existing.createdById === user?.id
+      if (!isOwner && !isAdmin) {
+        return { success: false, message: "Hanya pemilik iklan atau Admin yang dapat mengedit." }
+      }
+
+      // Optimistic update
       const updatedList = items.map((item) => {
         if (item.id === id) {
           return {
@@ -385,10 +392,10 @@ export function useLapakStore() {
         return item
       })
 
-      // Optimistic update
       updateLocalState(updatedList)
+      playRetroNotificationSound()
 
-      if (!isSupabaseConfigured || !supabase) {
+      if (!isSupabaseConfigured) {
         return { success: true }
       }
 
@@ -396,6 +403,7 @@ export function useLapakStore() {
         const payload: Record<string, any> = {
           updated_at: new Date().toISOString(),
         }
+
         if (itemData.title !== undefined) payload.title = itemData.title.trim()
         if (itemData.tagline !== undefined) payload.tagline = itemData.tagline.trim()
         if (itemData.description !== undefined) payload.description = itemData.description.trim()
@@ -408,12 +416,13 @@ export function useLapakStore() {
         if (itemData.imageUrl !== undefined) payload.image_url = itemData.imageUrl.trim()
         if (itemData.isActive !== undefined) payload.is_active = itemData.isActive
 
-        const { error } = await supabase.from("lapak_items").update(payload as any).eq("id", id)
+        const token = (await supabase?.auth.getSession())?.data.session?.access_token || null
+        const res = await updateLapakItemAction(id, payload, token)
 
-        if (error) {
-          console.error("Gagal update lapak di Supabase:", error)
+        if (!res.success) {
+          console.error("Gagal update lapak di Supabase:", res.error)
           updateLocalState(previousItems)
-          return { success: false, message: error.message }
+          return { success: false, message: res.error || "Gagal update iklan." }
         }
 
         return { success: true }
@@ -446,17 +455,18 @@ export function useLapakStore() {
       // Optimistic delete
       updateLocalState(filtered)
 
-      if (!isSupabaseConfigured || !supabase) {
+      if (!isSupabaseConfigured) {
         return { success: true }
       }
 
       try {
-        const { error } = await supabase.from("lapak_items").delete().eq("id", id)
+        const token = (await supabase?.auth.getSession())?.data.session?.access_token || null
+        const res = await deleteLapakItemAction(id, token)
 
-        if (error) {
-          console.error("Gagal menghapus lapak dari Supabase:", error)
+        if (!res.success) {
+          console.error("Gagal menghapus lapak dari Supabase:", res.error)
           updateLocalState(previousItems)
-          return { success: false, message: error.message }
+          return { success: false, message: res.error || "Gagal menghapus iklan." }
         }
 
         return { success: true }

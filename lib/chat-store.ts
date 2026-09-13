@@ -3,6 +3,13 @@
 import * as React from "react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { AuthUser } from "@/lib/auth"
+import {
+  fetchChatDataAction,
+  sendChatMessageAction,
+  editChatMessageAction,
+  deleteChatMessageAction,
+  toggleChatReactionAction,
+} from "@/app/actions/chat"
 
 export interface ChatMessage {
   id: string
@@ -198,82 +205,73 @@ export function useChatStore() {
     err?.message?.includes("schema cache") ||
     err?.message?.includes("does not exist")
 
-  // Helper untuk fetch reactions berdasarkan daftar message ID
-  const fetchReactionsForMessages = React.useCallback(async (messageIds: string[]) => {
-    if (!isSupabaseConfigured || !supabase || messageIds.length === 0) return
+  // Helper untuk mendapatkan JWT token user saat ini
+  const getAuthToken = React.useCallback(async (): Promise<string | null> => {
+    if (!isSupabaseConfigured || !supabase) return null
     try {
-      const { data, error } = await supabase
-        .from("chat_reactions")
-        .select("*")
-        .in("message_id", messageIds)
-
-      if (error) {
-        if (isTableMissingError(error)) return
-        console.warn("fetch reactions error:", error)
-        return
-      }
-
-      if (data && data.length > 0) {
-        const mapped = data.map((r) => mapDbReaction(r as DbChatReaction))
-        setReactions((prev) => {
-          const next = { ...prev }
-          mapped.forEach((rx) => {
-            if (!next[rx.messageId]) {
-              next[rx.messageId] = []
-            }
-            const existingIdx = next[rx.messageId].findIndex(
-              (r) => r.id === rx.id || r.userId === rx.userId
-            )
-            if (existingIdx >= 0) {
-              next[rx.messageId][existingIdx] = rx
-            } else {
-              next[rx.messageId].push(rx)
-            }
-          })
-          return next
-        })
-      }
-    } catch (err) {
-      console.warn("fetch reactions error:", err)
+      const { data: { session } } = await supabase.auth.getSession()
+      return session?.access_token || null
+    } catch {
+      return null
     }
   }, [])
 
-  // ─── Initial Fetch (50 pesan terbaru) ───────────────────────
+  // Helper untuk menggabungkan data reaksi dari database
+  const applyReactionsData = React.useCallback((rawReactions: DbChatReaction[]) => {
+    if (!rawReactions || rawReactions.length === 0) return
+    const mapped = rawReactions.map((r) => mapDbReaction(r as DbChatReaction))
+    setReactions((prev) => {
+      const next = { ...prev }
+      mapped.forEach((rx) => {
+        if (!next[rx.messageId]) {
+          next[rx.messageId] = []
+        }
+        const existingIdx = next[rx.messageId].findIndex(
+          (r) => r.id === rx.id || r.userId === rx.userId
+        )
+        if (existingIdx >= 0) {
+          next[rx.messageId][existingIdx] = rx
+        } else {
+          next[rx.messageId].push(rx)
+        }
+      })
+      return next
+    })
+  }, [])
+
+  // ─── Initial Fetch (50 pesan terbaru via Server Action) ──────
   const fetchMessages = React.useCallback(async () => {
-    if (!isSupabaseConfigured || !supabase) {
+    if (!isSupabaseConfigured) {
       setMessages([])
       setIsLoading(false)
       return
     }
 
     try {
-      const { data, error } = await supabase
-        .from("chat_messages")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(PAGE_SIZE)
+      const token = await getAuthToken()
+      const res = await fetchChatDataAction({ limit: PAGE_SIZE, token })
 
-      if (error) {
-        if (isTableMissingError(error)) {
+      if (res.error) {
+        if (isTableMissingError({ message: res.error })) {
           setTableMissing(true)
           setIsLoading(false)
           return
         }
-        throw error
+        throw new Error(res.error)
       }
 
       setTableMissing(false)
-      const raw = data || []
-      setHasMore(raw.length === PAGE_SIZE)
+      const raw = res.messages || []
+      setHasMore(res.hasMore)
       const mapped = raw.map((m) => mapDbMessage(m as DbChatMessage)).reverse()
       setMessages(mapped)
 
-      const ids = raw.map((m) => m.id)
-      if (ids.length > 0) {
-        fetchReactionsForMessages(ids)
+      if (res.reactions && res.reactions.length > 0) {
+        applyReactionsData(res.reactions)
       }
-    } catch (err) {
-      if (isTableMissingError(err as { code?: string; message?: string })) {
+    } catch (err: unknown) {
+      const errObj = err as { code?: string; message?: string }
+      if (isTableMissingError(errObj)) {
         setTableMissing(true)
       } else {
         console.warn("chat-store fetchMessages error:", err)
@@ -281,11 +279,11 @@ export function useChatStore() {
     } finally {
       setIsLoading(false)
     }
-  }, [fetchReactionsForMessages])
+  }, [getAuthToken, applyReactionsData])
 
-  // ─── Fetch Older Messages (Reverse Pagination) ──────────────
+  // ─── Fetch Older Messages (Reverse Pagination via Server Action)
   const fetchOlderMessages = React.useCallback(async (): Promise<number> => {
-    if (!isSupabaseConfigured || !supabase || isLoadingMore || !hasMore) return 0
+    if (!isSupabaseConfigured || isLoadingMore || !hasMore) return 0
     if (messages.length === 0) return 0
 
     const oldestMsg = messages[0]
@@ -293,20 +291,17 @@ export function useChatStore() {
 
     setIsLoadingMore(true)
     try {
-      const { data, error } = await supabase
-        .from("chat_messages")
-        .select("*")
-        .lt("created_at", oldestMsg.createdAt)
-        .order("created_at", { ascending: false })
-        .limit(PAGE_SIZE)
+      const token = await getAuthToken()
+      const res = await fetchChatDataAction({
+        limit: PAGE_SIZE,
+        beforeCreatedAt: oldestMsg.createdAt,
+        token,
+      })
 
-      if (error) throw error
+      if (res.error) throw new Error(res.error)
 
-      const raw = data || []
-      if (raw.length < PAGE_SIZE) {
-        setHasMore(false)
-      }
-
+      setHasMore(res.hasMore)
+      const raw = res.messages || []
       if (raw.length > 0) {
         const olderMapped = raw.map((m) => mapDbMessage(m as DbChatMessage)).reverse()
         setMessages((prev) => {
@@ -315,9 +310,8 @@ export function useChatStore() {
           return [...filteredNew, ...prev]
         })
 
-        const olderIds = raw.map((m) => m.id)
-        if (olderIds.length > 0) {
-          fetchReactionsForMessages(olderIds)
+        if (res.reactions && res.reactions.length > 0) {
+          applyReactionsData(res.reactions)
         }
 
         return raw.length
@@ -329,7 +323,7 @@ export function useChatStore() {
     } finally {
       setIsLoadingMore(false)
     }
-  }, [hasMore, isLoadingMore, messages, fetchReactionsForMessages])
+  }, [hasMore, isLoadingMore, messages, getAuthToken, applyReactionsData])
 
   // ─── Realtime Subscription & Background Sync ───────────────
   React.useEffect(() => {
@@ -582,46 +576,44 @@ export function useChatStore() {
     setIsSending(true)
 
     try {
-      let { error } = await supabase.from("chat_messages").insert({
+      const token = await getAuthToken()
+      let res = await sendChatMessageAction({
         id: tempId,
         message: sanitized,
         mentions: cleanMentions,
-        user_id: verifiedUserId,
-        user_name: currentUser.name,
-        user_avatar: currentUser.avatarUrl || null,
-        user_role: currentUser.role || "member",
-        is_edited: false,
-        is_deleted: false,
-        created_at: nowIso,
+        userId: verifiedUserId,
+        userName: currentUser.name,
+        userAvatar: currentUser.avatarUrl || null,
+        userRole: currentUser.role || "member",
+        token,
       })
 
       // Jika gagal karena RLS / token kedaluwarsa, paksa refresh session dan coba kirim ulang sekali
-      if (error && (error.code === "42501" || error.message?.toLowerCase().includes("row-level security"))) {
+      if (!res.success && res.error && (res.error.includes("42501") || res.error.toLowerCase().includes("row-level security"))) {
         try {
-          const refreshed = await supabase.auth.refreshSession()
-          if (refreshed.data.session?.user) {
-            const retryRes = await supabase.from("chat_messages").insert({
-              id: tempId,
-              message: sanitized,
-              mentions: cleanMentions,
-              user_id: refreshed.data.session.user.id,
-              user_name: currentUser.name,
-              user_avatar: currentUser.avatarUrl || null,
-              user_role: currentUser.role || "member",
-              is_edited: false,
-              is_deleted: false,
-              created_at: nowIso,
-            })
-            error = retryRes.error
+          if (supabase) {
+            const refreshed = await supabase.auth.refreshSession()
+            if (refreshed.data.session?.user) {
+              res = await sendChatMessageAction({
+                id: tempId,
+                message: sanitized,
+                mentions: cleanMentions,
+                userId: refreshed.data.session.user.id,
+                userName: currentUser.name,
+                userAvatar: currentUser.avatarUrl || null,
+                userRole: currentUser.role || "member",
+                token: refreshed.data.session.access_token,
+              })
+            }
           }
         } catch {
           // ignore refresh error
         }
       }
 
-      if (error) {
+      if (!res.success) {
         setMessages((prev) => prev.filter((m) => m.id !== tempId))
-        return { success: false, error: formatChatErrorMessage(error) }
+        return { success: false, error: formatChatErrorMessage(res.error) }
       }
 
       return { success: true }
@@ -680,18 +672,16 @@ export function useChatStore() {
     )
 
     try {
-      const { error } = await supabase
-        .from("chat_messages")
-        .update({
-          message: sanitized,
-          is_edited: true,
-          edited_at: nowIso,
-        })
-        .eq("id", messageId)
+      const token = await getAuthToken()
+      const res = await editChatMessageAction({
+        messageId,
+        newMessage: sanitized,
+        token,
+      })
 
-      if (error) {
+      if (!res.success) {
         setMessages(previousMessages)
-        return { success: false, error: formatChatErrorMessage(error) }
+        return { success: false, error: formatChatErrorMessage(res.error) }
       }
 
       return { success: true }
@@ -717,7 +707,7 @@ export function useChatStore() {
       }
     }
 
-    if (!isSupabaseConfigured || !supabase) {
+    if (!isSupabaseConfigured) {
       return { success: false, error: "Supabase belum terkonfigurasi." }
     }
 
@@ -743,20 +733,16 @@ export function useChatStore() {
     )
 
     try {
-      const { error } = await supabase
-        .from("chat_messages")
-        .update({
-          message: "[Pesan telah dihapus]",
-          mentions: [],
-          is_deleted: true,
-          deleted_by: deletedBy,
-          deleted_at: nowIso,
-        })
-        .eq("id", messageId)
+      const token = await getAuthToken()
+      const res = await deleteChatMessageAction({
+        messageId,
+        deletedBy,
+        token,
+      })
 
-      if (error) {
+      if (!res.success) {
         setMessages(previousMessages)
-        return { success: false, error: formatChatErrorMessage(error) }
+        return { success: false, error: formatChatErrorMessage(res.error) }
       }
 
       return { success: true }
@@ -796,6 +782,9 @@ export function useChatStore() {
 
     const previousReactions = { ...reactions }
 
+    const tempId = !existingRx ? crypto.randomUUID() : undefined
+    const nowIso = new Date().toISOString()
+
     if (existingRx) {
       if (existingRx.emoji === cleanEmoji) {
         // Toggle OFF: user mengklik emoji yang sama -> hapus reaksi
@@ -803,25 +792,8 @@ export function useChatStore() {
           ...prev,
           [messageId]: (prev[messageId] || []).filter((r) => r.id !== existingRx.id),
         }))
-
-        try {
-          const { error } = await supabase
-            .from("chat_reactions")
-            .delete()
-            .eq("id", existingRx.id)
-
-          if (error) {
-            setReactions(previousReactions)
-            return { success: false, error: formatChatErrorMessage(error) }
-          }
-          return { success: true }
-        } catch (err) {
-          setReactions(previousReactions)
-          return { success: false, error: formatChatErrorMessage(err) }
-        }
       } else {
         // Ganti reaksi: user mengklik emoji berbeda -> update reaksi sebelumnya
-        const nowIso = new Date().toISOString()
         const updatedRx: ChatReaction = {
           ...existingRx,
           emoji: cleanEmoji,
@@ -835,33 +807,11 @@ export function useChatStore() {
             r.id === existingRx.id ? updatedRx : r
           ),
         }))
-
-        try {
-          const { error } = await supabase
-            .from("chat_reactions")
-            .update({
-              emoji: cleanEmoji,
-              user_name: currentUser.name,
-              created_at: nowIso,
-            })
-            .eq("id", existingRx.id)
-
-          if (error) {
-            setReactions(previousReactions)
-            return { success: false, error: formatChatErrorMessage(error) }
-          }
-          return { success: true }
-        } catch (err) {
-          setReactions(previousReactions)
-          return { success: false, error: formatChatErrorMessage(err) }
-        }
       }
     } else {
       // Optimistic insert: user belum memberi reaksi
-      const tempId = crypto.randomUUID()
-      const nowIso = new Date().toISOString()
       const newRx: ChatReaction = {
-        id: tempId,
+        id: tempId!,
         messageId,
         emoji: cleanEmoji,
         userId: verifiedUserId,
@@ -873,26 +823,27 @@ export function useChatStore() {
         ...prev,
         [messageId]: [...(prev[messageId] || []), newRx],
       }))
+    }
 
-      try {
-        const { error } = await supabase.from("chat_reactions").insert({
-          id: tempId,
-          message_id: messageId,
-          emoji: cleanEmoji,
-          user_id: verifiedUserId,
-          user_name: currentUser.name,
-          created_at: nowIso,
-        })
+    try {
+      const token = await getAuthToken()
+      const res = await toggleChatReactionAction({
+        tempId,
+        messageId,
+        emoji: cleanEmoji,
+        userId: verifiedUserId,
+        userName: currentUser.name,
+        token,
+      })
 
-        if (error) {
-          setReactions(previousReactions)
-          return { success: false, error: formatChatErrorMessage(error) }
-        }
-        return { success: true }
-      } catch (err) {
+      if (!res.success) {
         setReactions(previousReactions)
-        return { success: false, error: formatChatErrorMessage(err) }
+        return { success: false, error: formatChatErrorMessage(res.error) }
       }
+      return { success: true }
+    } catch (err) {
+      setReactions(previousReactions)
+      return { success: false, error: formatChatErrorMessage(err) }
     }
   }
 

@@ -3,6 +3,11 @@
 import * as React from "react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import type { User } from "@supabase/supabase-js"
+import {
+  fetchTeamMemberProfileAction,
+  updateTeamMemberRoleAction,
+  updateTeamMemberProfileAction,
+} from "@/app/actions/team"
 
 export type UserRole = "guest" | "member" | "admin"
 
@@ -344,36 +349,23 @@ const ROOT_ADMIN_EMAILS = [
 
     let avatarUrl = googleAvatarUrl
 
-    // Check team_members table for role & custom profile name
+    // Check team_members table for role & custom profile name via Server Action
     try {
       if (supabase) {
-        const { data } = await supabase
-          .from("team_members")
-          .select("role, name, avatar_url")
-          .eq("user_id", sbUser.id)
-          .maybeSingle()
+        const token = (await supabase.auth.getSession()).data.session?.access_token || null
+        const profile = await fetchTeamMemberProfileAction({
+          userId: sbUser.id,
+          email: sbUser.email,
+          defaultName: displayName,
+          defaultAvatarUrl: avatarUrl,
+          isRootAdmin,
+          token,
+        })
 
-        if (data) {
-          if (data.role) {
-            role = data.role as UserRole
-          } else if (isRootAdmin) {
-            role = "admin"
-          }
-          if (data.name) displayName = data.name
-          if (data.avatar_url !== undefined && data.avatar_url !== null) {
-            avatarUrl = data.avatar_url
-          }
-        } else {
-          // If first time, insert as admin if root admin, else member
-          const initialRole: UserRole = isRootAdmin ? "admin" : "member"
-          role = initialRole
-          await supabase.from("team_members").upsert({
-            user_id: sbUser.id,
-            email: sbUser.email || "",
-            name: displayName,
-            avatar_url: avatarUrl || "",
-            role: initialRole,
-          })
+        role = profile.role
+        displayName = profile.name
+        if (profile.avatarUrl !== undefined && profile.avatarUrl !== null) {
+          avatarUrl = profile.avatarUrl
         }
       }
     } catch (e) {
@@ -421,12 +413,14 @@ const ROOT_ADMIN_EMAILS = [
 
     if (supabase && user?.id && !isGuest) {
       try {
-        const { error } = await supabase
-          .from("team_members")
-          .update({ role })
-          .eq("user_id", user.id)
-        if (error) {
-          console.error("Failed to persist role update to team_members:", error)
+        const token = (await supabase.auth.getSession()).data.session?.access_token || null
+        const res = await updateTeamMemberRoleAction({
+          userId: user.id,
+          role,
+          token,
+        })
+        if (!res.success) {
+          console.error("Failed to persist role update to team_members:", res.error)
         }
       } catch (e) {
         console.error("Error updating role in team_members:", e)
@@ -708,20 +702,13 @@ const ROOT_ADMIN_EMAILS = [
             updatePayload.avatar_url = updates.avatarUrl
           }
 
-          const { error: memberError } = await supabase
-            .from("team_members")
-            .update(updatePayload)
-            .eq("user_id", user.id)
-
-          if (memberError) {
-            await supabase.from("team_members").upsert({
-              user_id: user.id,
-              email: user.email || "",
-              name: trimmedName,
-              avatar_url: updates.avatarUrl !== undefined ? updates.avatarUrl : user.avatarUrl || "",
-              role: user.role || "member",
-            })
-          }
+          const token = (await supabase.auth.getSession()).data.session?.access_token || null
+          await updateTeamMemberProfileAction({
+            userId: user.id,
+            name: trimmedName,
+            avatarUrl: updates.avatarUrl,
+            token,
+          })
         }
 
         // 2. Update metadata di Supabase Auth

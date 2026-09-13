@@ -4,6 +4,18 @@ import * as React from "react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth"
 import { playRetroNotificationSound } from "@/lib/sound-effects"
+import { getUnreadChatCountAction } from "@/app/actions/chat"
+import { getDesktopBootstrapAction } from "@/app/actions/bootstrap"
+import { hydrateMemo } from "@/lib/memo-store"
+import { hydratePics } from "@/lib/pic-store"
+import { hydrateLapakItems } from "@/lib/lapak-store"
+import {
+  fetchNotificationBadgesAction,
+  fetchActiveVoteCountAction,
+  fetchActivePantryCountAction,
+  fetchActiveSplitBillCountAction,
+  fetchActivePaintWarCountAction,
+} from "@/app/actions/badges"
 
 export interface NotificationToast {
   id: string
@@ -50,18 +62,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   // ─── Fetch Active Paint War Player Count ────────────────────
   const fetchActivePaintWarCount = React.useCallback(async () => {
-    if (!isSupabaseConfigured || !supabase) return
+    if (!isSupabaseConfigured) return
     try {
-      const cutoff = new Date(Date.now() - 45 * 1000).toISOString()
-      const { data, error } = await supabase
-        .from("paint_war_players")
-        .select("id, is_online, last_seen")
-        .eq("is_online", true)
-        .gte("last_seen", cutoff)
-
-      if (!error && data) {
-        setActivePaintWarCount(data.length)
-      }
+      const token = (await supabase?.auth.getSession())?.data.session?.access_token || null
+      const count = await fetchActivePaintWarCountAction(token)
+      setActivePaintWarCount(count)
     } catch (err) {
       console.warn("fetchActivePaintWarCount error:", err)
     }
@@ -69,18 +74,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   // ─── Fetch Active Split Bill Count ──────────────────────────
   const fetchActiveSplitBillCount = React.useCallback(async () => {
-    if (!isSupabaseConfigured || !supabase) return
+    if (!isSupabaseConfigured) return
     try {
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-      const { data, error } = await supabase
-        .from("split_bills")
-        .select("id, is_settled, created_at")
-        .eq("is_settled", false)
-        .gte("created_at", sevenDaysAgo)
-
-      if (!error && data) {
-        setActiveSplitBillCount(data.length)
-      }
+      const token = (await supabase?.auth.getSession())?.data.session?.access_token || null
+      const count = await fetchActiveSplitBillCountAction(token)
+      setActiveSplitBillCount(count)
     } catch (err) {
       console.warn("fetchActiveSplitBillCount error:", err)
     }
@@ -88,18 +86,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   // ─── Fetch Active Vote Count ────────────────────────────────
   const fetchActiveVoteCount = React.useCallback(async () => {
-    if (!isSupabaseConfigured || !supabase) return
+    if (!isSupabaseConfigured) return
     try {
-      const nowIso = new Date().toISOString()
-      const { data, error } = await supabase
-        .from("vote_groups")
-        .select("id, is_closed, expires_at")
-        .eq("is_closed", false)
-        .gt("expires_at", nowIso)
-
-      if (!error && data) {
-        setActiveVoteCount(data.length)
-      }
+      const token = (await supabase?.auth.getSession())?.data.session?.access_token || null
+      const count = await fetchActiveVoteCountAction(token)
+      setActiveVoteCount(count)
     } catch (err) {
       console.warn("fetchActiveVoteCount error:", err)
     }
@@ -107,16 +98,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   // ─── Fetch Active Pantry Count ──────────────────────────────
   const fetchActivePantryCount = React.useCallback(async () => {
-    if (!isSupabaseConfigured || !supabase) return
+    if (!isSupabaseConfigured) return
     try {
-      const { data, error } = await supabase
-        .from("pantry_items")
-        .select("id, is_active")
-        .eq("is_active", true)
-
-      if (!error && data) {
-        setActivePantryCount(data.length)
-      }
+      const token = (await supabase?.auth.getSession())?.data.session?.access_token || null
+      const count = await fetchActivePantryCountAction(token)
+      setActivePantryCount(count)
     } catch (err) {
       console.warn("fetchActivePantryCount error:", err)
     }
@@ -136,16 +122,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         return
       }
 
-      let query = supabase
-        .from("chat_messages")
-        .select("id", { count: "exact", head: true })
-        .gt("created_at", lastRead)
+      const token = (await supabase?.auth.getSession())?.data.session?.access_token || null
+      const { count, error } = await getUnreadChatCountAction({
+        lastRead,
+        userId: user?.id,
+        token,
+      })
 
-      if (user?.id) {
-        query = query.neq("user_id", user.id)
-      }
-
-      const { count, error } = await query
       if (!error && typeof count === "number") {
         setUnreadChatCount(count)
       }
@@ -174,13 +157,44 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [])
 
-  // Sync active votes, pantry, and initial unread on mount
+  // Unified master bootstrap on mount: fetches badges, unread chat, memo, pics, and lapak in 1 single call
   React.useEffect(() => {
-    fetchActiveVoteCount()
-    fetchActivePantryCount()
-    fetchActiveSplitBillCount()
-    fetchActivePaintWarCount()
-    fetchInitialUnreadChat()
+    const bootstrapDesktop = async () => {
+      try {
+        let lastRead = typeof window !== "undefined" ? localStorage.getItem(LAST_READ_CHAT_KEY) : null
+        if (!lastRead && typeof window !== "undefined") {
+          lastRead = new Date().toISOString()
+          localStorage.setItem(LAST_READ_CHAT_KEY, lastRead)
+          setUnreadChatCount(0)
+        }
+
+        const token = (await supabase?.auth.getSession())?.data.session?.access_token || null
+        const bootstrap = await getDesktopBootstrapAction({
+          lastReadChat: lastRead,
+          userId: user?.id,
+          token,
+        })
+
+        // Hydrate shared caches in memory & localStorage
+        hydrateMemo(bootstrap.memo)
+        hydratePics(bootstrap.pics)
+        hydrateLapakItems(bootstrap.lapak)
+
+        // Set badges
+        setActiveVoteCount(bootstrap.badges.votes)
+        setActivePantryCount(bootstrap.badges.pantry)
+        setActiveSplitBillCount(bootstrap.badges.splitBills)
+        setActivePaintWarCount(bootstrap.badges.paintWar)
+
+        if (bootstrap.unreadChatCount !== null) {
+          setUnreadChatCount(bootstrap.unreadChatCount)
+        }
+      } catch (e) {
+        console.warn("bootstrapDesktop error:", e)
+      }
+    }
+
+    bootstrapDesktop()
 
     const handleVoteChanged = () => fetchActiveVoteCount()
     const handlePantryChanged = () => fetchActivePantryCount()
