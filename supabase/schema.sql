@@ -800,6 +800,26 @@ CREATE POLICY "chat_messages_update" ON public.chat_messages
     )
   );
 
+-- Auto-wipe teks pesan chat dan bersihkan reaksi ketika pesan di-soft delete (is_deleted = true)
+CREATE OR REPLACE FUNCTION public.handle_chat_message_soft_delete()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.is_deleted = true THEN
+    NEW.message := '[Pesan telah dihapus]';
+    NEW.mentions := '{}'::text[];
+    DELETE FROM public.chat_reactions WHERE message_id = NEW.id;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trg_chat_message_soft_delete ON public.chat_messages;
+
+CREATE TRIGGER trg_chat_message_soft_delete
+BEFORE INSERT OR UPDATE ON public.chat_messages
+FOR EACH ROW
+EXECUTE FUNCTION public.handle_chat_message_soft_delete();
+
 -- ============================================================
 -- 11. CHAT REACTIONS POLICIES
 -- ============================================================

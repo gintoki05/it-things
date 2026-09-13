@@ -66,17 +66,18 @@ function mapDbReaction(db: DbChatReaction): ChatReaction {
 }
 
 function mapDbMessage(db: DbChatMessage): ChatMessage {
+  const isDeleted = Boolean(db.is_deleted)
   return {
     id: db.id,
-    message: db.message,
-    mentions: Array.isArray(db.mentions) ? db.mentions : [],
+    message: isDeleted ? "[Pesan telah dihapus]" : db.message,
+    mentions: isDeleted ? [] : Array.isArray(db.mentions) ? db.mentions : [],
     userId: db.user_id,
     userName: db.user_name,
     userAvatar: db.user_avatar,
     userRole: db.user_role || "member",
     isEdited: Boolean(db.is_edited),
     editedAt: db.edited_at,
-    isDeleted: Boolean(db.is_deleted),
+    isDeleted,
     deletedBy: (db.deleted_by as "creator" | "admin") || null,
     deletedAt: db.deleted_at,
     createdAt: db.created_at,
@@ -725,12 +726,14 @@ export function useChatStore() {
     const nowIso = new Date().toISOString()
     const previousMessages = [...messages]
 
-    // Optimistic soft delete: pertahankan balon tapi tandai isDeleted
+    // Optimistic soft delete: pertahankan balon tapi tandai isDeleted dan bersihkan isi pesan
     setMessages((prev) =>
       prev.map((m) =>
         m.id === messageId
           ? {
               ...m,
+              message: "[Pesan telah dihapus]",
+              mentions: [],
               isDeleted: true,
               deletedBy,
               deletedAt: nowIso,
@@ -743,6 +746,8 @@ export function useChatStore() {
       const { error } = await supabase
         .from("chat_messages")
         .update({
+          message: "[Pesan telah dihapus]",
+          mentions: [],
           is_deleted: true,
           deleted_by: deletedBy,
           deleted_at: nowIso,
