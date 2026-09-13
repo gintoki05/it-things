@@ -5,12 +5,23 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.18"
+export const APP_VERSION = "v2.3.19"
 export const APP_BUILD = "2026.09.13"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.19",
+    date: "13 Sep 2026",
+    codename: "Clippy-Only Desktop Assistant, Authentic Vocal Adzan & Adaptive H-5/H-10 Pre-Adzan Reminder",
+    changes: [
+      "Clippy-Only Desktop Assistant: Menghapus opsi karakter Meril Wizard dan Rover Dog, mengunci asisten desktop secara paten ke Clippy 98 otentik serta merampingkan dialog pengaturan jadwal sholat.",
+      "Suara Adzan Vokal Asli: Mengganti efek beeps buatan dengan rekaman audio adzan vokal asli berkualitas tinggi (Adzan Masjidil Haram Makkah, Adzan Masjid Nabawi Madinah, Syaikh Mishary Rashid Alafasy, Adzan Nusantara Melayu, Bedug Tradisional, dan Lonceng Digital Masjid).",
+      "Interactive Sound Preview: Menambahkan tombol pratinjau putar/stop interaktif pada panel pengaturan suara adzan di JADWAL_SHOLAT.EXE.",
+      "Pengingat Persiapan Adaptif (H-5 Menit Biasa, H-10 Menit Jumatan): Menyesuaikan alarm persiapan sholat menjadi 5 menit sebelum adzan untuk sholat harian biasa, serta khusus 10 menit sebelum waktu Sholat Jumat dengan ucapan pengingat masjid yang kontekstual.",
+    ],
+  },
   {
     version: "v2.3.18",
     date: "13 Sep 2026",

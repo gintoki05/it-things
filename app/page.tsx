@@ -39,6 +39,9 @@ import { WordleApp } from "@/components/apps/wordle-app"
 import { WinampApp } from "@/components/apps/winamp-app"
 import { SwissToolsApp } from "@/components/apps/swiss-tools-app"
 import { WinampProvider } from "@/lib/winamp-store"
+import { ClippyProvider } from "@/lib/clippy-store"
+import { ClippyAssistant } from "@/components/desktop/clippy-assistant"
+import { SholatDialog } from "@/components/apps/sholat-dialog"
 
 const MemoizedReadmeApp = React.memo(ReadmeApp)
 const MemoizedVoteApp = React.memo(VoteApp)
@@ -62,6 +65,8 @@ const MemoizedSwissToolsApp = React.memo(SwissToolsApp)
 const MemoizedDesktopIcons = React.memo(DesktopIcons)
 const MemoizedTeamWidget = React.memo(TeamWidget)
 const MemoizedStickyNoteWidget = React.memo(StickyNoteWidget)
+const MemoizedClippyAssistant = React.memo(ClippyAssistant)
+const MemoizedSholatDialog = React.memo(SholatDialog)
 
 function DesktopWorkspace() {
   const { isPasscodeVerified, isPasscodeLoading, isGuest, isAdmin, isRecoveryMode } = useAuth()
@@ -283,6 +288,12 @@ function DesktopWorkspace() {
       {/* Floating Retro Sticky Note / Pengumuman Tim */}
       <MemoizedStickyNoteWidget />
 
+      {/* Floating Retro Assistant (Clippy 98 & Pengingat Waktu Sholat) */}
+      <MemoizedClippyAssistant />
+
+      {/* Retro Prayer Schedule Dialog (JADWAL_SHOLAT.EXE) */}
+      <MemoizedSholatDialog />
+
       {/* Bottom Retro Taskbar */}
       <Taskbar onOpenLoginModal={() => setShowLoginModal(true)} />
 
@@ -346,14 +357,17 @@ export default function Page() {
       <NotificationProvider>
         <PresenceProvider>
           <WinampProvider>
-            <DesktopProvider>
-              <WallpaperProvider>
-                <DesktopWorkspace />
-              </WallpaperProvider>
-            </DesktopProvider>
+            <ClippyProvider>
+              <DesktopProvider>
+                <WallpaperProvider>
+                  <DesktopWorkspace />
+                </WallpaperProvider>
+              </DesktopProvider>
+            </ClippyProvider>
           </WinampProvider>
         </PresenceProvider>
       </NotificationProvider>
     </AuthProvider>
   )
 }
+

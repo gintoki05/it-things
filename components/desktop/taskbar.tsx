@@ -39,6 +39,7 @@ import { usePicStore } from "@/lib/pic-store"
 import { useWallpaper } from "@/lib/wallpaper-store"
 import { usePresence } from "@/lib/presence-store"
 import { useWinamp } from "@/lib/winamp-store"
+import { useClippy } from "@/lib/clippy-store"
 import { playRetroNotificationSound } from "@/lib/sound-effects"
 
 interface TaskbarProps {
@@ -61,6 +62,7 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
   } = useNotification()
   const { onlineCount, onlineUsers } = usePresence()
   const { currentTrack, isPlaying: isWinampPlaying } = useWinamp()
+  const { openPrayerDialog, nextPrayer, selectedCity } = useClippy()
 
   const onlineTooltip = React.useMemo(() => {
     if (onlineUsers.length === 0) return "Tidak ada pengguna online"
@@ -270,7 +272,31 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                   </div>
                 </button>
               ))}
+
+              {/* Jadwal Sholat & Asisten Shortcut */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsStartOpen(false)
+                  openPrayerDialog()
+                }}
+                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-[2px] transition-colors text-left hover:bg-[#1E4E8C] hover:text-white text-[#14253D] group border-t border-[#A4B5C6]/40 mt-1 pt-1.5"
+              >
+                <span className="size-5 flex items-center justify-center text-sm shrink-0">🕌</span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-bold text-[11px] flex items-center justify-between gap-1 leading-snug">
+                    <span className="truncate">JADWAL_SHOLAT.EXE</span>
+                    <span className="text-[8px] font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 px-1 py-0.2 rounded shrink-0 group-hover:bg-emerald-200">
+                      {nextPrayer.name} {nextPrayer.time}
+                    </span>
+                  </div>
+                  <div className="text-[9px] opacity-75 truncate group-hover:opacity-90">
+                    Waktu Sholat Kemenag ({selectedCity.name})
+                  </div>
+                </div>
+              </button>
             </div>
+
 
             {/* Bottom Section: Role Switcher & System Actions (Pinned at bottom) */}
             <div className="shrink-0 p-1.5 pt-1 border-t border-[#A4B5C6]/80 bg-[#CAD6E2]/40 space-y-1">
@@ -702,8 +728,16 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
             {APP_VERSION}
           </button>
 
-          {/* Clock */}
-          <div className="font-bold text-[11px] tracking-wider text-slate-800 shrink-0">{time}</div>
+          {/* Clock & Prayer Tooltip */}
+          <button
+            type="button"
+            onClick={openPrayerDialog}
+            title={`${time} • ${selectedCity.name}: ${nextPrayer.name} ${nextPrayer.time} (${nextPrayer.formattedCountdown}) - Klik untuk buka Jadwal Sholat`}
+            className="font-bold text-[11px] tracking-wider text-slate-800 shrink-0 hover:bg-[#A8BCCC]/60 px-1 py-0.5 rounded-[2px] cursor-pointer transition-colors active:translate-y-px"
+          >
+            {time}
+          </button>
+
         </div>
       </footer>
 

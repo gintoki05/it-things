@@ -83,7 +83,7 @@ export function StickyNoteWidget() {
     if (savedMin !== null) {
       setIsMinimized(savedMin === "true")
     } else {
-      setIsMinimized(false)
+      setIsMinimized(window.innerWidth < 768)
     }
 
     const savedPos = localStorage.getItem(STORAGE_KEY_POSITION)
@@ -302,7 +302,7 @@ export function StickyNoteWidget() {
         aria-label="Papan Pengumuman Minimized"
         style={positionStyle}
         className={`absolute z-20 select-none animate-in fade-in duration-200 ${
-          !position ? "top-12 left-1/2 -translate-x-1/2 sm:top-14 sm:left-[44%] sm:-translate-x-1/2" : ""
+          !position ? "top-3 right-3 sm:top-4 sm:right-4" : ""
         }`}
       >
         <div
@@ -349,7 +349,7 @@ export function StickyNoteWidget() {
       aria-label="Papan Pengumuman & Lapak Tim"
       style={positionStyle}
       className={`absolute z-20 w-72 max-w-[calc(100vw-32px)] sm:w-80 bg-[#FFF9A6] border border-[#DCD36A] shadow-[4px_4px_14px_rgba(0,0,0,0.35)] rounded-[2px] select-none flex flex-col font-mono rotate-[-1deg] transition-transform hover:rotate-0 duration-150 animate-in fade-in ${
-        !position ? "top-12 left-1/2 -translate-x-1/2 sm:top-14 sm:left-[44%] sm:-translate-x-1/2" : ""
+        !position ? "top-3 right-3 sm:top-4 sm:right-4" : ""
       } ${isDragging ? "opacity-95 shadow-2xl scale-[1.01] cursor-grabbing" : ""}`}
     >
       {/* Visual Red Pushpin on Top Header (Klik ganda untuk reset posisi) */}
