@@ -38,6 +38,7 @@ import { GameApp } from "@/components/apps/game-app"
 import { WordleApp } from "@/components/apps/wordle-app"
 import { WinampApp } from "@/components/apps/winamp-app"
 import { SwissToolsApp } from "@/components/apps/swiss-tools-app"
+import { PomodoroApp } from "@/components/apps/pomodoro-app"
 import { WinampProvider } from "@/lib/winamp-store"
 import { ClippyProvider } from "@/lib/clippy-store"
 import { ClippyAssistant } from "@/components/desktop/clippy-assistant"
@@ -62,6 +63,7 @@ const TowerApp = dynamic(() => import("@/components/apps/tower-app").then(module
 })
 const MemoizedWinampApp = React.memo(WinampApp)
 const MemoizedSwissToolsApp = React.memo(SwissToolsApp)
+const MemoizedPomodoroApp = React.memo(PomodoroApp)
 const MemoizedDesktopIcons = React.memo(DesktopIcons)
 const MemoizedTeamWidget = React.memo(TeamWidget)
 const MemoizedStickyNoteWidget = React.memo(StickyNoteWidget)
@@ -280,6 +282,11 @@ function DesktopWorkspace() {
       {/* Retro Window: SwissTools.exe */}
       <DesktopWindow id="swisstools" bodyClassName="p-0 overflow-hidden flex flex-col">
         <MemoizedSwissToolsApp />
+      </DesktopWindow>
+
+      {/* Retro Window: Pomodoro.exe (Timer Fokus & Peregangan Otot) */}
+      <DesktopWindow id="pomodoro" keepMountedOnMinimize bodyClassName="p-0 overflow-hidden flex flex-col">
+        <MemoizedPomodoroApp />
       </DesktopWindow>
 
       {/* Floating Retro Team Widget */}

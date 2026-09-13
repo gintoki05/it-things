@@ -1342,3 +1342,68 @@ DO $$ BEGIN
     ALTER PUBLICATION supabase_realtime ADD TABLE public.tower_daily_scores;
   END IF;
 END $$;
+
+-- ============================================================
+-- 23. Table: pomodoro_sessions (Riwayat Sesi Fokus & Peregangan)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.pomodoro_sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id TEXT NOT NULL,
+    user_name TEXT NOT NULL,
+    user_avatar TEXT,
+    mode TEXT NOT NULL, -- 'focus' | 'short_break' | 'long_break'
+    duration_minutes INTEGER NOT NULL,
+    completed_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.pomodoro_sessions ENABLE ROW LEVEL SECURITY;
+
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'pomodoro_sessions' 
+        AND policyname = 'Allow authenticated to view pomodoro sessions'
+    ) THEN
+        CREATE POLICY "Allow authenticated to view pomodoro sessions"
+            ON public.pomodoro_sessions FOR SELECT
+            TO authenticated, anon
+            USING (true);
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'pomodoro_sessions' 
+        AND policyname = 'Allow authenticated to insert their own pomodoro sessions'
+    ) THEN
+        CREATE POLICY "Allow authenticated to insert their own pomodoro sessions"
+            ON public.pomodoro_sessions FOR INSERT
+            TO authenticated
+            WITH CHECK (auth.uid() IS NOT NULL AND user_id = auth.uid()::text);
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'pomodoro_sessions' 
+        AND policyname = 'Allow owner or admin to delete pomodoro sessions'
+    ) THEN
+        CREATE POLICY "Allow owner or admin to delete pomodoro sessions"
+            ON public.pomodoro_sessions FOR DELETE
+            TO authenticated
+            USING (user_id = auth.uid()::text OR public.is_admin());
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_pomodoro_sessions_user_id ON public.pomodoro_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_pomodoro_sessions_completed_at ON public.pomodoro_sessions(completed_at DESC);
+
+GRANT ALL ON public.pomodoro_sessions TO anon, authenticated, service_role;
+
+DO $$
+BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.pomodoro_sessions;
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
+

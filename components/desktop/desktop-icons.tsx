@@ -7,24 +7,20 @@ import { useNotification } from "@/lib/notification-store"
 import { cn } from "@/lib/utils"
 import { RetroIcon } from "@/components/ui/retro-icon"
 
-const ITEM_GRID_POSITIONS: Record<AppId, string> = {
-  readme: "col-start-1 row-start-1",
-  vote: "col-start-1 row-start-2",
-  chat: "col-start-1 row-start-3",
-  game: "col-start-1 row-start-4",
-  team: "col-start-1 row-start-5",
-  splitbill: "col-start-2 row-start-1",
-  kas: "col-start-2 row-start-2",
-  pantry: "col-start-2 row-start-3",
-  lapak: "col-start-2 row-start-4",
-  winamp: "col-start-2 row-start-5",
-  wordle: "",
-  tower: "",
-  paintwar: "",
-  wheel: "",
-  iexplore: "",
-  swisstools: "col-start-1 row-start-6",
-}
+const DESKTOP_ICON_ORDER: AppId[] = [
+  "readme",
+  "vote",
+  "chat",
+  "splitbill",
+  "kas",
+  "pantry",
+  "lapak",
+  "game",
+  "team",
+  "winamp",
+  "swisstools",
+  "pomodoro",
+]
 
 export function DesktopIcons() {
   const { windows, openWindow } = useDesktop()
@@ -38,11 +34,49 @@ export function DesktopIcons() {
     clearUnreadChat,
   } = useNotification()
   const [selectedId, setSelectedId] = React.useState<AppId | null>(null)
+  const [maxRows, setMaxRows] = React.useState<number>(6)
 
-  // Hanya tampilkan modul yang tidak disembunyikan dan bukan adminOnly (kecuali admin)
-  const items = Object.values(windows).filter(
-    (item) => !item.isHidden && !item.hideFromDesktop && (!item.adminOnly || isAdmin)
-  )
+  // Hitung jumlah baris yang muat berdasarkan tinggi viewport secara dinamis
+  React.useEffect(() => {
+    const calculateMaxRows = () => {
+      if (typeof window === "undefined") return
+      const isDesktop = window.innerWidth >= 640
+      // Taskbar 44px, top offset (12px mobile, 16px desktop), bottom safety margin ~16px
+      const verticalReserved = isDesktop ? 76 : 68
+      const availableHeight = Math.max(120, window.innerHeight - verticalReserved)
+      // Tinggi 1 slot ikon: ~82px + gap-y (10px di mobile, 14px di desktop)
+      const slotHeight = isDesktop ? 96 : 92
+      const calculated = Math.max(2, Math.floor(availableHeight / slotHeight))
+      setMaxRows(calculated)
+    }
+
+    calculateMaxRows()
+    window.addEventListener("resize", calculateMaxRows)
+    return () => window.removeEventListener("resize", calculateMaxRows)
+  }, [])
+
+  // Deselect icon saat klik di area kosong desktop
+  React.useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest("[data-desktop-icon]")) {
+        setSelectedId(null)
+      }
+    }
+    window.addEventListener("pointerdown", handleOutsideClick)
+    return () => window.removeEventListener("pointerdown", handleOutsideClick)
+  }, [])
+
+  // Modul aktif di desktop diurutkan sesuai urutan prioritas
+  const items = React.useMemo(() => {
+    return Object.values(windows)
+      .filter((item) => !item.isHidden && !item.hideFromDesktop && (!item.adminOnly || isAdmin))
+      .sort((a, b) => {
+        const indexA = DESKTOP_ICON_ORDER.indexOf(a.id)
+        const indexB = DESKTOP_ICON_ORDER.indexOf(b.id)
+        return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB)
+      })
+  }, [windows, isAdmin])
 
   const handleOpen = (id: AppId) => {
     if (id === "chat") {
@@ -52,7 +86,12 @@ export function DesktopIcons() {
   }
 
   return (
-    <div className="absolute top-3 sm:top-4 left-3 sm:left-4 grid grid-flow-col grid-rows-6 auto-cols-max gap-y-2.5 sm:gap-y-3.5 gap-x-2 select-none z-0">
+    <div
+      className="absolute top-3 sm:top-4 left-3 sm:left-4 grid grid-flow-col auto-cols-max gap-y-2.5 sm:gap-y-3.5 gap-x-2 select-none z-0"
+      style={{
+        gridTemplateRows: `repeat(${maxRows}, minmax(0, max-content))`,
+      }}
+    >
       {items.map((item) => {
         const isSelected = selectedId === item.id
 
@@ -60,6 +99,7 @@ export function DesktopIcons() {
           <button
             key={item.id}
             type="button"
+            data-desktop-icon
             onClick={() => setSelectedId(item.id)}
             onDoubleClick={() => handleOpen(item.id)}
             onKeyDown={(e) => {
@@ -82,15 +122,14 @@ export function DesktopIcons() {
               }
             }}
             className={cn(
-              "group flex flex-col items-center justify-center w-20 p-2 rounded cursor-pointer text-center transition-all",
-              ITEM_GRID_POSITIONS[item.id],
+              "group flex flex-col items-center justify-center w-20 p-2 rounded cursor-pointer text-center transition-all shrink-0",
               isSelected
                 ? "bg-[#1E4E8C]/50 border border-dotted border-white/80"
                 : "hover:bg-white/10"
             )}
           >
             <div className="relative size-12 rounded bg-[#2D4564]/40 border border-white/20 shadow-md flex items-center justify-center p-1 group-hover:scale-105 transition-transform">
-              <RetroIcon name={item.icon || item.id} iconSize={48} className="size-9 object-contain drop-shadow" />
+              <RetroIcon name={item.id === "pomodoro" ? "pomodoro" : (item.icon || item.id)} iconSize={48} className="size-9 object-contain drop-shadow" />
               {item.isComingSoon && (
                 <span className="absolute -top-1.5 -right-2 bg-amber-500 text-slate-950 font-mono text-[8px] font-black px-1 py-0.5 rounded border border-amber-600 shadow leading-none uppercase">
                   SOON

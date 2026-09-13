@@ -258,7 +258,7 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                       : "hover:bg-[#1E4E8C] hover:text-white"
                   )}
                 >
-                  <RetroIcon name={item.icon || item.id} iconSize={32} className="size-5 object-contain shrink-0" />
+                  <RetroIcon name={item.id === "pomodoro" ? "pomodoro" : (item.icon || item.id)} iconSize={32} className="size-5 object-contain shrink-0" />
                   <div className="min-w-0 flex-1">
                     <div className="font-bold text-[11px] flex items-center justify-between gap-1 leading-snug">
                       <span className="truncate">{item.filename}</span>
@@ -576,7 +576,7 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                   isUnreadChat && "animate-pulse border-amber-500 bg-amber-100 text-[#1E4E8C] font-bold shadow-xs"
                 )}
               >
-                <RetroIcon name={win.icon || win.id} iconSize={32} className="size-4 shrink-0 object-contain" />
+                <RetroIcon name={win.id === "pomodoro" ? "pomodoro" : (win.icon || win.id)} iconSize={32} className="size-4 shrink-0 object-contain" />
                 <span className="truncate text-[11px] font-sans">{win.filename}</span>
                 {isUnreadChat && (
                   <span className="ml-auto px-1 rounded-full bg-red-600 text-white font-mono font-black text-[9px] leading-tight shadow-xs shrink-0">

@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.19"
+export const APP_VERSION = "v2.3.20"
 export const APP_BUILD = "2026.09.13"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.20",
+    date: "13 Sep 2026",
+    codename: "Pomodoro.exe Focus & Ergonomic Stretching App, Tomato Pixel Icon, Supabase Session Sync & Weekly Activity Chart",
+    changes: [
+      "Peluncuran Pomodoro.exe (pomodoro.exe): Aplikasi timer produktivitas tim IT yang menggabungkan teknik Pomodoro klasik (Deep Work 25m/50m, Short Break 5m, Long Break 15m) dengan panduan peregangan otot ergonomis.",
+      "Panduan Ergonomi & Peregangan Otot (Anti-Jompo): 6 gerakan peregangan terstruktur (bahu & dada anti-bungkuk, pergelangan tangan anti-CTS/carpal tunnel, leher kaku, rotasi lumbar/pinggang, istirahat mata 20-20-20, dan hidrasi air putih) lengkap dengan mini timer interaktif.",
+      "Visualisasi Grafik Aktivitas 7 Hari (Weekly Bar Chart): Tab Riwayat & Grafik menyajikan grafik batang vertikal CRT retro membandingkan porsi menit fokus (biru) dan peregangan (hijau) per hari serta kartu metrik jam produktif.",
+      "Sinkronisasi Database Supabase & Background Timer: Pencatatan riwayat sesi otomatis tersinkron ke tabel Supabase (pomodoro_sessions) via Server Actions aman, sisa waktu fokus tersimpan independen saat ganti tab, serta keepMountedOnMinimize agar timer tetap berjalan lancar di latar belakang.",
+      "Ikon Tomat Pixel-Art Retro & Integrasi Clippy: Desain aset vektor pixel-art tomat retro (tomato.svg) di seluruh desktop, titlebar jendela, taskbar, dan Start menu, dipadukan dengan synthesizer nada chime Web Audio API dan dialog pengingat santai dari asisten Clippy.",
+    ],
+  },
   {
     version: "v2.3.19",
     date: "13 Sep 2026",

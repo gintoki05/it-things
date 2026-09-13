@@ -244,7 +244,7 @@ export function DesktopWindow({
         )}
       >
         <div className="flex items-center gap-2 truncate">
-          <RetroIcon name={win.icon || win.id} iconSize={32} className="size-4 shrink-0 object-contain" />
+          <RetroIcon name={id === "pomodoro" ? "pomodoro" : (win.icon || win.id)} iconSize={32} className="size-4 shrink-0 object-contain" />
           <span className="truncate tracking-wide font-sans text-[12px]">{win.title}</span>
         </div>
 

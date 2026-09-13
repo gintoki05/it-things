@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" shape-rendering="crispEdges">
+  <!-- Retro Shadow Underneath -->
+  <ellipse cx="16" cy="29" rx="10" ry="2" fill="#1F2937" opacity="0.4" />
+
+  <!-- Outer Dark Outline of Tomato -->
+  <rect x="9" y="8" width="14" height="2" fill="#450A0A" />
+  <rect x="7" y="10" width="18" height="2" fill="#450A0A" />
+  <rect x="5" y="12" width="22" height="13" fill="#450A0A" />
+  <rect x="7" y="25" width="18" height="2" fill="#450A0A" />
+  <rect x="9" y="27" width="14" height="2" fill="#450A0A" />
+
+  <!-- Tomato Body Base (Deep Red) -->
+  <rect x="9" y="9" width="14" height="2" fill="#DC2626" />
+  <rect x="7" y="11" width="18" height="15" fill="#DC2626" />
+  <rect x="9" y="26" width="14" height="2" fill="#991B1B" />
+
+  <!-- Tomato Body Middle & Bottom Shadow (Right & Bottom Depth) -->
+  <rect x="18" y="14" width="7" height="11" fill="#B91C1C" />
+  <rect x="21" y="15" width="4" height="9" fill="#991B1B" />
+  <rect x="10" y="24" width="12" height="2" fill="#991B1B" />
+  <rect x="12" y="25" width="8" height="2" fill="#7F1D1D" />
+
+  <!-- Tomato Left / Top-Left Specular Highlights (Retro Gloss) -->
+  <rect x="8" y="12" width="4" height="8" fill="#EF4444" />
+  <rect x="10" y="11" width="4" height="4" fill="#F87171" />
+  <rect x="11" y="12" width="2" height="2" fill="#FFFFFF" />
+  <rect x="13" y="13" width="1" height="1" fill="#FCA5A5" />
+  <rect x="9" y="14" width="1" height="3" fill="#FCA5A5" />
+
+  <!-- Subtle Tomato Lobes / Crease Shadows -->
+  <rect x="14" y="12" width="1" height="12" fill="#B91C1C" opacity="0.6" />
+  <rect x="19" y="13" width="1" height="11" fill="#991B1B" opacity="0.5" />
+
+  <!-- Green Stem & Calyx (Leaves) -->
+  <!-- Stem Outline & Body -->
+  <rect x="15" y="2" width="3" height="4" fill="#14532D" />
+  <rect x="17" y="2" width="3" height="2" fill="#14532D" />
+  <rect x="16" y="2" width="2" height="4" fill="#16A34A" />
+  <rect x="17" y="2" width="2" height="1" fill="#4ADE80" />
+
+  <!-- Center Calyx Core -->
+  <rect x="14" y="6" width="4" height="3" fill="#16A34A" />
+  <rect x="15" y="6" width="2" height="2" fill="#4ADE80" />
+
+  <!-- Calyx Leaf: Left Droop -->
+  <rect x="8" y="8" width="5" height="2" fill="#15803D" />
+  <rect x="7" y="9" width="3" height="1" fill="#14532D" />
+  <rect x="9" y="7" width="3" height="1" fill="#4ADE80" />
+
+  <!-- Calyx Leaf: Far Left Up -->
+  <rect x="10" y="5" width="4" height="2" fill="#16A34A" />
+  <rect x="9" y="4" width="2" height="2" fill="#22C55E" />
+
+  <!-- Calyx Leaf: Right Droop -->
+  <rect x="19" y="8" width="5" height="2" fill="#15803D" />
+  <rect x="22" y="9" width="3" height="1" fill="#14532D" />
+  <rect x="19" y="7" width="3" height="1" fill="#22C55E" />
+
+  <!-- Calyx Leaf: Far Right Up -->
+  <rect x="18" y="5" width="4" height="2" fill="#16A34A" />
+  <rect x="21" y="4" width="2" height="2" fill="#4ADE80" />
+
+  <!-- Calyx Leaf: Front Center Down -->
+  <rect x="15" y="9" width="2" height="2" fill="#15803D" />
+  <rect x="15" y="10" width="2" height="1" fill="#14532D" />
+</svg>

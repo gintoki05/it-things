@@ -553,4 +553,72 @@ export function playClippyPopSound(volume = 0.15) {
   }
 }
 
+/**
+ * Efek suara Pomodoro Timer (Focus Done & Break Done)
+ */
+export function playPomodoroChime(mode: "focus_done" | "break_done" = "focus_done", volume = 0.3) {
+  try {
+    const ctx = getAudioContext()
+    if (!ctx) return
+    const now = ctx.currentTime
+
+    const masterGain = ctx.createGain()
+    masterGain.gain.setValueAtTime(volume, now)
+    masterGain.connect(ctx.destination)
+
+    if (mode === "focus_done") {
+      // 4-note ascending fanfare retro chime (C5 -> E5 -> G5 -> C6)
+      const notes = [
+        { f: 523.25, t: 0.0, d: 0.18 }, // C5
+        { f: 659.25, t: 0.12, d: 0.18 }, // E5
+        { f: 783.99, t: 0.24, d: 0.22 }, // G5
+        { f: 1046.5, t: 0.38, d: 0.5 },  // C6
+      ]
+
+      notes.forEach((n) => {
+        const noteTime = now + n.t
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = "triangle"
+        osc.frequency.setValueAtTime(n.f, noteTime)
+
+        gain.gain.setValueAtTime(0, noteTime)
+        gain.gain.linearRampToValueAtTime(0.7, noteTime + 0.02)
+        gain.gain.exponentialRampToValueAtTime(0.001, noteTime + n.d)
+
+        osc.connect(gain)
+        gain.connect(masterGain)
+        osc.start(noteTime)
+        osc.stop(noteTime + n.d + 0.02)
+      })
+    } else {
+      // 2-tone gentle ping-pong chime (A5 -> E5)
+      const notes = [
+        { f: 880.0, t: 0.0, d: 0.25 },
+        { f: 659.25, t: 0.18, d: 0.45 },
+      ]
+
+      notes.forEach((n) => {
+        const noteTime = now + n.t
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = "sine"
+        osc.frequency.setValueAtTime(n.f, noteTime)
+
+        gain.gain.setValueAtTime(0, noteTime)
+        gain.gain.linearRampToValueAtTime(0.6, noteTime + 0.02)
+        gain.gain.exponentialRampToValueAtTime(0.001, noteTime + n.d)
+
+        osc.connect(gain)
+        gain.connect(masterGain)
+        osc.start(noteTime)
+        osc.stop(noteTime + n.d + 0.02)
+      })
+    }
+  } catch (err) {
+    console.warn("Could not play pomodoro chime:", err)
+  }
+}
+
+
 

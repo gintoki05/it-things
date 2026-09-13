@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
 
-export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "wordle" | "winamp" | "tower" | "swisstools"
+export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "wordle" | "winamp" | "tower" | "swisstools" | "pomodoro"
 
 export interface WindowState {
   id: AppId
@@ -280,6 +280,20 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 840, height: 600 },
     defaultSize: { width: 840, height: 600 },
     defaultPos: { x: 190, y: 35 },
+  },
+  pomodoro: {
+    id: "pomodoro",
+    title: "Pomodoro.exe - Timer Fokus & Peregangan Otot",
+    icon: "pomodoro",
+    filename: "pomodoro.exe",
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    zIndex: 14,
+    position: { x: 230, y: 40 },
+    size: { width: 560, height: 580 },
+    defaultSize: { width: 560, height: 580 },
+    defaultPos: { x: 230, y: 40 },
   },
 }
 

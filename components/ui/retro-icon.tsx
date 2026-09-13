@@ -33,11 +33,14 @@ export const RETRO_ICON_NAMES = [
   "trophy",
   "vote",
   "wheel",
+  "pomodoro",
+  "tomato",
 ] as const
 
 export type RetroIconName = typeof RETRO_ICON_NAMES[number]
 
 export const EMOJI_TO_RETRO_ICON: Record<string, RetroIconName> = {
+  "🍅": "pomodoro",
   "📦": "pantry",
   "🎡": "wheel",
   "🧾": "splitbill",
@@ -119,6 +122,9 @@ export function getRetroIconSrc(
   }
   if (iconName === "paint") {
     return "/icons/paint.svg"
+  }
+  if (iconName === "pomodoro" || iconName === "tomato") {
+    return "/icons/tomato.svg"
   }
 
   const normalizedSize = getClosestIconSize(size)

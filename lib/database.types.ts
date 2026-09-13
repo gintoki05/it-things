@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      pomodoro_sessions: {
+        Row: {
+          id: string
+          user_id: string
+          user_name: string
+          user_avatar: string | null
+          mode: "focus" | "short_break" | "long_break"
+          duration_minutes: number
+          completed_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          user_name: string
+          user_avatar?: string | null
+          mode: "focus" | "short_break" | "long_break"
+          duration_minutes: number
+          completed_at?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          user_name?: string
+          user_avatar?: string | null
+          mode?: "focus" | "short_break" | "long_break"
+          duration_minutes?: number
+          completed_at?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       tower_daily_scores: {
         Row: { user_id: string; target_date: string; user_name: string; score: number; floors: number; achieved_at: string }
         Insert: { user_id: string; target_date?: string; user_name: string; score: number; floors: number; achieved_at?: string }
