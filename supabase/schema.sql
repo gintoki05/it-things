@@ -1454,3 +1454,136 @@ BEGIN
     USING (bucket_id = 'avatars');
   END IF;
 END $$;
+
+-- ============================================================
+-- 28. Table: feedbacks (Kotak Saran & Lapor Bug FEEDBACK.EXE)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.feedbacks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'suggestion' CHECK (category IN ('bug', 'feature', 'suggestion')),
+    urgency TEXT NOT NULL DEFAULT 'normal' CHECK (urgency IN ('low', 'normal', 'urgent')),
+    status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'in_review', 'in_progress', 'resolved', 'closed')),
+    is_anonymous BOOLEAN NOT NULL DEFAULT false,
+    created_by_id TEXT NOT NULL,
+    created_by_name TEXT NOT NULL,
+    created_by_avatar TEXT,
+    admin_note TEXT,
+    upvote_count INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Table: feedback_upvotes
+CREATE TABLE IF NOT EXISTS public.feedback_upvotes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    feedback_id UUID NOT NULL REFERENCES public.feedbacks(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    UNIQUE(feedback_id, user_id)
+);
+
+-- RLS
+ALTER TABLE public.feedbacks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.feedback_upvotes ENABLE ROW LEVEL SECURITY;
+
+-- Policies for feedbacks
+DROP POLICY IF EXISTS "Feedbacks can be viewed by authenticated users and anon" ON public.feedbacks;
+CREATE POLICY "Feedbacks can be viewed by authenticated users and anon"
+ON public.feedbacks FOR SELECT
+USING (true);
+
+DROP POLICY IF EXISTS "Authenticated users can insert feedback" ON public.feedbacks;
+CREATE POLICY "Authenticated users can insert feedback"
+ON public.feedbacks FOR INSERT
+TO authenticated, anon
+WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Feedback author or admin can update feedback" ON public.feedbacks;
+CREATE POLICY "Feedback author or admin can update feedback"
+ON public.feedbacks FOR UPDATE
+USING (
+    created_by_id = auth.uid()::text 
+    OR public.is_admin()
+);
+
+DROP POLICY IF EXISTS "Feedback author or admin can delete feedback" ON public.feedbacks;
+CREATE POLICY "Feedback author or admin can delete feedback"
+ON public.feedbacks FOR DELETE
+USING (
+    created_by_id = auth.uid()::text 
+    OR public.is_admin()
+);
+
+-- Policies for feedback_upvotes
+DROP POLICY IF EXISTS "Feedback upvotes are viewable by everyone" ON public.feedback_upvotes;
+CREATE POLICY "Feedback upvotes are viewable by everyone"
+ON public.feedback_upvotes FOR SELECT
+USING (true);
+
+DROP POLICY IF EXISTS "Authenticated users can upvote" ON public.feedback_upvotes;
+CREATE POLICY "Authenticated users can upvote"
+ON public.feedback_upvotes FOR INSERT
+TO authenticated, anon
+WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Users can remove their own upvote" ON public.feedback_upvotes;
+CREATE POLICY "Users can remove their own upvote"
+ON public.feedback_upvotes FOR DELETE
+USING (
+    user_id = auth.uid()::text 
+    OR public.is_admin()
+);
+
+-- Function & Trigger to sync upvote_count
+CREATE OR REPLACE FUNCTION public.handle_feedback_upvote_count()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (TG_OP = 'INSERT') THEN
+        UPDATE public.feedbacks
+        SET upvote_count = upvote_count + 1,
+            updated_at = timezone('utc'::text, now())
+        WHERE id = NEW.feedback_id;
+        RETURN NEW;
+    ELSIF (TG_OP = 'DELETE') THEN
+        UPDATE public.feedbacks
+        SET upvote_count = GREATEST(0, upvote_count - 1),
+            updated_at = timezone('utc'::text, now())
+        WHERE id = OLD.feedback_id;
+        RETURN OLD;
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS tr_feedback_upvote_count ON public.feedback_upvotes;
+CREATE TRIGGER tr_feedback_upvote_count
+AFTER INSERT OR DELETE ON public.feedback_upvotes
+FOR EACH ROW EXECUTE FUNCTION public.handle_feedback_upvote_count();
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_feedbacks_created_at ON public.feedbacks(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_feedbacks_category ON public.feedbacks(category);
+CREATE INDEX IF NOT EXISTS idx_feedbacks_status ON public.feedbacks(status);
+CREATE INDEX IF NOT EXISTS idx_feedback_upvotes_feedback_id ON public.feedback_upvotes(feedback_id);
+CREATE INDEX IF NOT EXISTS idx_feedback_upvotes_user_id ON public.feedback_upvotes(user_id);
+
+-- Grants
+GRANT ALL ON public.feedbacks TO anon, authenticated, service_role;
+GRANT ALL ON public.feedback_upvotes TO anon, authenticated, service_role;
+
+DO $$
+BEGIN
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.feedbacks;
+  EXCEPTION WHEN duplicate_object THEN
+    NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.feedback_upvotes;
+  EXCEPTION WHEN duplicate_object THEN
+    NULL;
+  END;
+END $$;
+

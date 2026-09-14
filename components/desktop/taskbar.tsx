@@ -427,6 +427,18 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
                   type="button"
                   onClick={() => {
                     setIsStartOpen(false)
+                    openWindow("feedback")
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[#1E4E8C] hover:text-white text-[#14253D] rounded-[2px] transition-colors text-left font-semibold text-[11px] group"
+                >
+                  <Lightbulb className="size-3.5 text-amber-500 group-hover:text-yellow-300 shrink-0" />
+                  <span>Kirim Feedback & Saran...</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsStartOpen(false)
                     openAboutDialog()
                   }}
                   className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-[#1E4E8C] hover:text-white text-[#14253D] rounded-[2px] transition-colors text-left font-semibold text-[11px] group"

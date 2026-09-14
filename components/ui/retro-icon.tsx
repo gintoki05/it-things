@@ -87,6 +87,7 @@ export function resolveRetroIcon(nameOrEmoji?: string | null): RetroIconName | n
 
   // Alias matches
   if (trimmed === "paintwar") return "paint"
+  if (trimmed === "feedback") return "idea"
 
   // Exact match with emoji
   if (EMOJI_TO_RETRO_ICON[nameOrEmoji]) {

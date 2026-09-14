@@ -20,6 +20,7 @@ const DESKTOP_ICON_ORDER: AppId[] = [
   "winamp",
   "swisstools",
   "pomodoro",
+  "feedback",
 ]
 
 export function DesktopIcons() {

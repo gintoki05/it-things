@@ -14,6 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
+      feedbacks: {
+        Row: {
+          id: string
+          title: string
+          description: string
+          category: "bug" | "feature" | "suggestion"
+          urgency: "low" | "normal" | "urgent"
+          status: "new" | "in_review" | "in_progress" | "resolved" | "closed"
+          is_anonymous: boolean
+          created_by_id: string
+          created_by_name: string
+          created_by_avatar: string | null
+          admin_note: string | null
+          upvote_count: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          description: string
+          category?: "bug" | "feature" | "suggestion"
+          urgency?: "low" | "normal" | "urgent"
+          status?: "new" | "in_review" | "in_progress" | "resolved" | "closed"
+          is_anonymous?: boolean
+          created_by_id: string
+          created_by_name: string
+          created_by_avatar?: string | null
+          admin_note?: string | null
+          upvote_count?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          description?: string
+          category?: "bug" | "feature" | "suggestion"
+          urgency?: "low" | "normal" | "urgent"
+          status?: "new" | "in_review" | "in_progress" | "resolved" | "closed"
+          is_anonymous?: boolean
+          created_by_id?: string
+          created_by_name?: string
+          created_by_avatar?: string | null
+          admin_note?: string | null
+          upvote_count?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      feedback_upvotes: {
+        Row: {
+          id: string
+          feedback_id: string
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          feedback_id: string
+          user_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          feedback_id?: string
+          user_id?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       pomodoro_sessions: {
         Row: {
           id: string

@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.22"
+export const APP_VERSION = "v2.3.23"
 export const APP_BUILD = "2026.09.14"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.23",
+    date: "14 Sep 2026",
+    codename: "FEEDBACK.EXE Suggestion Box, Bug Reporting System, Anonymous Submissions & Realtime Upvotes",
+    changes: [
+      "Modul Baru FEEDBACK.EXE: Aplikasi desktop terintegrasi untuk mengumpulkan saran, kritik, ide fitur, dan pelaporan bug tim internal dengan tampilan retro Windows 98.",
+      "Mode Anonim & Privasi Terjamin: Pengguna dapat mengirim masukan secara rahasia tanpa nama/avatar (disanitasi di level server action untuk mencegah data leak).",
+      "Sistem Dukungan (Upvote) Realtime: Anggota tim dapat memberikan upvote untuk ide favorit, langsung tersinkronisasi antar pengguna via Supabase Realtime.",
+      "Tracking Status & Tanggapan Admin: Pelacakan alur pengerjaan (Baru, Ditinjau, Diproses, Selesai, Ditutup) lengkap dengan catatan respon resmi dari Admin IT.",
+      "Integrasi Desktop & Start Menu: Ikon desktop FEEDBACK.EXE dan menu pintas instan 'Kirim Feedback & Saran...' di Start Menu.",
+    ],
+  },
   {
     version: "v2.3.22",
     date: "14 Sep 2026",

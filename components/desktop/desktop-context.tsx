@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
 
-export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "wordle" | "winamp" | "tower" | "swisstools" | "pomodoro"
+export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "wordle" | "winamp" | "tower" | "swisstools" | "pomodoro" | "feedback"
 
 export interface WindowState {
   id: AppId
@@ -294,6 +294,20 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 560, height: 580 },
     defaultSize: { width: 560, height: 580 },
     defaultPos: { x: 230, y: 40 },
+  },
+  feedback: {
+    id: "feedback",
+    title: "Feedback.exe - Kotak Saran & Lapor Bug",
+    icon: "idea",
+    filename: "feedback.exe",
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    zIndex: 14,
+    position: { x: 210, y: 35 },
+    size: { width: 760, height: 600 },
+    defaultSize: { width: 760, height: 600 },
+    defaultPos: { x: 210, y: 35 },
   },
 }
 

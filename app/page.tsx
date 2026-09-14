@@ -39,6 +39,7 @@ import { WordleApp } from "@/components/apps/wordle-app"
 import { WinampApp } from "@/components/apps/winamp-app"
 import { SwissToolsApp } from "@/components/apps/swiss-tools-app"
 import { PomodoroApp } from "@/components/apps/pomodoro-app"
+import { FeedbackApp } from "@/components/apps/feedback-app"
 import { PomodoroProvider } from "@/lib/pomodoro-store"
 import { WinampProvider } from "@/lib/winamp-store"
 import { ClippyProvider } from "@/lib/clippy-store"
@@ -65,6 +66,7 @@ const TowerApp = dynamic(() => import("@/components/apps/tower-app").then(module
 const MemoizedWinampApp = React.memo(WinampApp)
 const MemoizedSwissToolsApp = React.memo(SwissToolsApp)
 const MemoizedPomodoroApp = React.memo(PomodoroApp)
+const MemoizedFeedbackApp = React.memo(FeedbackApp)
 const MemoizedDesktopIcons = React.memo(DesktopIcons)
 const MemoizedTeamWidget = React.memo(TeamWidget)
 const MemoizedStickyNoteWidget = React.memo(StickyNoteWidget)
@@ -288,6 +290,11 @@ function DesktopWorkspace() {
       {/* Retro Window: Pomodoro.exe (Timer Fokus & Peregangan Otot) */}
       <DesktopWindow id="pomodoro" keepMountedOnMinimize bodyClassName="p-0 overflow-hidden flex flex-col">
         <MemoizedPomodoroApp />
+      </DesktopWindow>
+
+      {/* Retro Window: feedback.exe (Kotak Saran & Lapor Bug) */}
+      <DesktopWindow id="feedback" bodyClassName="p-0 overflow-hidden flex flex-col">
+        <MemoizedFeedbackApp />
       </DesktopWindow>
 
       {/* Floating Retro Team Widget */}
