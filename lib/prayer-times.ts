@@ -198,8 +198,8 @@ export function getNextPrayer(schedule: PrayerSchedule, now: Date = new Date()):
     { name: "Isya", time: schedule.isya, minutes: parseMinutes(schedule.isya) },
   ]
 
-  // Cari sholat terdekat setelah waktu saat ini
-  let next = prayers.find((p) => p.minutes > currentTotal)
+  // Cari sholat terdekat setelah waktu saat ini (termasuk yang pas di menit saat ini)
+  let next = prayers.find((p) => p.minutes >= currentTotal)
   let diffMinutes = 0
 
   if (next) {
@@ -210,8 +210,8 @@ export function getNextPrayer(schedule: PrayerSchedule, now: Date = new Date()):
     diffMinutes = 1440 - currentTotal + next.minutes
   }
 
-  // Cek apakah waktu pas tiba (toleransi 0 s.d. 1 menit)
-  const isDueNow = diffMinutes <= 1 && diffMinutes >= 0
+  // Tepat saat jadwal tiba (di menit yang sama, diff = 0)
+  const isDueNow = diffMinutes === 0
 
   let formattedCountdown = ""
   if (diffMinutes <= 0) {

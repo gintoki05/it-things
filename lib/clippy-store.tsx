@@ -48,7 +48,7 @@ interface ClippyContextType {
   speechText: string
   speechVisible: boolean
   setSpeechVisible: (val: boolean) => void
-  speak: (text: string, durationMs?: number) => void
+  speak: (text: string, durationMs?: number, playPop?: boolean) => void
   showPrayerCountdown: () => void
   triggerRandomQuote: () => void
 
@@ -224,13 +224,13 @@ export function ClippyProvider({ children }: { children: React.ReactNode }) {
   }, [schedule, currentTime])
 
   const speak = React.useCallback(
-    (text: string, durationMs = 8000) => {
+    (text: string, durationMs = 8000, playPop = true) => {
       if (dismissTimerRef.current) {
         clearTimeout(dismissTimerRef.current)
       }
       setSpeechText(text)
       setSpeechVisible(true)
-      if (soundEnabled) {
+      if (soundEnabled && playPop) {
         playClippyPopSound(0.12)
       }
 
@@ -267,7 +267,7 @@ export function ClippyProvider({ children }: { children: React.ReactNode }) {
     const alertPreKey = `${nowStr}-${nextPrayer.name}-${preMinutes}min`
     const alertDueKey = `${nowStr}-${nextPrayer.name}-due`
 
-    // Cek pengingat persiapan (H-5 menit biasa, H-10 menit Jumatan)
+    // Cek pengingat persiapan (H-5 menit biasa, H-10 menit Jumatan) - Hening tanpa suara notifikasi
     if (
       reminder10Min &&
       nextPrayer.remainingMinutes === preMinutes &&
@@ -277,26 +277,43 @@ export function ClippyProvider({ children }: { children: React.ReactNode }) {
       if (isJumatan) {
         speak(
           `🕌 10 menit menuju Sholat Jumat (${nextPrayer.time} ${selectedCity.tzLabel})! Yuk bersiap-siap sejenak dan jalan ke masjid.`,
-          14000
+          14000,
+          false
         )
       } else {
         speak(
           `⏰ 5 menit menuju waktu ${nextPrayer.name} (${nextPrayer.time} ${selectedCity.tzLabel})! Yuk bersiap-siap sejenak.`,
-          12000
+          12000,
+          false
         )
       }
-      if (soundEnabled) {
-        playRetroNotificationSound(0.3)
-      }
+      // Suara notif/azan tidak berbunyi 5 menit sebelum, melainkan tepat saat jadwal sholat tiba
     }
 
-    // Cek saat waktu sholat tiba
+    // Cek saat waktu sholat tiba (tepat saat jadwalnya tiba)
     if (nextPrayer.isDueNow && lastAlertKeyRef.current !== alertDueKey) {
       lastAlertKeyRef.current = alertDueKey
+      const isFardhu = ["Subuh", "Dzuhur", "Ashar", "Maghrib", "Isya"].includes(nextPrayer.name)
       if (isJumatan) {
         speak(
           `🕌 Waktu Sholat Jumat telah tiba (${nextPrayer.time} ${selectedCity.tzLabel})! Mari tunaikan ibadah sholat Jumat.`,
           16000
+        )
+      } else if (nextPrayer.name === "Terbit") {
+        speak(
+          `🌅 Matahari telah terbit (${nextPrayer.time} ${selectedCity.tzLabel}). Waktu Subuh telah berakhir.`,
+          12000,
+          false
+        )
+      } else if (nextPrayer.name === "Imsak") {
+        speak(
+          `⏳ Waktu Imsak telah tiba (${nextPrayer.time} ${selectedCity.tzLabel})! Waktu sahur segera berakhir.`,
+          12000
+        )
+      } else if (nextPrayer.name === "Dhuha") {
+        speak(
+          `☀️ Waktu Dhuha telah tiba (${nextPrayer.time} ${selectedCity.tzLabel})! Selamat menunaikan sholat sunnah Dhuha.`,
+          12000
         )
       } else {
         speak(
@@ -304,8 +321,12 @@ export function ClippyProvider({ children }: { children: React.ReactNode }) {
           15000
         )
       }
-      if (soundEnabled) {
+
+      // Suara notif/azan dibunyikan tepat saat jadwalnya tiba
+      if (soundEnabled && (isFardhu || isJumatan)) {
         playAdzanSound(adzanSound, 0.5)
+      } else if (soundEnabled && (nextPrayer.name === "Imsak" || nextPrayer.name === "Dhuha")) {
+        playRetroNotificationSound(0.3)
       }
     }
   }, [currentTime, nextPrayer, reminder10Min, soundEnabled, adzanSound, enabled, selectedCity, speak])

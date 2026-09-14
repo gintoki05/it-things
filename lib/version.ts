@@ -5,12 +5,22 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.27"
+export const APP_VERSION = "v2.3.28"
 export const APP_BUILD = "2026.09.14"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.28",
+    date: "14 Sep 2026",
+    codename: "Accurate Prayer Schedule Sound & Vocal Adzan at Scheduled Time",
+    changes: [
+      "Ketepatan Suara Notifikasi & Adzan: Memindahkan bunyi suara notifikasi dan adzan tepat saat menit jadwal sholat tiba, bukan lagi 5 menit sebelum.",
+      "Koreksi Penentuan Waktu Pas Sholat: Memperbaiki pencarian jadwal sholat sehingga saat menit jadwal tiba (diff 0 menit), status sholat aktif terdeteksi tepat waktu.",
+      "Pengingat Persiapan H-5 Menit Hening: Pengingat 5 menit sebelum sholat (dan 10 menit sholat Jumat) tetap muncul sebagai balon teks Clippy tanpa bunyi suara yang mengganggu.",
+    ],
+  },
   {
     version: "v2.3.27",
     date: "14 Sep 2026",

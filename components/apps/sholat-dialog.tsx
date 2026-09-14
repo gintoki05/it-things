@@ -347,7 +347,7 @@ export function SholatDialog() {
                       Pengingat persiapan H-5 menit
                     </div>
                     <div className="text-[10px] text-gray-500">
-                      Khusus Sholat Jumat otomatis H-10 menit sebelum waktu sholat.
+                      Pesan balon teks Clippy di desktop (suara berbunyi saat jadwal sholat tiba).
                     </div>
                   </div>
                   <input
