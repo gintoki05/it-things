@@ -336,11 +336,17 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
       "wordle",
       "tower",
       "winamp",
+      "swisstools",
+      "pomodoro",
     ]
     const targetApp = requestedApp && validApps.includes(requestedApp) ? requestedApp : null
+    const wasPomodoroOpen = typeof window !== "undefined" && localStorage.getItem("it-things_pomodoro_window_open") === "true"
 
     if (targetApp) {
       setActiveWindowId(targetApp)
+      setTopZIndex(25)
+    } else if (wasPomodoroOpen) {
+      setActiveWindowId("pomodoro")
       setTopZIndex(25)
     } else if (!isMobile) {
       setActiveWindowId("chat")
@@ -392,6 +398,13 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
           isOpen: true,
           isMinimized: false,
           zIndex: 25,
+        }
+      } else if (wasPomodoroOpen && updated.pomodoro) {
+        updated.pomodoro = {
+          ...updated.pomodoro,
+          isOpen: true,
+          isMinimized: false,
+          zIndex: 22,
         }
       }
 
@@ -476,6 +489,12 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
+      if (id === "pomodoro") {
+        try {
+          localStorage.setItem("it-things_pomodoro_window_open", "true")
+        } catch {}
+      }
+
       setWindows((curr) => {
         const win = curr[id] || INITIAL_WINDOWS[id]
         if (!win) return curr
@@ -494,6 +513,12 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
   )
 
   const closeWindow = React.useCallback((id: AppId) => {
+    if (id === "pomodoro") {
+      try {
+        localStorage.setItem("it-things_pomodoro_window_open", "false")
+      } catch {}
+    }
+
     setWindows((curr) => {
       const win = curr[id]
       if (!win) return curr

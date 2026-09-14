@@ -2,16 +2,15 @@
 
 import * as React from "react"
 import { useDesktop } from "@/components/desktop/desktop-context"
-import { useClippy } from "@/lib/clippy-store"
 import { useAuth } from "@/lib/auth"
-import { playPomodoroChime, playRetroNotificationSound } from "@/lib/sound-effects"
+import { playRetroNotificationSound } from "@/lib/sound-effects"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { RetroIcon } from "@/components/ui/retro-icon"
 import {
-  savePomodoroSessionAction,
-  fetchUserPomodoroSessionsAction,
-  clearUserPomodoroSessionsAction,
-} from "@/app/actions/pomodoro"
+  usePomodoro,
+  type PomodoroMode,
+  type PomodoroSessionRecord,
+} from "@/lib/pomodoro-store"
 import { cn } from "@/lib/utils"
 import {
   Play,
@@ -40,14 +39,7 @@ import {
   Cloud,
 } from "lucide-react"
 
-export type PomodoroMode = "focus" | "short_break" | "long_break"
-
-export interface PomodoroSessionRecord {
-  id: string
-  mode: PomodoroMode
-  durationMinutes: number
-  completedAt: string
-}
+export type { PomodoroMode, PomodoroSessionRecord }
 
 interface StretchExercise {
   id: string
@@ -169,260 +161,38 @@ const MODE_PRESETS: Record<PomodoroMode, { name: string; defaultMinutes: number;
 
 export function PomodoroApp() {
   const { closeWindow } = useDesktop()
-  const { speak } = useClippy()
   const { user } = useAuth()
-
-  // Tab: timer | stretch | history | about
-  const [activeTab, setActiveTab] = React.useState<"timer" | "stretch" | "history" | "about">("timer")
-  const [mode, setMode] = React.useState<PomodoroMode>("focus")
-
-  // Durasi konfigurasi dalam menit
-  const [durations, setDurations] = React.useState<Record<PomodoroMode, number>>({
-    focus: 25,
-    short_break: 5,
-    long_break: 15,
-  })
-
-  // Sisa waktu independen per mode (detik) agar tidak reset saat berganti tab/mode
-  const [timeLeftPerMode, setTimeLeftPerMode] = React.useState<Record<PomodoroMode, number>>({
-    focus: 25 * 60,
-    short_break: 5 * 60,
-    long_break: 15 * 60,
-  })
-
-  const [isRunning, setIsRunning] = React.useState<boolean>(false)
-
-  // Daily streak
-  const [completedSessions, setCompletedSessions] = React.useState<number>(0)
-
-  // Riwayat Sesi
-  const [sessionHistory, setSessionHistory] = React.useState<PomodoroSessionRecord[]>([])
-  const [showClearHistoryConfirm, setShowClearHistoryConfirm] = React.useState<boolean>(false)
-  const [isHistoryLoading, setIsHistoryLoading] = React.useState<boolean>(false)
-
-  // Options
-  const [soundEnabled, setSoundEnabled] = React.useState<boolean>(true)
-  const [clippyEnabled, setClippyEnabled] = React.useState<boolean>(true)
-  const [autoStartBreaks, setAutoStartBreaks] = React.useState<boolean>(false)
+  const {
+    mode,
+    switchMode,
+    startMode,
+    durations,
+    timeLeftPerMode,
+    timeLeft,
+    isRunning,
+    completedSessions,
+    sessionHistory,
+    isHistoryLoading,
+    soundEnabled,
+    setSoundEnabled,
+    clippyEnabled,
+    setClippyEnabled,
+    autoStartBreaks,
+    setAutoStartBreaks,
+    activeTab,
+    setActiveTab,
+    togglePlayPause,
+    handleReset: resetTimerStore,
+    adjustMinutes,
+    setPresetMinutes,
+    handleClearHistory: clearHistoryStore,
+  } = usePomodoro()
 
   // Dialog & Active Exercise
   const [showResetConfirm, setShowResetConfirm] = React.useState<boolean>(false)
+  const [showClearHistoryConfirm, setShowClearHistoryConfirm] = React.useState<boolean>(false)
   const [selectedExerciseId, setSelectedExerciseId] = React.useState<string>(STRETCH_EXERCISES[0].id)
   const [exerciseTimer, setExerciseTimer] = React.useState<number | null>(null)
-
-  // Load streak, settings & session history dari localStorage
-  React.useEffect(() => {
-    try {
-      const savedSettings = localStorage.getItem("it-things_pomodoro_settings")
-      if (savedSettings) {
-        const parsed = JSON.parse(savedSettings)
-        if (parsed.durations) {
-          setDurations(parsed.durations)
-          setTimeLeftPerMode({
-            focus: (parsed.durations.focus || 25) * 60,
-            short_break: (parsed.durations.short_break || 5) * 60,
-            long_break: (parsed.durations.long_break || 15) * 60,
-          })
-        }
-        if (typeof parsed.soundEnabled === "boolean") setSoundEnabled(parsed.soundEnabled)
-        if (typeof parsed.clippyEnabled === "boolean") setClippyEnabled(parsed.clippyEnabled)
-        if (typeof parsed.autoStartBreaks === "boolean") setAutoStartBreaks(parsed.autoStartBreaks)
-      }
-
-      const todayKey = `it-things_pomodoro_streak_${new Date().toISOString().slice(0, 10)}`
-      const savedStreak = localStorage.getItem(todayKey)
-      if (savedStreak) {
-        setCompletedSessions(parseInt(savedStreak, 10) || 0)
-      }
-
-      const savedHistory = localStorage.getItem("it-things_pomodoro_history")
-      if (savedHistory) {
-        setSessionHistory(JSON.parse(savedHistory))
-      }
-    } catch {
-      // Ignore local storage error
-    }
-  }, [])
-
-  // Sync riwayat dari Supabase jika user sedang login
-  React.useEffect(() => {
-    if (!user?.id) return
-    let isMounted = true
-    setIsHistoryLoading(true)
-
-    fetchUserPomodoroSessionsAction({ userId: user.id, limit: 60 })
-      .then((res) => {
-        if (!isMounted || !res.data || res.data.length === 0) return
-        const dbRecords: PomodoroSessionRecord[] = res.data.map((row) => ({
-          id: row.id,
-          mode: row.mode as PomodoroMode,
-          durationMinutes: row.duration_minutes,
-          completedAt: row.completed_at,
-        }))
-
-        setSessionHistory((prev) => {
-          const existingIds = new Set(prev.map((p) => p.id))
-          const newUnique = dbRecords.filter((d) => !existingIds.has(d.id))
-          const merged = [...prev, ...newUnique].sort(
-            (a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
-          )
-          try {
-            localStorage.setItem("it-things_pomodoro_history", JSON.stringify(merged.slice(0, 100)))
-          } catch {}
-          return merged.slice(0, 100)
-        })
-      })
-      .catch((err) => console.warn("Failed to fetch sessions from Supabase:", err))
-      .finally(() => {
-        if (isMounted) setIsHistoryLoading(false)
-      })
-
-    return () => {
-      isMounted = false
-    }
-  }, [user?.id])
-
-  // Simpan settings ke localStorage
-  const saveSettings = (newDurations = durations, newSound = soundEnabled, newClippy = clippyEnabled, newAuto = autoStartBreaks) => {
-    try {
-      localStorage.setItem(
-        "it-things_pomodoro_settings",
-        JSON.stringify({
-          durations: newDurations,
-          soundEnabled: newSound,
-          clippyEnabled: newClippy,
-          autoStartBreaks: newAuto,
-        })
-      )
-    } catch {
-      // Ignore
-    }
-  }
-
-  // Ganti mode (pertahankan sisa detik yang ada di mode tersebut)
-  const switchMode = (newMode: PomodoroMode) => {
-    setIsRunning(false)
-    setMode(newMode)
-  }
-
-  // Timer countdown effect (setiap detik hanya mengurangi mode yang aktif)
-  React.useEffect(() => {
-    if (!isRunning) return
-
-    const interval = setInterval(() => {
-      setTimeLeftPerMode((prev) => {
-        const currentSec = prev[mode]
-        if (currentSec <= 1) {
-          return {
-            ...prev,
-            [mode]: 0,
-          }
-        }
-        return {
-          ...prev,
-          [mode]: currentSec - 1,
-        }
-      })
-    }, 1000)
-
-    return () => clearInterval(interval)
-  }, [isRunning, mode])
-
-  // Handler saat timer habis
-  const handleTimerComplete = React.useCallback(() => {
-    setIsRunning(false)
-
-    // Kembalikan sisa waktu mode yang baru selesai ke durasi penuhnya
-    setTimeLeftPerMode((prev) => ({
-      ...prev,
-      [mode]: durations[mode] * 60,
-    }))
-
-    const nowIso = new Date().toISOString()
-    const record: PomodoroSessionRecord = {
-      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `sess_${Date.now()}`,
-      mode,
-      durationMinutes: durations[mode],
-      completedAt: nowIso,
-    }
-
-    // Catat ke state lokal & localStorage
-    setSessionHistory((prev) => {
-      const updated = [record, ...prev].slice(0, 100)
-      try {
-        localStorage.setItem("it-things_pomodoro_history", JSON.stringify(updated))
-      } catch {}
-      return updated
-    })
-
-    // Simpan ke Supabase di background
-    if (user?.id) {
-      savePomodoroSessionAction({
-        userId: user.id,
-        userName: user.name || "Programmer",
-        userAvatar: user.avatarUrl || null,
-        mode,
-        durationMinutes: durations[mode],
-        completedAt: nowIso,
-      }).catch((e) => console.warn("Supabase pomodoro save error:", e))
-    }
-
-    if (mode === "focus") {
-      // Selesai fokus
-      const newCompleted = completedSessions + 1
-      setCompletedSessions(newCompleted)
-
-      try {
-        const todayKey = `it-things_pomodoro_streak_${new Date().toISOString().slice(0, 10)}`
-        localStorage.setItem(todayKey, newCompleted.toString())
-      } catch {
-        // Ignore
-      }
-
-      if (soundEnabled) {
-        playPomodoroChime("focus_done", 0.35)
-      }
-
-      if (clippyEnabled) {
-        const clippyMessages = [
-          "Mantap sesi fokus kelar! Buruan stretching badan dulu bro biar gak jompo!",
-          "Time's up! Ayo lurusin punggung, putar bahu, jangan kayak udang!",
-          "Sesi deep work selesai! Minum air putih dulu yuk biar otak seger lagi!",
-        ]
-        const randomMsg = clippyMessages[Math.floor(Math.random() * clippyMessages.length)]
-        speak(randomMsg, 7000)
-      }
-
-      // Pilih long break setiap kelipatan 4 sesi
-      const nextMode: PomodoroMode = newCompleted % 4 === 0 ? "long_break" : "short_break"
-      setMode(nextMode)
-      setActiveTab("stretch")
-
-      if (autoStartBreaks) {
-        setIsRunning(true)
-      }
-    } else {
-      // Selesai break
-      if (soundEnabled) {
-        playPomodoroChime("break_done", 0.3)
-      }
-
-      if (clippyEnabled) {
-        speak("Istirahat & stretching beres! Yuk gaskeun coding lagi dengan postur tegak!", 6000)
-      }
-
-      setMode("focus")
-      setActiveTab("timer")
-    }
-  }, [mode, completedSessions, soundEnabled, clippyEnabled, speak, autoStartBreaks, durations, user])
-
-  // Deteksi waktu habis secara reaktif
-  React.useEffect(() => {
-    if (!isRunning) return
-    if (timeLeftPerMode[mode] === 0) {
-      handleTimerComplete()
-    }
-  }, [timeLeftPerMode, isRunning, mode, handleTimerComplete])
 
   // Mini Exercise timer
   React.useEffect(() => {
@@ -441,60 +211,13 @@ export function PomodoroApp() {
     return () => clearInterval(timer)
   }, [exerciseTimer, soundEnabled])
 
-  // Kontrol timer
-  const togglePlayPause = () => {
-    if (!isRunning && timeLeftPerMode[mode] === 0) {
-      setTimeLeftPerMode((prev) => ({
-        ...prev,
-        [mode]: durations[mode] * 60,
-      }))
-    }
-    setIsRunning(!isRunning)
-  }
-
   const handleReset = () => {
-    setIsRunning(false)
-    const defaultSecs = durations[mode] * 60
-    setTimeLeftPerMode((prev) => ({
-      ...prev,
-      [mode]: defaultSecs,
-    }))
+    resetTimerStore()
     setShowResetConfirm(false)
   }
 
-  const adjustMinutes = (delta: number) => {
-    if (isRunning) return
-    const currentMins = durations[mode]
-    const nextMins = Math.max(1, Math.min(120, currentMins + delta))
-    const updated = { ...durations, [mode]: nextMins }
-    setDurations(updated)
-    saveSettings(updated)
-    setTimeLeftPerMode((prev) => ({
-      ...prev,
-      [mode]: nextMins * 60,
-    }))
-  }
-
-  const setPresetMinutes = (targetMode: PomodoroMode, mins: number) => {
-    if (isRunning) return
-    const updated = { ...durations, [targetMode]: mins }
-    setDurations(updated)
-    saveSettings(updated)
-    setTimeLeftPerMode((prev) => ({
-      ...prev,
-      [targetMode]: mins * 60,
-    }))
-  }
-
-  // Bersihkan riwayat
   const handleClearHistory = async () => {
-    setSessionHistory([])
-    try {
-      localStorage.removeItem("it-things_pomodoro_history")
-    } catch {}
-    if (user?.id) {
-      await clearUserPomodoroSessionsAction({ userId: user.id }).catch(() => {})
-    }
+    await clearHistoryStore()
     setShowClearHistoryConfirm(false)
   }
 
@@ -547,7 +270,6 @@ export function PomodoroApp() {
     }
   }, [sessionHistory])
 
-  const timeLeft = timeLeftPerMode[mode]
   const totalSeconds = durations[mode] * 60
 
   // Format detik ke MM:SS
@@ -612,11 +334,7 @@ export function PomodoroApp() {
         <div className="ml-auto flex items-center gap-1.5 text-[11px] font-mono">
           <button
             type="button"
-            onClick={() => {
-              const next = !soundEnabled
-              setSoundEnabled(next)
-              saveSettings(durations, next, clippyEnabled, autoStartBreaks)
-            }}
+            onClick={() => setSoundEnabled(!soundEnabled)}
             title={soundEnabled ? "Audio Chime: Aktif" : "Audio Chime: Bisu"}
             className={cn(
               "p-1 rounded border",
@@ -629,11 +347,7 @@ export function PomodoroApp() {
           </button>
           <button
             type="button"
-            onClick={() => {
-              const next = !clippyEnabled
-              setClippyEnabled(next)
-              saveSettings(durations, soundEnabled, next, autoStartBreaks)
-            }}
+            onClick={() => setClippyEnabled(!clippyEnabled)}
             title={clippyEnabled ? "Clippy Reminders: Aktif" : "Clippy Reminders: Mati"}
             className={cn(
               "p-1 rounded border",
@@ -869,9 +583,8 @@ export function PomodoroApp() {
               <button
                 type="button"
                 onClick={() => {
-                  switchMode("short_break")
+                  startMode("short_break")
                   setActiveTab("timer")
-                  setIsRunning(true)
                 }}
                 className="px-2.5 py-1 bg-amber-400 hover:bg-amber-300 text-slate-950 font-mono text-[10px] font-black rounded-[2px] border border-amber-600 shadow-xs shrink-0 flex items-center gap-1"
               >

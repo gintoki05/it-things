@@ -39,6 +39,7 @@ import { WordleApp } from "@/components/apps/wordle-app"
 import { WinampApp } from "@/components/apps/winamp-app"
 import { SwissToolsApp } from "@/components/apps/swiss-tools-app"
 import { PomodoroApp } from "@/components/apps/pomodoro-app"
+import { PomodoroProvider } from "@/lib/pomodoro-store"
 import { WinampProvider } from "@/lib/winamp-store"
 import { ClippyProvider } from "@/lib/clippy-store"
 import { ClippyAssistant } from "@/components/desktop/clippy-assistant"
@@ -365,11 +366,13 @@ export default function Page() {
         <PresenceProvider>
           <WinampProvider>
             <ClippyProvider>
-              <DesktopProvider>
-                <WallpaperProvider>
-                  <DesktopWorkspace />
-                </WallpaperProvider>
-              </DesktopProvider>
+              <PomodoroProvider>
+                <DesktopProvider>
+                  <WallpaperProvider>
+                    <DesktopWorkspace />
+                  </WallpaperProvider>
+                </DesktopProvider>
+              </PomodoroProvider>
             </ClippyProvider>
           </WinampProvider>
         </PresenceProvider>

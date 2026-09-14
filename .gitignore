@@ -37,3 +37,10 @@ next-env.d.ts
 
 # scratch / temp test files
 scratch/
+.agents/*
+!.agents/skills/
+ORIGINAL_REQUEST.md
+PROJECT.md
+TEST_INFRA.md
+TEST_READY.md
+scripts/

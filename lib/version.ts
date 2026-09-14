@@ -5,12 +5,22 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.20"
-export const APP_BUILD = "2026.09.13"
+export const APP_VERSION = "v2.3.21"
+export const APP_BUILD = "2026.09.14"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.21",
+    date: "14 Sep 2026",
+    codename: "Persistent Pomodoro Engine, Browser Refresh Resilience & Desktop State Preservation",
+    changes: [
+      "Persistent Pomodoro Engine: Memindahkan logika timer & state ke root provider (PomodoroProvider) berbasis timestamp riil (targetEndTimestamp), membuat timer berjalan presisi dan kebal terhadap background tab throttling maupun window minimize.",
+      "Browser Refresh Resilience: Status timer (berjalan/pause), sisa detik, dan mode aktif kini tersimpan otomatis di localStorage. Saat browser di-refresh (F5), timer tidak mengulang dari nol (25:00), melainkan langsung melanjutkan detik berjalan secara mulus atau mempertahankan waktu pause.",
+      "Desktop State & URL Routing Preservation: Jendela Pomodoro.exe kini otomatis mengingat status terbukanya saat browser di-refresh, serta menambahkan 'pomodoro' dan 'swisstools' ke daftar aplikasi valid desktop routing (?app=pomodoro).",
+    ],
+  },
   {
     version: "v2.3.20",
     date: "13 Sep 2026",
