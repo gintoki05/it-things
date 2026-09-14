@@ -17,6 +17,7 @@ import { PdfConvertTool } from "./swiss-tools/tools/pdf-convert-tool"
 import { PdfCompressTool } from "./swiss-tools/tools/pdf-compress-tool"
 import { MediaDownloadTool } from "./swiss-tools/tools/media-download-tool"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { BgRemoveTool } from "./swiss-tools/tools/bg-remove-tool"
 import {
   FileCode,
   KeyRound,
@@ -35,6 +36,7 @@ import {
   FileImage,
   Minimize2,
   Download,
+  Sparkles,
 } from "lucide-react"
 
 const TOOL_ICONS: Record<SwissToolId, React.ComponentType<{ className?: string }>> = {
@@ -51,11 +53,12 @@ const TOOL_ICONS: Record<SwissToolId, React.ComponentType<{ className?: string }
   case: CaseSensitive,
   regex: Regex,
   "media-download": Download,
+  "bg-remove": Sparkles,
 }
 
 const CATEGORY_NAMES: Record<SwissToolCategory, string> = {
-  media: "Media & Downloader",
   format: "Format & Dokumen",
+  media: "Media & Gambar",
   crypto: "Keamanan & Kripto",
   generator: "Waktu & Generator",
   text: "Teks & Pemrosesan",
@@ -63,7 +66,7 @@ const CATEGORY_NAMES: Record<SwissToolCategory, string> = {
 
 export function SwissToolsApp() {
   const { closeWindow, openAboutDialog } = useDesktop()
-  const [activeToolId, setActiveToolId] = React.useState<SwissToolId>("media-download")
+  const [activeToolId, setActiveToolId] = React.useState<SwissToolId>("json")
   const [searchQuery, setSearchQuery] = React.useState("")
   const [activeMenu, setActiveMenu] = React.useState<string | null>(null)
 
@@ -118,8 +121,8 @@ export function SwissToolsApp() {
   // Kelompokkan tools berdasarkan kategori
   const categorizedTools = React.useMemo(() => {
     const groups: { category: SwissToolCategory; items: typeof SWISS_TOOLS }[] = [
-      { category: "media", items: [] },
       { category: "format", items: [] },
+      { category: "media", items: [] },
       { category: "crypto", items: [] },
       { category: "generator", items: [] },
       { category: "text", items: [] },
@@ -161,6 +164,8 @@ export function SwissToolsApp() {
         return <RegexTool />
       case "media-download":
         return <MediaDownloadTool />
+      case "bg-remove":
+        return <BgRemoveTool onDirtyChange={setIsToolDirty} />
       default:
         return <JsonTool />
     }
@@ -431,7 +436,7 @@ export function SwissToolsApp() {
       <ConfirmDialog
         isOpen={isCloseConfirmOpen}
         title="TUTUP_SWISSTOOLS.EXE"
-        message="Ada dokumen PDF di antrean yang belum selesai diproses. Yakin ingin menutup Swiss Army Tools?"
+        message="Ada dokumen atau proses aktif yang belum selesai atau belum disimpan. Yakin ingin menutup Swiss Army Tools?"
         variant="destructive"
         confirmText="Ya, Tutup Aplikasi"
         cancelText="Batal"

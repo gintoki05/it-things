@@ -170,7 +170,34 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
   }, [isStartOpen])
 
   const openWindows = Object.values(windows).filter((w) => w.isOpen && !w.isHidden && (!w.adminOnly || isAdmin))
-  const programItems = Object.values(windows).filter((item) => !item.isHidden && (!item.adminOnly || isAdmin))
+  const groupedPrograms = React.useMemo(() => {
+    const all = Object.values(windows).filter((item) => !item.isHidden && (!item.adminOnly || isAdmin))
+    const categoryConfig: { name: string; ids: AppId[] }[] = [
+      {
+        name: "Aplikasi Harian",
+        ids: ["vote", "splitbill", "pantry", "kas", "lapak", "chat"],
+      },
+      {
+        name: "Utilitas IT & Tools",
+        ids: ["tools", "swisstools", "snipper", "pomodoro", "feedback"],
+      },
+      {
+        name: "Hiburan & Game",
+        ids: ["game", "winamp", "paintwar", "wordle", "tower"],
+      },
+      {
+        name: "Sistem & Informasi",
+        ids: ["team", "readme"],
+      },
+    ]
+
+    return categoryConfig
+      .map((cat) => ({
+        name: cat.name,
+        items: cat.ids.map((id) => all.find((w) => w.id === id)).filter(Boolean) as typeof all,
+      }))
+      .filter((cat) => cat.items.length > 0)
+  }, [windows, isAdmin])
 
   return (
     <>
@@ -240,37 +267,42 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
 
             {/* Apps List (Scrollable if overflowing) */}
             <div className="flex-1 min-h-0 overflow-y-auto px-1.5 py-1 border-t border-[#A4B5C6]/60 retro-scrollbar space-y-0.5">
-              <div className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-500 font-mono sticky top-0 bg-[#D4DDE6]/95 backdrop-blur-xs z-10">
-                Programs (.exe)
-              </div>
-              {programItems.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    openWindow(item.id)
-                    setIsStartOpen(false)
-                  }}
-                  className={cn(
-                    "w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-[2px] transition-colors text-left group",
-                    item.isComingSoon
-                      ? "hover:bg-[#1E4E8C]/20 text-[#14253D]"
-                      : "hover:bg-[#1E4E8C] hover:text-white"
-                  )}
-                >
-                  <RetroIcon name={item.id === "pomodoro" ? "pomodoro" : (item.icon || item.id)} iconSize={32} className="size-5 object-contain shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <div className="font-bold text-[11px] flex items-center justify-between gap-1 leading-snug">
-                      <span className="truncate">{item.filename}</span>
-                      {item.isComingSoon && (
-                        <span className="text-[8px] font-mono font-bold bg-amber-100 text-amber-800 border border-amber-300 px-1 py-0.2 rounded shrink-0 group-hover:bg-amber-200">
-                          Soon
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-[9px] opacity-75 truncate group-hover:opacity-90">{item.title.split(" - ")[1]}</div>
+              {groupedPrograms.map((cat, idx) => (
+                <div key={cat.name} className={cn("space-y-0.5", idx > 0 && "pt-1.5")}>
+                  <div className="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-gray-500 font-mono flex items-center gap-1.5">
+                    <span className="truncate">{cat.name}</span>
+                    <div className="h-px flex-1 bg-[#A4B5C6]/50" />
                   </div>
-                </button>
+                  {cat.items.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        openWindow(item.id)
+                        setIsStartOpen(false)
+                      }}
+                      className={cn(
+                        "w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-[2px] transition-colors text-left group",
+                        item.isComingSoon
+                          ? "hover:bg-[#1E4E8C]/20 text-[#14253D]"
+                          : "hover:bg-[#1E4E8C] hover:text-white"
+                      )}
+                    >
+                      <RetroIcon name={item.id === "pomodoro" ? "pomodoro" : (item.icon || item.id)} iconSize={32} className="size-5 object-contain shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-[11px] flex items-center justify-between gap-1 leading-snug">
+                          <span className="truncate">{item.filename}</span>
+                          {item.isComingSoon && (
+                            <span className="text-[8px] font-mono font-bold bg-amber-100 text-amber-800 border border-amber-300 px-1 py-0.2 rounded shrink-0 group-hover:bg-amber-200">
+                              Soon
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[9px] opacity-75 truncate group-hover:opacity-90">{item.title.split(" - ")[1]}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               ))}
 
               {/* Jadwal Sholat & Asisten Shortcut */}

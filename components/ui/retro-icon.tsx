@@ -35,11 +35,15 @@ export const RETRO_ICON_NAMES = [
   "wheel",
   "pomodoro",
   "tomato",
+  "bug",
+  "folder",
 ] as const
 
 export type RetroIconName = typeof RETRO_ICON_NAMES[number]
 
 export const EMOJI_TO_RETRO_ICON: Record<string, RetroIconName> = {
+  "📁": "folder",
+  "📂": "folder",
   "🍅": "pomodoro",
   "📦": "pantry",
   "🎡": "wheel",
@@ -74,6 +78,8 @@ export const EMOJI_TO_RETRO_ICON: Record<string, RetroIconName> = {
   "🏗️": "tower",
   "🏗": "tower",
   "🏢": "tower",
+  "🐛": "bug",
+  "🐞": "bug",
 }
 
 export function resolveRetroIcon(nameOrEmoji?: string | null): RetroIconName | null {
@@ -88,6 +94,7 @@ export function resolveRetroIcon(nameOrEmoji?: string | null): RetroIconName | n
   // Alias matches
   if (trimmed === "paintwar") return "paint"
   if (trimmed === "feedback") return "idea"
+  if (trimmed === "snipper") return "bug"
 
   // Exact match with emoji
   if (EMOJI_TO_RETRO_ICON[nameOrEmoji]) {
@@ -126,6 +133,12 @@ export function getRetroIconSrc(
   }
   if (iconName === "pomodoro" || iconName === "tomato") {
     return "/icons/tomato.svg"
+  }
+  if (iconName === "bug") {
+    return "/icons/bug.svg"
+  }
+  if (iconName === "folder") {
+    return "/icons/folder.svg"
   }
 
   const normalizedSize = getClosestIconSize(size)

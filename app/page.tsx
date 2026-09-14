@@ -41,6 +41,8 @@ import { SwissToolsApp } from "@/components/apps/swiss-tools-app"
 import { PomodoroApp } from "@/components/apps/pomodoro-app"
 import { FeedbackApp } from "@/components/apps/feedback-app"
 import { PomodoroProvider } from "@/lib/pomodoro-store"
+import { SnipperApp } from "@/components/apps/snipper-app"
+import { ToolsFolderApp } from "@/components/apps/tools-folder-app"
 import { WinampProvider } from "@/lib/winamp-store"
 import { ClippyProvider } from "@/lib/clippy-store"
 import { ClippyAssistant } from "@/components/desktop/clippy-assistant"
@@ -67,6 +69,8 @@ const MemoizedWinampApp = React.memo(WinampApp)
 const MemoizedSwissToolsApp = React.memo(SwissToolsApp)
 const MemoizedPomodoroApp = React.memo(PomodoroApp)
 const MemoizedFeedbackApp = React.memo(FeedbackApp)
+const MemoizedSnipperApp = React.memo(SnipperApp)
+const MemoizedToolsFolderApp = React.memo(ToolsFolderApp)
 const MemoizedDesktopIcons = React.memo(DesktopIcons)
 const MemoizedTeamWidget = React.memo(TeamWidget)
 const MemoizedStickyNoteWidget = React.memo(StickyNoteWidget)
@@ -285,6 +289,7 @@ function DesktopWorkspace() {
       {/* Retro Window: SwissTools.exe */}
       <DesktopWindow
         id="swisstools"
+        keepMountedOnMinimize
         bodyClassName="p-0 overflow-hidden flex flex-col"
         onCloseRequest={() => {
           if (typeof window !== "undefined") {
@@ -301,8 +306,18 @@ function DesktopWorkspace() {
       </DesktopWindow>
 
       {/* Retro Window: feedback.exe (Kotak Saran & Lapor Bug) */}
-      <DesktopWindow id="feedback" bodyClassName="p-0 overflow-hidden flex flex-col">
+      <DesktopWindow id="feedback" keepMountedOnMinimize bodyClassName="p-0 overflow-hidden flex flex-col">
         <MemoizedFeedbackApp />
+      </DesktopWindow>
+
+      {/* Retro Window: snipper.exe (QA Bug & Screenshot Studio) */}
+      <DesktopWindow id="snipper" keepMountedOnMinimize bodyClassName="p-0 overflow-hidden flex flex-col">
+        <MemoizedSnipperApp />
+      </DesktopWindow>
+
+      {/* Retro Window: Utilitas IT (Folder Aksesoris & DevTools) */}
+      <DesktopWindow id="tools" keepMountedOnMinimize bodyClassName="p-0 overflow-hidden flex flex-col">
+        <MemoizedToolsFolderApp />
       </DesktopWindow>
 
       {/* Floating Retro Team Widget */}

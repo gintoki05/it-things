@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.29"
+export const APP_VERSION = "v2.3.30"
 export const APP_BUILD = "2026.09.14"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.30",
+    date: "14 Sep 2026",
+    codename: "Snipper.exe QA Studio Pro, AI Background Remover & Retro Bug Icon",
+    changes: [
+      "Snipper.exe (QA Bug & Screenshot Studio): Aplikasi desktop baru dengan Tool Anotasi Lengkap (Pilih, Crop, Teks Bebas, Panah, Kotak, Spotlight Dimmer, Stabilo Transparan, Step Counter #1 #2, Callout Bubble, Sensor Blackout, Pixelate, dan Stempel Status).",
+      "Interactive Resize & Properties Bar: Resize bebas teks dan bentuk objek via handle retro di kanvas (NW/NE/SE/SW, ujung panah, ekor callout) serta bar properti dinamis (stepper font, presets, tebal garis, edit teks langsung).",
+      "Before vs After Comparison Studio: Studio perbandingan gambar Expected vs Actual dengan mode Berdampingan (Side-by-Side) dan mode Curtain Slider Diff interaktif.",
+      "AI Background Remover (BG_REMOVE.EXE): Utilitas baru di SwissTools (kategori Media & Gambar) untuk menghapus latar foto 100% lokal di browser via WebAssembly tanpa kirim data ke server.",
+      "Ikon Bug Retro & Keep-Alive State: Logo desktop & taskbar Snipper diganti ikon Bug Beetle retro, serta integrasi keepMountedOnMinimize dan persistent tab agar kanvas tidak ter-reset saat berpindah jendela.",
+    ],
+  },
   {
     version: "v2.3.29",
     date: "14 Sep 2026",

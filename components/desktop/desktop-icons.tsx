@@ -8,19 +8,14 @@ import { cn } from "@/lib/utils"
 import { RetroIcon } from "@/components/ui/retro-icon"
 
 const DESKTOP_ICON_ORDER: AppId[] = [
-  "readme",
   "vote",
-  "chat",
   "splitbill",
   "kas",
   "pantry",
   "lapak",
+  "chat",
   "game",
-  "team",
-  "winamp",
-  "swisstools",
-  "pomodoro",
-  "feedback",
+  "tools",
 ]
 
 export function DesktopIcons() {
@@ -185,7 +180,7 @@ export function DesktopIcons() {
                   {activePaintWarCount > 99 ? "99+" : activePaintWarCount}
                 </span>
               )}
-              {!item.isComingSoon && item.id === "feedback" && activeFeedbackCount > 0 && (
+              {!item.isComingSoon && (item.id === "feedback" || item.id === "tools") && activeFeedbackCount > 0 && (
                 <span
                   title={`${activeFeedbackCount} Masukan Belum Selesai`}
                   className="absolute -top-1.5 -right-2 bg-amber-500 text-slate-950 font-mono text-[9px] font-black min-w-[16px] text-center px-1 py-0.5 rounded border border-amber-600 shadow leading-none"

@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
 
-export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "wordle" | "winamp" | "tower" | "swisstools" | "pomodoro" | "feedback"
+export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "wordle" | "winamp" | "tower" | "swisstools" | "pomodoro" | "feedback" | "snipper" | "tools"
 
 export interface WindowState {
   id: AppId
@@ -63,6 +63,7 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 580, height: 490 },
     defaultSize: { width: 580, height: 490 },
     defaultPos: { x: 200, y: 35 },
+    hideFromDesktop: true,
   },
   vote: {
     id: "vote",
@@ -163,7 +164,7 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 740, height: 560 },
     defaultSize: { width: 740, height: 560 },
     defaultPos: { x: 295, y: 104 },
-    hideFromDesktop: false,
+    hideFromDesktop: true,
   },
   chat: {
     id: "chat",
@@ -266,6 +267,7 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 540, height: 680 },
     defaultSize: { width: 540, height: 680 },
     defaultPos: { x: 260, y: 30 },
+    hideFromDesktop: true,
   },
   swisstools: {
     id: "swisstools",
@@ -280,6 +282,7 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 840, height: 600 },
     defaultSize: { width: 840, height: 600 },
     defaultPos: { x: 190, y: 35 },
+    hideFromDesktop: true,
   },
   pomodoro: {
     id: "pomodoro",
@@ -294,6 +297,7 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 560, height: 580 },
     defaultSize: { width: 560, height: 580 },
     defaultPos: { x: 230, y: 40 },
+    hideFromDesktop: true,
   },
   feedback: {
     id: "feedback",
@@ -308,6 +312,36 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 760, height: 600 },
     defaultSize: { width: 760, height: 600 },
     defaultPos: { x: 210, y: 35 },
+    hideFromDesktop: true,
+  },
+  snipper: {
+    id: "snipper",
+    title: "Snipper.exe - QA Bug & Screenshot Studio",
+    icon: "bug",
+    filename: "snipper.exe",
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    zIndex: 14,
+    position: { x: 160, y: 25 },
+    size: { width: 900, height: 640 },
+    defaultSize: { width: 900, height: 640 },
+    defaultPos: { x: 160, y: 25 },
+    hideFromDesktop: true,
+  },
+  tools: {
+    id: "tools",
+    title: "Utilitas IT - Aksesoris & DevTools",
+    icon: "folder",
+    filename: "Utilitas",
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    zIndex: 14,
+    position: { x: 220, y: 45 },
+    size: { width: 620, height: 440 },
+    defaultSize: { width: 620, height: 440 },
+    defaultPos: { x: 220, y: 45 },
   },
 }
 
@@ -352,6 +386,9 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
       "winamp",
       "swisstools",
       "pomodoro",
+      "feedback",
+      "snipper",
+      "tools",
     ]
     const targetApp = requestedApp && validApps.includes(requestedApp) ? requestedApp : null
     const wasPomodoroOpen = typeof window !== "undefined" && localStorage.getItem("it-things_pomodoro_window_open") === "true"

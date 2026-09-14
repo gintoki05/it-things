@@ -1,0 +1,67 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" shape-rendering="crispEdges">
+  <!-- Retro Drop Shadow -->
+  <ellipse cx="16" cy="28" rx="9" ry="2" fill="#1F2937" opacity="0.35" />
+
+  <!-- Antennas Outline -->
+  <rect x="10" y="3" width="2" height="2" fill="#18181B" />
+  <rect x="9" y="5" width="2" height="2" fill="#18181B" />
+  <rect x="11" y="7" width="2" height="2" fill="#18181B" />
+  <rect x="20" y="3" width="2" height="2" fill="#18181B" />
+  <rect x="21" y="5" width="2" height="2" fill="#18181B" />
+  <rect x="19" y="7" width="2" height="2" fill="#18181B" />
+
+  <!-- Head Outline & Body -->
+  <rect x="12" y="7" width="8" height="4" fill="#18181B" />
+  <rect x="13" y="8" width="6" height="3" fill="#047857" />
+  <!-- Eyes -->
+  <rect x="13" y="8" width="2" height="2" fill="#FEF08A" />
+  <rect x="17" y="8" width="2" height="2" fill="#FEF08A" />
+  <rect x="14" y="9" width="1" height="1" fill="#18181B" />
+  <rect x="18" y="9" width="1" height="1" fill="#18181B" />
+
+  <!-- Thorax (Upper Body) -->
+  <rect x="11" y="11" width="10" height="4" fill="#18181B" />
+  <rect x="12" y="12" width="8" height="2" fill="#059669" />
+  <rect x="13" y="12" width="3" height="1" fill="#34D399" />
+
+  <!-- Abdomen / Elytra (Main Wing Shell) -->
+  <rect x="10" y="15" width="12" height="11" fill="#18181B" />
+  <rect x="11" y="16" width="10" height="9" fill="#10B981" />
+  <rect x="12" y="25" width="8" height="2" fill="#18181B" />
+  <rect x="13" y="25" width="6" height="1" fill="#047857" />
+
+  <!-- Left Elytra Highlight -->
+  <rect x="12" y="17" width="3" height="4" fill="#6EE7B7" />
+  <rect x="13" y="18" width="1" height="2" fill="#FFFFFF" />
+
+  <!-- Center Wing Split Line -->
+  <rect x="15" y="15" width="2" height="11" fill="#065F46" />
+  <rect x="15" y="16" width="1" height="10" fill="#047857" />
+
+  <!-- Beetle Shell Dots / Markings -->
+  <rect x="12" y="22" width="2" height="2" fill="#047857" />
+  <rect x="18" y="18" width="2" height="2" fill="#047857" />
+  <rect x="18" y="22" width="2" height="2" fill="#047857" />
+
+  <!-- Legs (6 Pixelated Legs) -->
+  <!-- Top Left Leg -->
+  <rect x="7" y="9" width="2" height="2" fill="#18181B" />
+  <rect x="8" y="11" width="3" height="2" fill="#18181B" />
+  <!-- Top Right Leg -->
+  <rect x="23" y="9" width="2" height="2" fill="#18181B" />
+  <rect x="21" y="11" width="3" height="2" fill="#18181B" />
+
+  <!-- Middle Left Leg -->
+  <rect x="6" y="16" width="2" height="2" fill="#18181B" />
+  <rect x="8" y="15" width="3" height="2" fill="#18181B" />
+  <!-- Middle Right Leg -->
+  <rect x="24" y="16" width="2" height="2" fill="#18181B" />
+  <rect x="21" y="15" width="3" height="2" fill="#18181B" />
+
+  <!-- Bottom Left Leg -->
+  <rect x="6" y="23" width="2" height="2" fill="#18181B" />
+  <rect x="8" y="21" width="3" height="2" fill="#18181B" />
+  <!-- Bottom Right Leg -->
+  <rect x="24" y="23" width="2" height="2" fill="#18181B" />
+  <rect x="21" y="21" width="3" height="2" fill="#18181B" />
+</svg>

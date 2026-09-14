@@ -1,0 +1,33 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" shape-rendering="crispEdges">
+  <!-- Windows 98 Classic Manila Folder -->
+  
+  <!-- Tab outline & back cover outline -->
+  <rect x="3" y="6" width="12" height="4" fill="#664600" />
+  <rect x="3" y="9" width="26" height="18" fill="#664600" />
+  
+  <!-- Back flap tab fill (darker manila) -->
+  <rect x="4" y="7" width="10" height="3" fill="#D49B24" />
+  <rect x="4" y="7" width="10" height="1" fill="#FFE082" />
+  
+  <!-- Inside folder paper/sheet hint -->
+  <rect x="6" y="9" width="18" height="4" fill="#FFFFFF" />
+  <rect x="8" y="10" width="12" height="1" fill="#757575" />
+  <rect x="8" y="12" width="8" height="1" fill="#BDBDBD" />
+  
+  <!-- Front Flap Outline -->
+  <polygon points="2,13 28,13 30,26 4,26" fill="#664600" />
+  
+  <!-- Front Flap Body (Vibrant Manila Gold) -->
+  <polygon points="3,14 27,14 29,25 5,25" fill="#FFC83B" />
+  
+  <!-- Top Bevel Highlight (Light Manila) -->
+  <line x1="3" y1="14" x2="27" y2="14" stroke="#FFF3C4" stroke-width="1" />
+  <line x1="4" y1="15" x2="27" y2="15" stroke="#FFE79A" stroke-width="1" />
+  
+  <!-- Left Edge Highlight -->
+  <line x1="3" y1="14" x2="5" y2="25" stroke="#FFE28A" stroke-width="1" />
+  
+  <!-- Bottom & Right Bevel Shadows -->
+  <line x1="27" y1="14" x2="29" y2="25" stroke="#B27F0E" stroke-width="1" />
+  <line x1="5" y1="25" x2="29" y2="25" stroke="#B27F0E" stroke-width="1" />
+</svg>
