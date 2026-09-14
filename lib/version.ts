@@ -5,12 +5,21 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.25"
+export const APP_VERSION = "v2.3.26"
 export const APP_BUILD = "2026.09.14"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.26",
+    date: "14 Sep 2026",
+    codename: "PDF Processing Web Worker Buffer Cloning & Detached ArrayBuffer Fix",
+    changes: [
+      "Perbaikan Detached ArrayBuffer: Mengkloning ArrayBuffer dengan aman via .slice() pada helper loadPdfDocument sebelum ditransfer ke Web Worker PDF.js.",
+      "Resiliensi Buffer Kompresi & Split: Menjamin pengambilan buffer segar langsung dari berkas lokal (file.arrayBuffer()) saat proses kompresi dan ekspor split PDF berjalan.",
+    ],
+  },
   {
     version: "v2.3.25",
     date: "14 Sep 2026",

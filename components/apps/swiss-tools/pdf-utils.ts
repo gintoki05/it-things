@@ -60,8 +60,17 @@ export async function getPdfjsLib() {
 // Load dokumen PDF dari File / ArrayBuffer menggunakan PDF.js
 export async function loadPdfDocument(source: ArrayBuffer | Uint8Array) {
   const pdfjs = await getPdfjsLib()
+
+  // Clone buffer agar tidak detached saat ditransfer ke Web Worker PDF.js
+  let dataCopy: Uint8Array
+  if (source instanceof Uint8Array) {
+    dataCopy = source.slice()
+  } else {
+    dataCopy = new Uint8Array(source.slice(0))
+  }
+
   const loadingTask = pdfjs.getDocument({
-    data: source,
+    data: dataCopy,
     cMapUrl: "https://unpkg.com/pdfjs-dist@legacy/cmaps/",
     cMapPacked: true,
   })

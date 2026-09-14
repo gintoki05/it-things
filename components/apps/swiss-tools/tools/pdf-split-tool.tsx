@@ -207,7 +207,7 @@ export function PdfSplitTool({ onDirtyChange }: PdfSplitToolProps) {
   // Export Mode 1: Simpan halaman terpilih jadi 1 PDF tunggal
   const handleSaveSelectedAsSinglePdf = async () => {
     const selectedPages = pages.filter((p) => p.isSelected)
-    if (!file || !fileBuffer || selectedPages.length === 0) {
+    if (!file || selectedPages.length === 0) {
       setStatus({ type: "error", message: "Pilih minimal 1 halaman untuk disimpan." })
       return
     }
@@ -216,7 +216,8 @@ export function PdfSplitTool({ onDirtyChange }: PdfSplitToolProps) {
       setIsProcessing(true)
       setStatus(null)
 
-      const sourceDoc = await PDFDocument.load(fileBuffer, { ignoreEncryption: true })
+      const buffer = await file.arrayBuffer()
+      const sourceDoc = await PDFDocument.load(buffer, { ignoreEncryption: true })
       const newDoc = await PDFDocument.create()
 
       for (const p of selectedPages) {
@@ -249,7 +250,7 @@ export function PdfSplitTool({ onDirtyChange }: PdfSplitToolProps) {
   // Export Mode 2: Pecah tiap halaman terpilih jadi file terpisah (ZIP)
   const handleSplitToZip = async () => {
     const selectedPages = pages.filter((p) => p.isSelected)
-    if (!file || !fileBuffer || selectedPages.length === 0) {
+    if (!file || selectedPages.length === 0) {
       setStatus({ type: "error", message: "Pilih minimal 1 halaman untuk dipecah." })
       return
     }
@@ -258,7 +259,8 @@ export function PdfSplitTool({ onDirtyChange }: PdfSplitToolProps) {
       setIsProcessing(true)
       setStatus(null)
 
-      const sourceDoc = await PDFDocument.load(fileBuffer, { ignoreEncryption: true })
+      const buffer = await file.arrayBuffer()
+      const sourceDoc = await PDFDocument.load(buffer, { ignoreEncryption: true })
       const baseName = file.name.replace(/\.pdf$/i, "")
       const splitFiles: { name: string; blob: Blob }[] = []
 

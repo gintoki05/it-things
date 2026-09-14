@@ -161,7 +161,7 @@ export function PdfCompressTool({ onDirtyChange }: PdfCompressToolProps) {
 
   // Eksekusi Kompresi
   const handleCompress = async () => {
-    if (!file || !fileBuffer) return
+    if (!file) return
 
     const activeConfig = PRESETS.find((p) => p.id === preset) || PRESETS[0]
 
@@ -171,7 +171,8 @@ export function PdfCompressTool({ onDirtyChange }: PdfCompressToolProps) {
       setResult(null)
       setProgress({ current: 0, total: pageCount || 1, msg: "Mempersiapkan dokumen..." })
 
-      const pdfJsDoc = await loadPdfDocument(fileBuffer)
+      const freshBuffer = await file.arrayBuffer()
+      const pdfJsDoc = await loadPdfDocument(freshBuffer)
       const totalPages = pdfJsDoc.numPages
       const newPdfDoc = await PDFDocument.create()
 
