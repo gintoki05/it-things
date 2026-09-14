@@ -5,21 +5,116 @@ import { useAuth } from "@/lib/auth"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { UserAvatar } from "@/components/retro/user-avatar"
 import { usePicStore } from "@/lib/pic-store"
-import { RETRO_AVATAR_PRESETS, isRetroAvatarPreset, findRetroAvatarPreset } from "@/lib/avatar-presets"
-import { User, X, Check, AlertCircle, ShieldCheck, ShieldAlert, Sparkles, Image as ImageIcon } from "lucide-react"
+import { RETRO_AVATAR_PRESETS, findRetroAvatarPreset } from "@/lib/avatar-presets"
+import { uploadProfilePhotoAction } from "@/app/actions/team"
+import {
+  User,
+  X,
+  Check,
+  AlertCircle,
+  ShieldCheck,
+  ShieldAlert,
+  Camera,
+  Upload,
+  Image as ImageIcon,
+  Loader2,
+} from "lucide-react"
 
 interface EditProfileModalProps {
   isOpen: boolean
   onClose: () => void
 }
 
+/**
+ * Center-crop image to square and resize to max 400x400 WebP/JPEG
+ */
+function processImageToSquare(
+  file: File,
+  maxDim = 400
+): Promise<{ blob: Blob; dataUrl: string }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas")
+          const ctx = canvas.getContext("2d")
+          if (!ctx) {
+            reject(new Error("Gagal menginisialisasi canvas untuk kompresi."))
+            return
+          }
+
+          // Center crop to 1:1 square
+          const minSide = Math.min(img.width, img.height)
+          const sx = (img.width - minSide) / 2
+          const sy = (img.height - minSide) / 2
+
+          const targetDim = Math.min(minSide, maxDim)
+          canvas.width = targetDim
+          canvas.height = targetDim
+
+          ctx.drawImage(
+            img,
+            sx,
+            sy,
+            minSide,
+            minSide,
+            0,
+            0,
+            targetDim,
+            targetDim
+          )
+
+          const dataUrl = canvas.toDataURL("image/webp", 0.88)
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve({ blob, dataUrl })
+              } else {
+                canvas.toBlob(
+                  (jpegBlob) => {
+                    if (jpegBlob) {
+                      resolve({
+                        blob: jpegBlob,
+                        dataUrl: canvas.toDataURL("image/jpeg", 0.88),
+                      })
+                    } else {
+                      reject(new Error("Gagal mengonversi gambar."))
+                    }
+                  },
+                  "image/jpeg",
+                  0.88
+                )
+              }
+            },
+            "image/webp",
+            0.88
+          )
+        } catch (err) {
+          reject(err instanceof Error ? err : new Error("Gagal memproses gambar."))
+        }
+      }
+      img.onerror = () => reject(new Error("Format file gambar tidak valid."))
+      img.src = e.target?.result as string
+    }
+    reader.onerror = () => reject(new Error("Gagal membaca file gambar."))
+    reader.readAsDataURL(file)
+  })
+}
+
 export function EditProfileModal({ isOpen, onClose }: EditProfileModalProps) {
   const { user, isGuest, isAdmin, updateProfile } = useAuth()
   const { getUserPicTags } = usePicStore()
 
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
   const [name, setName] = React.useState("")
   const [selectedAvatar, setSelectedAvatar] = React.useState<string>("")
+  const [savedCustomPhoto, setSavedCustomPhoto] = React.useState<string | null>(null)
+  const [pendingFile, setPendingFile] = React.useState<File | null>(null)
+  const [isProcessingImage, setIsProcessingImage] = React.useState(false)
   const [isSaving, setIsSaving] = React.useState(false)
+  const [savingStatus, setSavingStatus] = React.useState<string | null>(null)
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null)
 
@@ -30,8 +125,20 @@ export function EditProfileModal({ isOpen, onClose }: EditProfileModalProps) {
     if (isOpen && user) {
       setName(user.name || "")
       setSelectedAvatar(user.avatarUrl || "")
+      setPendingFile(null)
+      setIsProcessingImage(false)
+      setSavingStatus(null)
       setErrorMessage(null)
       setSuccessMessage(null)
+
+      const cur = user.avatarUrl || ""
+      const isPreset = RETRO_AVATAR_PRESETS.some((p) => p.url === cur)
+      const isGoogle = user.googleAvatarUrl && cur === user.googleAvatarUrl
+      if (cur && !isPreset && !isGoogle) {
+        setSavedCustomPhoto(cur)
+      } else {
+        setSavedCustomPhoto(null)
+      }
     }
   }, [isOpen, user])
 
@@ -62,9 +169,51 @@ export function EditProfileModal({ isOpen, onClose }: EditProfileModalProps) {
 
   if (!isOpen || !user) return null
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ""
+
+    setErrorMessage(null)
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+    if (!allowedTypes.includes(file.type)) {
+      setErrorMessage("Format foto harus JPG, PNG, WebP, atau GIF.")
+      return
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setErrorMessage("Ukuran file maksimal 10MB.")
+      return
+    }
+
+    try {
+      setIsProcessingImage(true)
+      const { blob, dataUrl } = await processImageToSquare(file, 400)
+      setIsProcessingImage(false)
+
+      setSelectedAvatar(dataUrl)
+
+      if (isGuest) {
+        setPendingFile(null)
+      } else {
+        const processedFile = new File(
+          [blob],
+          file.name.replace(/\.[^/.]+$/, ".webp"),
+          { type: blob.type || "image/webp" }
+        )
+        setPendingFile(processedFile)
+      }
+    } catch (err) {
+      setIsProcessingImage(false)
+      setErrorMessage(err instanceof Error ? err.message : "Gagal memproses gambar.")
+    }
+  }
+
   const hasChanges =
     name.trim() !== user.name ||
-    selectedAvatar !== (user.avatarUrl || "")
+    selectedAvatar !== (user.avatarUrl || "") ||
+    pendingFile !== null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -87,11 +236,45 @@ export function EditProfileModal({ isOpen, onClose }: EditProfileModalProps) {
     }
 
     setIsSaving(true)
+    let finalAvatarUrl = selectedAvatar
+
+    // Jika ada pending upload file ke storage Supabase
+    if (pendingFile && !isGuest && isSupabaseConfigured && supabase) {
+      try {
+        setSavingStatus("Mengunggah foto...")
+        const sessionRes = await supabase.auth.getSession()
+        const token = sessionRes.data.session?.access_token || null
+
+        const formData = new FormData()
+        formData.append("file", pendingFile)
+        if (token) {
+          formData.append("token", token)
+        }
+
+        const uploadRes = await uploadProfilePhotoAction(formData)
+        if (!uploadRes.success || !uploadRes.avatarUrl) {
+          setIsSaving(false)
+          setSavingStatus(null)
+          setErrorMessage(uploadRes.error || "Gagal mengunggah foto ke storage.")
+          return
+        }
+
+        finalAvatarUrl = uploadRes.avatarUrl
+      } catch (err: unknown) {
+        setIsSaving(false)
+        setSavingStatus(null)
+        setErrorMessage(err instanceof Error ? err.message : "Gagal mengunggah foto.")
+        return
+      }
+    }
+
+    setSavingStatus("Menyimpan profil...")
     const res = await updateProfile({
       name: trimmed,
-      avatarUrl: selectedAvatar,
+      avatarUrl: finalAvatarUrl,
     })
     setIsSaving(false)
+    setSavingStatus(null)
 
     if (res.success) {
       setSuccessMessage("Profil & avatar berhasil diperbarui!")
@@ -106,6 +289,7 @@ export function EditProfileModal({ isOpen, onClose }: EditProfileModalProps) {
   const activePreset = findRetroAvatarPreset(selectedAvatar)
   const isUsingGoogle = !!(googlePhoto && selectedAvatar === googlePhoto)
   const isUsingInitials = selectedAvatar === ""
+  const isCustomActive = !activePreset && !isUsingGoogle && !isUsingInitials
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] overflow-y-auto flex items-center justify-center p-3 sm:p-4 select-none min-h-full">
@@ -129,16 +313,25 @@ export function EditProfileModal({ isOpen, onClose }: EditProfileModalProps) {
         <form onSubmit={handleSubmit} className="p-3 sm:p-4 space-y-3.5 text-xs font-sans text-[#14253D] overflow-y-auto flex-1 flex flex-col">
           {/* Avatar Preview & Identitas Header */}
           <div className="flex items-center gap-3 p-3 bg-white/80 border border-[#A4B5C6] rounded-[2px] shadow-inner">
-            <div className="relative shrink-0">
+            <div
+              className="relative shrink-0 group cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+              title="Klik untuk upload foto baru"
+            >
               <UserAvatar
                 src={selectedAvatar}
                 name={name || user.name}
-                size="size-13"
+                size="size-14"
                 textClass="text-base font-bold"
               />
-              <span className="absolute -bottom-1 -right-1 size-4 bg-[#1E4E8C] text-white rounded-full flex items-center justify-center text-[9px] shadow border border-white">
-                <Sparkles className="size-2.5" />
+              <span className="absolute -bottom-1 -right-1 size-5 bg-[#1E4E8C] text-white rounded-full flex items-center justify-center shadow border border-white group-hover:bg-[#153A6B] transition-colors">
+                <Camera className="size-3" />
               </span>
+              {isProcessingImage && (
+                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white">
+                  <Loader2 className="size-4 animate-spin" />
+                </div>
+              )}
             </div>
             <div className="min-w-0 flex-1">
               <div className="font-bold text-sm truncate">{name || user.name}</div>
@@ -174,7 +367,9 @@ export function EditProfileModal({ isOpen, onClose }: EditProfileModalProps) {
                     ? "Avatar: Akun Google"
                     : isUsingInitials
                     ? "Avatar: Inisial Huruf"
-                    : "Avatar: Kustom"}
+                    : pendingFile
+                    ? "Avatar: Foto Baru"
+                    : "Avatar: Foto Kustom"}
                 </span>
               </div>
             </div>
@@ -198,7 +393,10 @@ export function EditProfileModal({ isOpen, onClose }: EditProfileModalProps) {
                     key={preset.id}
                     type="button"
                     title={preset.name}
-                    onClick={() => setSelectedAvatar(preset.url)}
+                    onClick={() => {
+                      setSelectedAvatar(preset.url)
+                      setPendingFile(null)
+                    }}
                     className={`group relative p-1.5 rounded-[2px] flex flex-col items-center justify-center transition-all cursor-pointer ${
                       isSelected
                         ? "bg-[#1E4E8C] text-white shadow-inner border border-[#102A45]"
@@ -227,17 +425,61 @@ export function EditProfileModal({ isOpen, onClose }: EditProfileModalProps) {
               })}
             </div>
 
-            {/* Sumber Avatar Lainnya (Google & Inisial) */}
-            <div className="space-y-1 pt-1.5">
+            {/* Sumber Avatar Lainnya (Upload, Google & Inisial) */}
+            <div className="space-y-1.5 pt-1.5">
               <span className="text-[10px] font-mono font-bold text-[#102A45] block">
                 SUMBER AVATAR LAINNYA:
               </span>
-              <div className="flex items-center gap-2">
+
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+
+              {/* Tombol Upload Foto */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isProcessingImage || isSaving}
+                className={`w-full py-1.5 px-3 text-[11px] font-mono flex items-center justify-center gap-2 rounded-[2px] border transition-all cursor-pointer ${
+                  isCustomActive
+                    ? "bg-[#1E4E8C] text-white border-[#102A45] shadow-inner font-bold"
+                    : "bg-white hover:bg-[#EEF3F8] text-[#14253D] border border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] shadow-sm active:translate-y-px"
+                }`}
+              >
+                {isProcessingImage ? (
+                  <>
+                    <Loader2 className="size-3.5 animate-spin" />
+                    <span>Memproses Foto...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="size-3.5" />
+                    <span className="truncate">
+                      {pendingFile
+                        ? "✓ Foto Baru Dipilih (Klik Simpan)"
+                        : isCustomActive
+                        ? "✓ Foto Kustom (Aktif) — Klik untuk Ganti"
+                        : "Upload Foto Profil Baru (JPG/PNG/WebP)"}
+                    </span>
+                  </>
+                )}
+              </button>
+
+              {/* Row Opsi: Foto Google, Saved Custom Photo, Inisial */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-0.5">
                 {googlePhoto ? (
                   <button
                     type="button"
-                    onClick={() => setSelectedAvatar(googlePhoto)}
-                    className={`flex-1 py-1.5 px-2.5 text-[11px] font-mono flex items-center justify-center gap-2 rounded-[2px] border transition-all cursor-pointer ${
+                    onClick={() => {
+                      setSelectedAvatar(googlePhoto)
+                      setPendingFile(null)
+                    }}
+                    className={`py-1.5 px-2.5 text-[10px] font-mono flex items-center justify-center gap-1.5 rounded-[2px] border transition-all cursor-pointer ${
                       isUsingGoogle
                         ? "bg-[#1E4E8C] text-white border-[#102A45] shadow-inner font-bold"
                         : "bg-white hover:bg-[#EEF3F8] text-[#14253D] border border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] shadow-sm active:translate-y-px"
@@ -246,22 +488,35 @@ export function EditProfileModal({ isOpen, onClose }: EditProfileModalProps) {
                     <img
                       src={googlePhoto}
                       alt="Google"
-                      className="size-4 rounded-full object-cover shrink-0 border border-gray-300"
+                      className="size-3.5 rounded-full object-cover shrink-0 border border-gray-300"
                     />
                     <span className="truncate">
-                      {isUsingGoogle ? "✓ Foto Akun Google (Aktif)" : "Kembalikan ke Foto Akun Google"}
+                      {isUsingGoogle ? "✓ Foto Akun Google" : "Pakai Foto Google"}
                     </span>
                   </button>
-                ) : !isGuest ? (
-                  <div className="flex-1 py-1 px-2 text-[10px] font-mono text-gray-400 bg-gray-100 rounded border border-dashed border-gray-300 text-center">
-                    Foto Google tidak terdeteksi
-                  </div>
+                ) : null}
+
+                {savedCustomPhoto && (selectedAvatar !== savedCustomPhoto || pendingFile) ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedAvatar(savedCustomPhoto)
+                      setPendingFile(null)
+                    }}
+                    className="py-1.5 px-2.5 text-[10px] font-mono flex items-center justify-center gap-1.5 rounded-[2px] border bg-white hover:bg-[#EEF3F8] text-[#14253D] border border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] shadow-sm active:translate-y-px cursor-pointer"
+                  >
+                    <ImageIcon className="size-3.5 text-blue-600" />
+                    <span className="truncate">Kembalikan Foto Kustom</span>
+                  </button>
                 ) : null}
 
                 <button
                   type="button"
-                  onClick={() => setSelectedAvatar("")}
-                  className={`py-1.5 px-3 text-[11px] font-mono flex items-center justify-center gap-1.5 rounded-[2px] border transition-all cursor-pointer ${
+                  onClick={() => {
+                    setSelectedAvatar("")
+                    setPendingFile(null)
+                  }}
+                  className={`py-1.5 px-2.5 text-[10px] font-mono flex items-center justify-center gap-1.5 rounded-[2px] border transition-all cursor-pointer ${
                     isUsingInitials
                       ? "bg-[#1E4E8C] text-white border-[#102A45] shadow-inner font-bold"
                       : "bg-[#D4DDE6] hover:bg-white text-[#14253D] border border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] active:translate-y-px"
@@ -316,17 +571,18 @@ export function EditProfileModal({ isOpen, onClose }: EditProfileModalProps) {
             <button
               type="button"
               onClick={onClose}
-              disabled={isSaving}
+              disabled={isSaving || isProcessingImage}
               className="px-3.5 py-1.5 sm:py-1 min-h-[32px] sm:min-h-0 bg-[#D4DDE6] hover:bg-[#C2CEDC] text-[#14253D] font-mono text-xs border border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] rounded-[2px] active:translate-y-px cursor-pointer touch-manipulation"
             >
               Batal
             </button>
             <button
               type="submit"
-              disabled={isSaving || !name.trim() || !hasChanges}
-              className="px-4 py-1.5 sm:py-1 min-h-[32px] sm:min-h-0 bg-[#1E4E8C] hover:bg-[#153A6B] text-white font-mono text-xs font-bold border border-[#102A45] shadow-[1px_1px_0px_#102A45] rounded-[2px] active:translate-y-px cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+              disabled={isSaving || isProcessingImage || !name.trim() || !hasChanges}
+              className="px-4 py-1.5 sm:py-1 min-h-[32px] sm:min-h-0 bg-[#1E4E8C] hover:bg-[#153A6B] text-white font-mono text-xs font-bold border border-[#102A45] shadow-[1px_1px_0px_#102A45] rounded-[2px] active:translate-y-px cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation flex items-center gap-1.5"
             >
-              {isSaving ? "Menyimpan..." : "Simpan Perubahan"}
+              {isSaving && <Loader2 className="size-3 animate-spin" />}
+              <span>{savingStatus || (isSaving ? "Menyimpan..." : "Simpan Perubahan")}</span>
             </button>
           </div>
         </form>

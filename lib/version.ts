@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.21"
+export const APP_VERSION = "v2.3.22"
 export const APP_BUILD = "2026.09.14"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.22",
+    date: "14 Sep 2026",
+    codename: "Custom Profile Photo Upload, Supabase Storage Bucket & Client-Side Auto-Crop",
+    changes: [
+      "Fitur Upload Foto Profil (PROFILE.EXE): Pengguna kini dapat mengunggah foto profil kustom (JPG, PNG, WebP, GIF) langsung dari jendela edit profil atau klik pada avatar preview.",
+      "Supabase Storage Bucket & RLS: Penyimpanan foto profil terpusat di bucket 'avatars' Supabase dengan kebijakan Row Level Security (RLS) terisolasi untuk integritas dan keamanan data tim.",
+      "Server Action Upload: Integrasi upload server-side (uploadProfilePhotoAction) via Server Actions Next.js yang memvalidasi otorisasi dan format berkas secara ketat tanpa mengekspos endpoint atau skema database internal.",
+      "Client-Side 1:1 Auto-Crop & WebP Compression: Pemrosesan gambar otomatis di sisi browser menggunakan HTML5 Canvas, memastikan foto terpotong rapi di tengah (square) dan terkompresi di bawah 40KB untuk loading super cepat dan hemat kuota.",
+      "Dukungan Mode Tamu (Guest) & Transisi Mulus: Penyimpanan avatar kustom berbasis data URL lokal untuk mode tamu, serta kemudahan berganti kapan saja antara Foto Kustom, Preset Retro, Foto Google, atau Inisial.",
+    ],
+  },
   {
     version: "v2.3.21",
     date: "14 Sep 2026",

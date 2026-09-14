@@ -253,3 +253,83 @@ export async function deleteTeamMemberAction(
     }
   }
 }
+
+export async function uploadProfilePhotoAction(formData: FormData): Promise<{
+  success: boolean
+  avatarUrl?: string
+  error?: string
+}> {
+  const token = formData.get("token") as string | null
+  const file = formData.get("file") as File | null
+
+  if (!file) {
+    return { success: false, error: "File foto tidak ditemukan." }
+  }
+
+  const supabase = createServerSupabase(token)
+  if (!supabase) {
+    return { success: false, error: "Supabase tidak terkonfigurasi." }
+  }
+
+  try {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return { success: false, error: "Sesi tidak valid atau belum login." }
+    }
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+    ]
+    if (!allowedTypes.includes(file.type)) {
+      return {
+        success: false,
+        error: "Format file harus berupa JPG, PNG, WebP, atau GIF.",
+      }
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      return { success: false, error: "Ukuran file maksimal 5MB." }
+    }
+
+    const extMap: Record<string, string> = {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+      "image/gif": "gif",
+    }
+    const ext = extMap[file.type] || "webp"
+    const filePath = `${user.id}/${Date.now()}.${ext}`
+
+    const arrayBuffer = await file.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+
+    const { error: uploadError } = await supabase.storage
+      .from("avatars")
+      .upload(filePath, buffer, {
+        contentType: file.type,
+        upsert: true,
+      })
+
+    if (uploadError) {
+      return { success: false, error: uploadError.message }
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from("avatars")
+      .getPublicUrl(filePath)
+
+    return { success: true, avatarUrl: publicUrlData.publicUrl }
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error:
+        err instanceof Error ? err.message : "Gagal mengunggah foto profil.",
+    }
+  }
+}
