@@ -5,6 +5,7 @@ export type SwissToolId =
   | "pdf-merge"
   | "pdf-split"
   | "pdf-convert"
+  | "pdf-compress"
   | "jwt"
   | "hash"
   | "encode"
@@ -53,6 +54,14 @@ export const SWISS_TOOLS: SwissToolDefinition[] = [
     command: "PDF_CONV.EXE",
     category: "format",
     description: "Konversi gambar (JPG/PNG) ke PDF atau ekstrak halaman PDF menjadi gambar berkualitas tinggi.",
+    badge: "PDF",
+  },
+  {
+    id: "pdf-compress",
+    name: "Kompres PDF",
+    command: "PDF_COMPRESS.EXE",
+    category: "format",
+    description: "Perkecil ukuran file PDF (Ekstrem, Rekomendasi, Ringan) untuk batas upload email atau portal.",
     badge: "PDF",
   },
   {

@@ -14,6 +14,7 @@ import { RegexTool } from "./swiss-tools/tools/regex-tool"
 import { PdfMergeTool } from "./swiss-tools/tools/pdf-merge-tool"
 import { PdfSplitTool } from "./swiss-tools/tools/pdf-split-tool"
 import { PdfConvertTool } from "./swiss-tools/tools/pdf-convert-tool"
+import { PdfCompressTool } from "./swiss-tools/tools/pdf-compress-tool"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   FileCode,
@@ -31,6 +32,7 @@ import {
   Files,
   Scissors,
   FileImage,
+  Minimize2,
 } from "lucide-react"
 
 const TOOL_ICONS: Record<SwissToolId, React.ComponentType<{ className?: string }>> = {
@@ -38,6 +40,7 @@ const TOOL_ICONS: Record<SwissToolId, React.ComponentType<{ className?: string }
   "pdf-merge": Files,
   "pdf-split": Scissors,
   "pdf-convert": FileImage,
+  "pdf-compress": Minimize2,
   jwt: KeyRound,
   hash: Hash,
   encode: Binary,
@@ -135,6 +138,8 @@ export function SwissToolsApp() {
         return <PdfSplitTool onDirtyChange={setIsToolDirty} />
       case "pdf-convert":
         return <PdfConvertTool onDirtyChange={setIsToolDirty} />
+      case "pdf-compress":
+        return <PdfCompressTool onDirtyChange={setIsToolDirty} />
       case "jwt":
         return <JwtTool />
       case "hash":

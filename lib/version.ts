@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.24"
+export const APP_VERSION = "v2.3.25"
 export const APP_BUILD = "2026.09.14"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.25",
+    date: "14 Sep 2026",
+    codename: "PDF_COMPRESS.EXE Client-Side PDF Compressor with Smart Presets & Live Comparison",
+    changes: [
+      "Modul Baru PDF_COMPRESS.EXE: Utilitas kompresi berkas PDF 100% client-side di Swiss Army Tools untuk mengecilkan ukuran dokumen tanpa kirim data ke server luar.",
+      "Tiga Level Preset Kompresi: Pilihan Rekomendasi (keseimbangan terbaik ~50%-75%), Ekstrem (ukuran terkecil untuk batas portal < 1MB), dan Ringan (kualitas tajam).",
+      "Komparasi Ukuran Sebelum vs Sesudah: Tampilan metrik Before vs After dan persentase penghematan ukuran file secara real-time.",
+      "Pratinjau Hasil & Auto-Download: Integrasi penampil PREVIEW_DOKUMEN.EXE untuk cek dokumen asli maupun hasil kompresi sebelum/sesudah unduh otomatis.",
+      "Proteksi Dokumen 3-Lapis: Pengaman unsaved guard browser beforeunload, konfirmasi pindah tool, dan penutupan jendela desktop.",
+    ],
+  },
   {
     version: "v2.3.24",
     date: "14 Sep 2026",
