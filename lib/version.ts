@@ -5,12 +5,23 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.26"
+export const APP_VERSION = "v2.3.27"
 export const APP_BUILD = "2026.09.14"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.27",
+    date: "14 Sep 2026",
+    codename: "Media & Video Grabber in Swiss Army Tools (MEDIA_GRAB.EXE)",
+    changes: [
+      "Media & Video Grabber (MEDIA_GRAB.EXE): Utilitas unduh media langsung dari TikTok (video HD no-watermark & audio MP3) dan Twitter/X (MP4) tanpa iklan.",
+      "Penempatan Paling Atas di SwissTools: Kategori 'Media & Downloader' kini menjadi tab default paling atas saat membuka SwissTools.",
+      "UI Sleek & Minimalis: Desain retro Windows 98 yang ringkas dengan tombol Paste instan, pratinjau thumbnail otomatis, dan indikator status platform.",
+      "Informasi Pembatasan YouTube: Deteksi cerdas tautan YouTube dengan informasi edukatif mengenai proteksi bot server.",
+    ],
+  },
   {
     version: "v2.3.26",
     date: "14 Sep 2026",

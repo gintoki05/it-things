@@ -15,6 +15,7 @@ import { PdfMergeTool } from "./swiss-tools/tools/pdf-merge-tool"
 import { PdfSplitTool } from "./swiss-tools/tools/pdf-split-tool"
 import { PdfConvertTool } from "./swiss-tools/tools/pdf-convert-tool"
 import { PdfCompressTool } from "./swiss-tools/tools/pdf-compress-tool"
+import { MediaDownloadTool } from "./swiss-tools/tools/media-download-tool"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   FileCode,
@@ -33,6 +34,7 @@ import {
   Scissors,
   FileImage,
   Minimize2,
+  Download,
 } from "lucide-react"
 
 const TOOL_ICONS: Record<SwissToolId, React.ComponentType<{ className?: string }>> = {
@@ -48,9 +50,11 @@ const TOOL_ICONS: Record<SwissToolId, React.ComponentType<{ className?: string }
   timestamp: Clock,
   case: CaseSensitive,
   regex: Regex,
+  "media-download": Download,
 }
 
 const CATEGORY_NAMES: Record<SwissToolCategory, string> = {
+  media: "Media & Downloader",
   format: "Format & Dokumen",
   crypto: "Keamanan & Kripto",
   generator: "Waktu & Generator",
@@ -59,7 +63,7 @@ const CATEGORY_NAMES: Record<SwissToolCategory, string> = {
 
 export function SwissToolsApp() {
   const { closeWindow, openAboutDialog } = useDesktop()
-  const [activeToolId, setActiveToolId] = React.useState<SwissToolId>("json")
+  const [activeToolId, setActiveToolId] = React.useState<SwissToolId>("media-download")
   const [searchQuery, setSearchQuery] = React.useState("")
   const [activeMenu, setActiveMenu] = React.useState<string | null>(null)
 
@@ -114,6 +118,7 @@ export function SwissToolsApp() {
   // Kelompokkan tools berdasarkan kategori
   const categorizedTools = React.useMemo(() => {
     const groups: { category: SwissToolCategory; items: typeof SWISS_TOOLS }[] = [
+      { category: "media", items: [] },
       { category: "format", items: [] },
       { category: "crypto", items: [] },
       { category: "generator", items: [] },
@@ -154,6 +159,8 @@ export function SwissToolsApp() {
         return <CaseTool />
       case "regex":
         return <RegexTool />
+      case "media-download":
+        return <MediaDownloadTool />
       default:
         return <JsonTool />
     }

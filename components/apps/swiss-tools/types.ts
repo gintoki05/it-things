@@ -1,6 +1,7 @@
-export type SwissToolCategory = "format" | "crypto" | "generator" | "text"
+export type SwissToolCategory = "media" | "format" | "crypto" | "generator" | "text"
 
 export type SwissToolId =
+  | "media-download"
   | "json"
   | "pdf-merge"
   | "pdf-split"
@@ -24,6 +25,14 @@ export interface SwissToolDefinition {
 }
 
 export const SWISS_TOOLS: SwissToolDefinition[] = [
+  {
+    id: "media-download",
+    name: "Media & Video Grabber",
+    command: "MEDIA_GRAB.EXE",
+    category: "media",
+    description: "Download video atau audio dari YouTube, TikTok, Twitter/X, Instagram tanpa iklan.",
+    badge: "New",
+  },
   {
     id: "json",
     name: "JSON Formatter & Validator",
