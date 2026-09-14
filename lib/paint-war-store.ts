@@ -68,15 +68,28 @@ export const PAINT_WAR_WORDS: WordItem[] = [
   { word: "PISANG GORENG", hint: "Camilan sore hangat", category: "Umum" },
 ]
 
-export function getRandomWordOptions(count = 3): WordItem[] {
-  const shuffled = [...PAINT_WAR_WORDS].sort(() => 0.5 - Math.random())
+export function getRandomWordOptions(count = 3, category?: string | null): WordItem[] {
+  let pool = PAINT_WAR_WORDS
+  if (category && category !== "Campuran" && category !== "Semua") {
+    const filtered = PAINT_WAR_WORDS.filter((w) => w.category === category)
+    if (filtered.length >= count) {
+      pool = filtered
+    }
+  }
+  const shuffled = [...pool].sort(() => 0.5 - Math.random())
   return shuffled.slice(0, count)
 }
 
-// ─── Interfaces ─────────────────────────────────────────────
+export interface PaintWarGameOptions {
+  totalRounds?: number
+  roundDurationSec?: number
+  category?: string
+  targetDrawerId?: string
+}
+
 export interface PaintWarRoom {
   id: string
-  status: "waiting" | "selecting_word" | "drawing" | "round_ended"
+  status: "waiting" | "selecting_word" | "drawing" | "round_ended" | "game_over"
   currentDrawerId: string | null
   currentDrawerName: string | null
   currentDrawerAvatar: string | null
@@ -98,7 +111,8 @@ export interface PaintWarPlayer {
   userId: string
   userName: string
   userAvatar: string | null
-  score: number
+  score: number // Skor match / sesi ronde saat ini
+  totalScore: number // Skor akumulasi permanen (all-time)
   hasGuessed: boolean
   isDrawing: boolean
   isOnline: boolean
@@ -146,12 +160,99 @@ export function generateMaskedHint(word: string): string {
     .trim()
 }
 
+/**
+ * Normalisasi kata tebakan untuk perbandingan toleran spasi dan tanda baca
+ */
+export function normalizeGuess(text: string): string {
+  return text
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .trim()
+}
+
+/**
+ * Algoritma Levenshtein Distance untuk menghitung jarak perbedaan karakter
+ */
+export function getLevenshteinDistance(a: string, b: string): number {
+  if (a === b) return 0
+  if (a.length === 0) return b.length
+  if (b.length === 0) return a.length
+
+  const row = Array.from({ length: a.length + 1 }, (_, i) => i)
+
+  for (let i = 1; i <= b.length; i++) {
+    let prev = i
+    for (let j = 1; j <= a.length; j++) {
+      const cost = b.charAt(i - 1) === a.charAt(j - 1) ? 0 : 1
+      const val = Math.min(
+        row[j] + 1,
+        prev + 1,
+        row[j - 1] + cost
+      )
+      row[j - 1] = prev
+      prev = val
+    }
+    row[a.length] = prev
+  }
+
+  return row[a.length]
+}
+
+/**
+ * Cek apakah tebakan pemain mendekati kata rahasia (hampir benar)
+ * - Typo 1 huruf (Levenshtein = 1)
+ * - Typo 2 huruf untuk kata panjang (>= 8 karakter tanpa spasi)
+ * - Menebak salah satu kata pada kata majemuk (misal "kabel" untuk "KABEL LAN")
+ * - Substring signifikan dengan kemiripan tinggi
+ */
+export function isAlmostCorrect(guess: string, target: string): boolean {
+  const cleanGuess = normalizeGuess(guess)
+  const cleanTarget = normalizeGuess(target)
+
+  if (!cleanGuess || !cleanTarget || cleanGuess === cleanTarget) {
+    return false
+  }
+
+  // 1. Cek jarak Levenshtein
+  const dist = getLevenshteinDistance(cleanGuess, cleanTarget)
+  if (dist === 1 && (cleanTarget.length >= 4 || cleanGuess.startsWith(cleanTarget))) {
+    return true
+  }
+  if (dist === 2 && cleanTarget.length >= 8 && cleanGuess.length >= 6) {
+    return true
+  }
+
+  // 2. Cek jika kata target terdiri dari beberapa kata (kata majemuk)
+  const targetWords = target
+    .toUpperCase()
+    .split(/[\s\-_]+/)
+    .map((w) => normalizeGuess(w))
+    .filter((w) => w.length >= 3)
+
+  for (const part of targetWords) {
+    if (cleanGuess === part) return true
+    if (part.length >= 4 && getLevenshteinDistance(cleanGuess, part) === 1) return true
+  }
+
+  // 3. Substring signifikan (panjang >= 4 dan mencakup minimal 50% panjang target)
+  if (
+    cleanGuess.length >= 4 &&
+    cleanGuess.length >= Math.floor(cleanTarget.length * 0.5) &&
+    cleanTarget.includes(cleanGuess)
+  ) {
+    return true
+  }
+
+  return false
+}
+
 // ─── Main Hook: usePaintWar ─────────────────────────────────
 export function usePaintWar(roomId: string = DEFAULT_PAINT_ROOM_ID) {
   const { user } = useAuth()
 
   const [room, setRoom] = React.useState<PaintWarRoom | null>(null)
   const [players, setPlayers] = React.useState<PaintWarPlayer[]>([])
+  const [onlineUserIds, setOnlineUserIds] = React.useState<Set<string>>(new Set())
   const [messages, setMessages] = React.useState<PaintWarMessage[]>([])
   const [wordChoices, setWordChoices] = React.useState<WordItem[]>([])
   const [timeLeft, setTimeLeft] = React.useState<number>(60)
@@ -160,10 +261,27 @@ export function usePaintWar(roomId: string = DEFAULT_PAINT_ROOM_ID) {
   // External listener for incoming realtime draw events
   const drawEventListenerRef = React.useRef<((event: DrawEvent) => void) | null>(null)
 
+  // Presence-aware player list, prioritized online players
+  const activePlayers = React.useMemo(() => {
+    return players
+      .map((p) => {
+        const isOnline = onlineUserIds.size > 0 ? onlineUserIds.has(p.userId) : p.isOnline
+        return {
+          ...p,
+          isOnline,
+        }
+      })
+      .sort((a, b) => {
+        if (a.isOnline && !b.isOnline) return -1
+        if (!a.isOnline && b.isOnline) return 1
+        return b.score - a.score
+      })
+  }, [players, onlineUserIds])
+
   const isCurrentDrawer = Boolean(user && room && room.currentDrawerId === user.id)
   const myPlayer = React.useMemo(
-    () => players.find((p) => p.userId === user?.id),
-    [players, user?.id]
+    () => activePlayers.find((p) => p.userId === user?.id),
+    [activePlayers, user?.id]
   )
   const hasGuessedWord = Boolean(myPlayer?.hasGuessed)
 
@@ -215,6 +333,7 @@ export function usePaintWar(roomId: string = DEFAULT_PAINT_ROOM_ID) {
             userName: p.user_name,
             userAvatar: p.user_avatar,
             score: p.score,
+            totalScore: p.total_score ?? p.score ?? 0,
             hasGuessed: p.has_guessed,
             isDrawing: p.is_drawing,
             isOnline: p.is_online,
@@ -325,6 +444,20 @@ export function usePaintWar(roomId: string = DEFAULT_PAINT_ROOM_ID) {
     const channelName = `paint-war-lobby-${roomId}`
     const channel = supabase.channel(channelName)
 
+    // Realtime Presence tracking
+    channel.on("presence", { event: "sync" }, () => {
+      const state = channel.presenceState()
+      const ids = new Set<string>()
+      Object.values(state).forEach((presences: any) => {
+        if (Array.isArray(presences)) {
+          presences.forEach((item: any) => {
+            if (item.userId) ids.add(item.userId)
+          })
+        }
+      })
+      setOnlineUserIds(ids)
+    })
+
     // A. Broadcast draw events (ultra-low latency)
     channel
       .on("broadcast", { event: "draw_event" }, ({ payload }) => {
@@ -393,6 +526,7 @@ export function usePaintWar(roomId: string = DEFAULT_PAINT_ROOM_ID) {
                       userName: p.user_name,
                       userAvatar: p.user_avatar,
                       score: p.score,
+                      totalScore: p.total_score ?? p.score ?? 0,
                       hasGuessed: p.has_guessed,
                       isDrawing: p.is_drawing,
                       isOnline: p.is_online,
@@ -433,15 +567,26 @@ export function usePaintWar(roomId: string = DEFAULT_PAINT_ROOM_ID) {
 
           if (newMsg.isCorrectGuess) {
             playRetroCorrectSound()
+          } else if (newMsg.isSystem && newMsg.message.includes("hampir benar")) {
+            playRetroNotificationSound()
           }
         }
       )
-      .subscribe()
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED" && user) {
+          await channel.track({
+            userId: user.id,
+            userName: user.name || "Anon Player",
+            userAvatar: user.avatarUrl || null,
+            onlineAt: new Date().toISOString(),
+          })
+        }
+      })
 
     return () => {
       supabase?.removeChannel(channel)
     }
-  }, [roomId])
+  }, [roomId, user])
 
   // ─── 4. Synced Countdown Timer ────────────────────────────
   React.useEffect(() => {
@@ -488,10 +633,15 @@ export function usePaintWar(roomId: string = DEFAULT_PAINT_ROOM_ID) {
 
     try {
       const revealedWord = room?.currentWord || "???"
+      const currentRound = room?.roundNumber || 1
+      const maxRounds = room?.totalRounds || 5
+      const isLastRound = currentRound >= maxRounds
+      const nextStatus = isLastRound ? "game_over" : "round_ended"
+
       await supabase
         .from("paint_war_rooms")
         .update({
-          status: "round_ended",
+          status: nextStatus,
           updated_at: new Date().toISOString(),
         })
         .eq("id", roomId)
@@ -500,15 +650,141 @@ export function usePaintWar(roomId: string = DEFAULT_PAINT_ROOM_ID) {
         room_id: roomId,
         user_id: "system",
         user_name: "SYSTEM",
-        message: `⏰ Waktu habis! Kata rahasianya adalah: "${revealedWord}"`,
+        message: isLastRound
+          ? `⏰ Ronde ${currentRound}/${maxRounds} selesai! Kata rahasia: "${revealedWord}". 🏆 Pertandingan berakhir!`
+          : `⏰ Ronde ${currentRound}/${maxRounds} selesai! Kata rahasianya adalah: "${revealedWord}"`,
         is_system: true,
       })
 
-      playRetroBuzzerSound()
+      if (isLastRound) {
+        playRetroCorrectSound()
+      } else {
+        playRetroBuzzerSound()
+      }
     } catch (err) {
       console.warn("endRound error:", err)
     }
-  }, [roomId, room?.currentWord])
+  }, [roomId, room?.currentWord, room?.roundNumber, room?.totalRounds])
+
+  // Start New Game (Pilih Jumlah Ronde, Durasi, Kategori & Reset Skor Sesi)
+  const startNewGame = React.useCallback(
+    async (
+      optionsOrRounds: number | PaintWarGameOptions = 5,
+      targetDrawerIdArg?: string
+    ) => {
+      if (!isSupabaseConfigured || !supabase || !user) return
+
+      try {
+        const opts: PaintWarGameOptions =
+          typeof optionsOrRounds === "number"
+            ? { totalRounds: optionsOrRounds, targetDrawerId: targetDrawerIdArg }
+            : optionsOrRounds
+
+        const totalRounds = opts.totalRounds || 5
+        const roundDurationSec = opts.roundDurationSec || 60
+        const category = opts.category || "Campuran"
+        const targetDrawerId = opts.targetDrawerId
+
+        const onlineList = activePlayers.filter((p) => p.isOnline)
+        const candidates = onlineList.length > 0 ? onlineList : activePlayers
+        if (candidates.length === 0) return
+
+        let firstDrawer = candidates[0]
+        if (targetDrawerId) {
+          const found = candidates.find((p) => p.userId === targetDrawerId)
+          if (found) firstDrawer = found
+        } else {
+          const me = candidates.find((p) => p.userId === user.id)
+          if (me) firstDrawer = me
+        }
+
+        // Reset skor sesi semua pemain untuk pertandingan baru
+        await supabase
+          .from("paint_war_players")
+          .update({ score: 0, has_guessed: false, is_drawing: false })
+          .eq("room_id", roomId)
+
+        // Set drawer pertama
+        await supabase
+          .from("paint_war_players")
+          .update({ is_drawing: true })
+          .match({ room_id: roomId, user_id: firstDrawer.userId })
+
+        // Reset room ke ronde 1 dengan total ronde, durasi, dan kategori yang dipilih
+        await supabase
+          .from("paint_war_rooms")
+          .update({
+            status: "selecting_word",
+            current_drawer_id: firstDrawer.userId,
+            current_drawer_name: firstDrawer.userName,
+            current_drawer_avatar: firstDrawer.userAvatar,
+            current_word: null,
+            word_hint: null,
+            canvas_snapshot: null,
+            round_start_time: null,
+            round_number: 1,
+            total_rounds: totalRounds,
+            round_duration_sec: roundDurationSec,
+            category: category,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", roomId)
+
+        await supabase.from("paint_war_messages").insert({
+          room_id: roomId,
+          user_id: "system",
+          user_name: "SYSTEM",
+          message: `🎮 PERTANDINGAN DIMULAI (${totalRounds} Ronde, ${roundDurationSec}s, [${category}])! Giliran ${firstDrawer.userName} memilih kata.`,
+          is_system: true,
+        })
+
+        broadcastCanvasEvent({ type: "clear" })
+        playRetroRoundStartSound()
+      } catch (err) {
+        console.warn("startNewGame error:", err)
+      }
+    },
+    [roomId, user, activePlayers, broadcastCanvasEvent]
+  )
+
+  // Reset Room Kembali ke Lobby
+  const resetToLobby = React.useCallback(async () => {
+    if (!isSupabaseConfigured || !supabase) return
+    try {
+      await supabase
+        .from("paint_war_players")
+        .update({ score: 0, has_guessed: false, is_drawing: false })
+        .eq("room_id", roomId)
+
+      await supabase
+        .from("paint_war_rooms")
+        .update({
+          status: "waiting",
+          current_drawer_id: null,
+          current_drawer_name: null,
+          current_drawer_avatar: null,
+          current_word: null,
+          word_hint: null,
+          canvas_snapshot: null,
+          round_start_time: null,
+          round_number: 1,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", roomId)
+
+      await supabase.from("paint_war_messages").insert({
+        room_id: roomId,
+        user_id: "system",
+        user_name: "SYSTEM",
+        message: `⚙️ Room kembali ke Lobby Setup. Menunggu pertandingan dimulai!`,
+        is_system: true,
+      })
+
+      broadcastCanvasEvent({ type: "clear" })
+    } catch (err) {
+      console.warn("resetToLobby error:", err)
+    }
+  }, [roomId, broadcastCanvasEvent])
 
   // Start / Next Turn
   const startNextTurn = React.useCallback(
@@ -516,20 +792,53 @@ export function usePaintWar(roomId: string = DEFAULT_PAINT_ROOM_ID) {
       if (!isSupabaseConfigured || !supabase || !user) return
 
       try {
-        const onlinePlayers = players.filter((p) => p.isOnline)
-        if (onlinePlayers.length === 0) return
+        const currentRound = room?.roundNumber || 1
+        const maxRounds = room?.totalRounds || 5
 
-        let nextDrawer = onlinePlayers[0]
+        // Jika ronde saat ini sudah mencapai batas ronde dan ronde berakhir, akhiri game
+        if ((room?.status === "round_ended" || room?.status === "game_over") && currentRound >= maxRounds) {
+          await supabase
+            .from("paint_war_rooms")
+            .update({
+              status: "game_over",
+              round_number: maxRounds,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", roomId)
+
+          await supabase.from("paint_war_messages").insert({
+            room_id: roomId,
+            user_id: "system",
+            user_name: "SYSTEM",
+            message: `🏆 Seluruh ${maxRounds} ronde telah selesai! Lihat podium pemenang!`,
+            is_system: true,
+          })
+
+          playRetroNotificationSound()
+          return
+        }
+
+        const onlineList = activePlayers.filter((p) => p.isOnline)
+        const candidates = onlineList.length > 0 ? onlineList : activePlayers
+        if (candidates.length === 0) return
+
+        let nextDrawer = candidates[0]
         if (targetDrawerId) {
-          const found = onlinePlayers.find((p) => p.userId === targetDrawerId)
+          const found = candidates.find((p) => p.userId === targetDrawerId)
           if (found) nextDrawer = found
         } else if (room?.currentDrawerId) {
-          const currentIndex = onlinePlayers.findIndex(
+          const currentIndex = candidates.findIndex(
             (p) => p.userId === room.currentDrawerId
           )
-          const nextIndex = (currentIndex + 1) % onlinePlayers.length
-          nextDrawer = onlinePlayers[nextIndex]
+          const nextIndex = (currentIndex + 1) % candidates.length
+          nextDrawer = candidates[nextIndex]
         }
+
+        // Jika lanjut dari round_ended, increment nomor ronde; jika ganti drawer di tengah jalan (AFK), tetap di ronde yang sama
+        const nextRoundNumber = Math.min(
+          maxRounds,
+          room?.status === "round_ended" ? currentRound + 1 : currentRound
+        )
 
         // Reset has_guessed on all players for this room
         await supabase
@@ -555,7 +864,7 @@ export function usePaintWar(roomId: string = DEFAULT_PAINT_ROOM_ID) {
             word_hint: null,
             canvas_snapshot: null,
             round_start_time: null,
-            round_number: (room?.roundNumber || 0) + 1,
+            round_number: nextRoundNumber,
             updated_at: new Date().toISOString(),
           })
           .eq("id", roomId)
@@ -565,7 +874,7 @@ export function usePaintWar(roomId: string = DEFAULT_PAINT_ROOM_ID) {
           room_id: roomId,
           user_id: "system",
           user_name: "SYSTEM",
-          message: `🎮 Giliran ${nextDrawer.userName} memilih kata untuk digambar!`,
+          message: `🎮 Ronde ${nextRoundNumber}/${maxRounds}: Giliran ${nextDrawer.userName} memilih kata untuk digambar!`,
           is_system: true,
         })
 
@@ -576,7 +885,7 @@ export function usePaintWar(roomId: string = DEFAULT_PAINT_ROOM_ID) {
         console.warn("startNextTurn error:", err)
       }
     },
-    [roomId, user, players, room, broadcastCanvasEvent]
+    [roomId, user, activePlayers, room, broadcastCanvasEvent]
   )
 
   // Drawer chooses a word to start drawing
@@ -595,7 +904,7 @@ export function usePaintWar(roomId: string = DEFAULT_PAINT_ROOM_ID) {
             word_hint: `${masked} (${selectedWordItem.word.replace(/\s/g, "").length} huruf)`,
             category: selectedWordItem.category,
             round_start_time: new Date().toISOString(),
-            round_duration_sec: 60,
+            round_duration_sec: room?.roundDurationSec || 60,
             canvas_snapshot: null,
             updated_at: new Date().toISOString(),
           })
@@ -616,7 +925,7 @@ export function usePaintWar(roomId: string = DEFAULT_PAINT_ROOM_ID) {
         console.warn("selectWord error:", err)
       }
     },
-    [roomId, user, broadcastCanvasEvent]
+    [roomId, user, room?.roundDurationSec, broadcastCanvasEvent]
   )
 
   // Send Guess Message
@@ -625,39 +934,54 @@ export function usePaintWar(roomId: string = DEFAULT_PAINT_ROOM_ID) {
       if (!isSupabaseConfigured || !supabase || !user || !text.trim()) return
 
       const cleanText = text.trim()
-      const normalizedGuess = cleanText.toUpperCase().replace(/\s+/g, " ")
+      const normalizedGuess = normalizeGuess(cleanText)
       const targetWord = (room?.currentWord || "").toUpperCase().trim()
+      const normalizedTarget = normalizeGuess(targetWord)
 
       const isGuessingActive = room?.status === "drawing" && targetWord.length > 0
+      const isDrawerOrGuessed = Boolean(isCurrentDrawer || hasGuessedWord)
+
       const isCorrect =
         isGuessingActive &&
-        !isCurrentDrawer &&
-        !hasGuessedWord &&
-        normalizedGuess === targetWord
+        !isDrawerOrGuessed &&
+        normalizedGuess.length > 0 &&
+        normalizedGuess === normalizedTarget
+
+      const isAlmost =
+        !isCorrect &&
+        isGuessingActive &&
+        !isDrawerOrGuessed &&
+        isAlmostCorrect(cleanText, targetWord)
 
       try {
         if (isCorrect) {
           // Calculate score based on remaining time (max 100, min 25)
           const points = Math.max(25, Math.floor((timeLeft / (room?.roundDurationSec || 60)) * 100))
           const currentScore = myPlayer?.score || 0
+          const currentTotalScore = myPlayer?.totalScore || 0
           const newPlayerScore = currentScore + points
+          const newPlayerTotalScore = currentTotalScore + points
 
-          // Update player record
+          // Update player record (score sesi + total_score permanen)
           await supabase
             .from("paint_war_players")
             .update({
               score: newPlayerScore,
+              total_score: newPlayerTotalScore,
               has_guessed: true,
             })
             .match({ room_id: roomId, user_id: user.id })
 
-          // Award drawer bonus 25 pts
+          // Award drawer bonus 25 pts (sesi + total akumulasi)
           if (room?.currentDrawerId) {
             const drawer = players.find((p) => p.userId === room.currentDrawerId)
             if (drawer) {
               await supabase
                 .from("paint_war_players")
-                .update({ score: drawer.score + 25 })
+                .update({
+                  score: drawer.score + 25,
+                  total_score: (drawer.totalScore || 0) + 25,
+                })
                 .match({ room_id: roomId, user_id: room.currentDrawerId })
             }
           }
@@ -684,12 +1008,37 @@ export function usePaintWar(roomId: string = DEFAULT_PAINT_ROOM_ID) {
           if (allGuessed && nonDrawers.length > 0) {
             handleEndRound()
           }
+        } else if (isAlmost) {
+          // Tebakan hampir benar: kirim pesan pemain + pengumuman sistem "hampir benar"
+          await supabase.from("paint_war_messages").insert([
+            {
+              room_id: roomId,
+              user_id: user.id,
+              user_name: user.name || "Pemain",
+              user_avatar: user.avatarUrl || null,
+              message: cleanText,
+              is_system: false,
+              is_correct_guess: false,
+              points_awarded: 0,
+            },
+            {
+              room_id: roomId,
+              user_id: "system",
+              user_name: "SYSTEM",
+              message: `🤏 "${cleanText}" hampir benar!`,
+              is_system: true,
+              is_correct_guess: false,
+              points_awarded: 0,
+            },
+          ])
         } else {
           // Regular chat / wrong guess
           const containsWord =
-            targetWord.length > 2 && normalizedGuess.includes(targetWord)
+            normalizedTarget.length > 2 &&
+            normalizedGuess.includes(normalizedTarget)
+
           const messageContent =
-            containsWord && (hasGuessedWord || isCurrentDrawer)
+            containsWord && isDrawerOrGuessed
               ? "••••• (disensor karena membocorkan kata)"
               : cleanText
 
@@ -784,7 +1133,8 @@ export function usePaintWar(roomId: string = DEFAULT_PAINT_ROOM_ID) {
 
   return {
     room,
-    players,
+    players: activePlayers,
+    rawPlayers: players,
     messages,
     wordChoices,
     timeLeft,
@@ -793,12 +1143,14 @@ export function usePaintWar(roomId: string = DEFAULT_PAINT_ROOM_ID) {
     hasGuessedWord,
     myPlayer,
     startNextTurn,
+    startNewGame,
     selectWordAndStartRound,
     handleEndRound,
     sendGuess,
     broadcastCanvasEvent,
     saveCanvasSnapshot,
     resetMatchScores,
+    resetToLobby,
     setDrawEventListener,
   }
 }

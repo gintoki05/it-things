@@ -226,6 +226,7 @@ export type Database = {
           user_name: string
           user_avatar: string | null
           score: number
+          total_score: number
           has_guessed: boolean
           is_drawing: boolean
           is_online: boolean
@@ -239,6 +240,7 @@ export type Database = {
           user_name: string
           user_avatar?: string | null
           score?: number
+          total_score?: number
           has_guessed?: boolean
           is_drawing?: boolean
           is_online?: boolean
@@ -252,6 +254,7 @@ export type Database = {
           user_name?: string
           user_avatar?: string | null
           score?: number
+          total_score?: number
           has_guessed?: boolean
           is_drawing?: boolean
           is_online?: boolean

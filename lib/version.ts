@@ -5,12 +5,23 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.28"
+export const APP_VERSION = "v2.3.29"
 export const APP_BUILD = "2026.09.14"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.29",
+    date: "14 Sep 2026",
+    codename: "Paint War Game Concepts Upgrade, Match Lobby Setup & Dual Scoring System",
+    changes: [
+      "Lobby Setup Sebelum Start (SETTING_LOBBY.EXE): Menyediakan panel pengaturan match retro Windows 98 untuk memilih target ronde (3, 5, 8, 10), durasi waktu gambar (45s, 60s, 90s), dan filter bank kata (Campuran, IT & Tech, Kultur Kantor, Umum) sebelum pertandingan dimulai.",
+      "Sistem Dua Skor (Sesi vs Akumulasi All-Time): Memisahkan skor sesi ronde saat ini dengan total akumulasi poin karir sepanjang masa di Supabase, lengkap dengan filter sorting di papan skor.",
+      "Penyempurnaan Deteksi Tebakan: Mendukung normalisasi spasi tanpa sensitivitas spasi berlebih serta deteksi tebakan 'hampir benar' (Levensthein distance & substring) dengan petunjuk inline retro.",
+      "Realtime Presence & Kontrol Ronde Terintegrasi: Menampilkan status online pemain standby di lobby, pergantian giliran cepat jika drawer offline, dan penghentian permainan otomatis saat batas ronde tercapai.",
+    ],
+  },
   {
     version: "v2.3.28",
     date: "14 Sep 2026",

@@ -1192,6 +1192,7 @@ CREATE TABLE IF NOT EXISTS public.paint_war_players (
     user_name TEXT NOT NULL,
     user_avatar TEXT,
     score INT NOT NULL DEFAULT 0,
+    total_score INT NOT NULL DEFAULT 0,
     has_guessed BOOLEAN NOT NULL DEFAULT false,
     is_drawing BOOLEAN NOT NULL DEFAULT false,
     is_online BOOLEAN NOT NULL DEFAULT true,
