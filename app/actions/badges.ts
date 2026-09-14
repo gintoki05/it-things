@@ -7,6 +7,7 @@ export interface NotificationBadgesResult {
   pantry: number
   splitBills: number
   paintWar: number
+  feedbacks: number
 }
 
 export async function fetchNotificationBadgesAction(
@@ -14,7 +15,7 @@ export async function fetchNotificationBadgesAction(
 ): Promise<NotificationBadgesResult> {
   const supabase = createServerSupabase(token)
   if (!supabase) {
-    return { votes: 0, pantry: 0, splitBills: 0, paintWar: 0 }
+    return { votes: 0, pantry: 0, splitBills: 0, paintWar: 0, feedbacks: 0 }
   }
 
   const nowIso = new Date().toISOString()
@@ -22,7 +23,7 @@ export async function fetchNotificationBadgesAction(
   const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
 
   try {
-    const [votesRes, pantryRes, splitRes, paintRes] = await Promise.all([
+    const [votesRes, pantryRes, splitRes, paintRes, feedbackRes] = await Promise.all([
       supabase
         .from("vote_groups")
         .select("id", { count: "exact", head: true })
@@ -42,6 +43,10 @@ export async function fetchNotificationBadgesAction(
         .select("id", { count: "exact", head: true })
         .eq("is_online", true)
         .gte("last_seen", fiveMinAgo),
+      supabase
+        .from("feedbacks")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["new", "in_review", "in_progress"]),
     ])
 
     return {
@@ -49,10 +54,11 @@ export async function fetchNotificationBadgesAction(
       pantry: pantryRes.count ?? 0,
       splitBills: splitRes.count ?? 0,
       paintWar: paintRes.count ?? 0,
+      feedbacks: feedbackRes.count ?? 0,
     }
   } catch (err) {
     console.warn("fetchNotificationBadgesAction error:", err)
-    return { votes: 0, pantry: 0, splitBills: 0, paintWar: 0 }
+    return { votes: 0, pantry: 0, splitBills: 0, paintWar: 0, feedbacks: 0 }
   }
 }
 
@@ -99,5 +105,15 @@ export async function fetchActivePaintWarCountAction(token?: string | null): Pro
     .select("id", { count: "exact", head: true })
     .eq("is_online", true)
     .gte("last_seen", fiveMinAgo)
+  return count ?? 0
+}
+
+export async function fetchActiveFeedbackCountAction(token?: string | null): Promise<number> {
+  const supabase = createServerSupabase(token)
+  if (!supabase) return 0
+  const { count } = await supabase
+    .from("feedbacks")
+    .select("id", { count: "exact", head: true })
+    .in("status", ["new", "in_review", "in_progress"])
   return count ?? 0
 }

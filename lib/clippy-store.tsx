@@ -81,7 +81,7 @@ export function ClippyProvider({ children }: { children: React.ReactNode }) {
   const [adzanSound, setAdzanSoundState] = React.useState<AdzanSoundType>("makkah")
   const [playingSoundId, setPlayingSoundId] = React.useState<string | null>(null)
   const [reminder10Min, setReminder10MinState] = React.useState<boolean>(true)
-  const [minimized, setMinimizedState] = React.useState<boolean>(false)
+  const [minimized, setMinimizedState] = React.useState<boolean>(true)
 
   const [speechText, setSpeechText] = React.useState<string>("")
   const [speechVisible, setSpeechVisible] = React.useState<boolean>(false)
@@ -107,13 +107,6 @@ export function ClippyProvider({ children }: { children: React.ReactNode }) {
         if (typeof parsed.soundEnabled === "boolean") setSoundEnabledState(parsed.soundEnabled)
         if (parsed.adzanSound) setAdzanSoundState(parsed.adzanSound)
         if (typeof parsed.reminder10Min === "boolean") setReminder10MinState(parsed.reminder10Min)
-        if (typeof parsed.minimized === "boolean") {
-          setMinimizedState(parsed.minimized)
-        } else if (window.innerWidth < 768) {
-          setMinimizedState(true)
-        }
-      } else if (window.innerWidth < 768) {
-        setMinimizedState(true)
       }
     } catch {
       // ignore

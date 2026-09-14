@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.23"
+export const APP_VERSION = "v2.3.24"
 export const APP_BUILD = "2026.09.14"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.24",
+    date: "14 Sep 2026",
+    codename: "Swiss Army Tools PDF Suite, Document Previewer & Unsaved Changes Guard",
+    changes: [
+      "PDF Merge (PDF_MERGE.EXE): Penggabungan multi-file PDF client-side dengan cover thumbnail otomatis, pengaturan urutan berkas, estimasi jumlah halaman, dan pratinjau dokumen langsung di dalam aplikasi.",
+      "PDF Split & Organize (PDF_SPLIT.EXE): Visual thumbnail canvas per lembar dokumen, rotasi 90° interaktif, filter/seleksi rentang halaman (range), serta ekspor ke 1 PDF utuh atau arsip ZIP berkas terpisah.",
+      "PDF & Image Converter (PDF_CONV.EXE): Konversi dua arah gambar ke PDF (JPG/PNG/WebP dengan pengaturan margin dan orientasi A4) dan ekstraksi lembar PDF ke gambar berkualitas tinggi (satuan atau ZIP).",
+      "Interactive Document Viewer (PREVIEW_DOKUMEN.EXE): Penampil dokumen modal ala Windows 98 dengan navigasi lembar (Prev/Next/Jump), kontrol zoom in/out/100%, dan cache render cepat.",
+      "Sistem Pengaman Dokumen (3-Tier Unsaved Guard): Proteksi cegah kehilangan antrean berkas via event beforeunload browser, konfirmasi pindah tool di SwissTools, dan konfirmasi penutupan jendela desktop.",
+    ],
+  },
   {
     version: "v2.3.23",
     date: "14 Sep 2026",

@@ -2,6 +2,9 @@ export type SwissToolCategory = "format" | "crypto" | "generator" | "text"
 
 export type SwissToolId =
   | "json"
+  | "pdf-merge"
+  | "pdf-split"
+  | "pdf-convert"
   | "jwt"
   | "hash"
   | "encode"
@@ -27,6 +30,30 @@ export const SWISS_TOOLS: SwissToolDefinition[] = [
     category: "format",
     description: "Prettify, minify, validasi syntax error, dan perbaiki format JSON.",
     badge: "Populer",
+  },
+  {
+    id: "pdf-merge",
+    name: "PDF Merge",
+    command: "PDF_MERGE.EXE",
+    category: "format",
+    description: "Gabungkan banyak dokumen PDF menjadi satu file dalam urutan yang ditentukan.",
+    badge: "PDF",
+  },
+  {
+    id: "pdf-split",
+    name: "PDF Split & Organize",
+    command: "PDF_SPLIT.EXE",
+    category: "format",
+    description: "Pecah halaman, putar orientasi (rotate), buang lembar, dan preview visual thumbnail.",
+    badge: "PDF",
+  },
+  {
+    id: "pdf-convert",
+    name: "PDF & Image Converter",
+    command: "PDF_CONV.EXE",
+    category: "format",
+    description: "Konversi gambar (JPG/PNG) ke PDF atau ekstrak halaman PDF menjadi gambar berkualitas tinggi.",
+    badge: "PDF",
   },
   {
     id: "jwt",

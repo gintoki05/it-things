@@ -32,6 +32,7 @@ export function DesktopIcons() {
     activePantryCount,
     activeSplitBillCount,
     activePaintWarCount,
+    activeFeedbackCount,
     clearUnreadChat,
   } = useNotification()
   const [selectedId, setSelectedId] = React.useState<AppId | null>(null)
@@ -182,6 +183,14 @@ export function DesktopIcons() {
                   className="absolute -top-1.5 -right-2 bg-purple-600 text-white font-mono text-[9px] font-black min-w-[16px] text-center px-1 py-0.5 rounded border border-purple-400 shadow leading-none animate-pulse"
                 >
                   {activePaintWarCount > 99 ? "99+" : activePaintWarCount}
+                </span>
+              )}
+              {!item.isComingSoon && item.id === "feedback" && activeFeedbackCount > 0 && (
+                <span
+                  title={`${activeFeedbackCount} Masukan Belum Selesai`}
+                  className="absolute -top-1.5 -right-2 bg-amber-500 text-slate-950 font-mono text-[9px] font-black min-w-[16px] text-center px-1 py-0.5 rounded border border-amber-600 shadow leading-none"
+                >
+                  {activeFeedbackCount > 99 ? "99+" : activeFeedbackCount}
                 </span>
               )}
             </div>

@@ -283,7 +283,15 @@ function DesktopWorkspace() {
       </DesktopWindow>
 
       {/* Retro Window: SwissTools.exe */}
-      <DesktopWindow id="swisstools" bodyClassName="p-0 overflow-hidden flex flex-col">
+      <DesktopWindow
+        id="swisstools"
+        bodyClassName="p-0 overflow-hidden flex flex-col"
+        onCloseRequest={() => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("swisstools:close-request"))
+          }
+        }}
+      >
         <MemoizedSwissToolsApp />
       </DesktopWindow>
 

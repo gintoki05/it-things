@@ -15,6 +15,7 @@ import {
   fetchActivePantryCountAction,
   fetchActiveSplitBillCountAction,
   fetchActivePaintWarCountAction,
+  fetchActiveFeedbackCountAction,
 } from "@/app/actions/badges"
 
 export interface NotificationToast {
@@ -34,6 +35,7 @@ interface NotificationContextType {
   activePantryCount: number
   activeSplitBillCount: number
   activePaintWarCount: number
+  activeFeedbackCount: number
   activeToast: NotificationToast | null
   toggleMute: () => void
   dismissToast: () => void
@@ -56,9 +58,22 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [activePantryCount, setActivePantryCount] = React.useState<number>(0)
   const [activeSplitBillCount, setActiveSplitBillCount] = React.useState<number>(0)
   const [activePaintWarCount, setActivePaintWarCount] = React.useState<number>(0)
+  const [activeFeedbackCount, setActiveFeedbackCount] = React.useState<number>(0)
   const [activeToast, setActiveToast] = React.useState<NotificationToast | null>(null)
   const [browserPermission, setBrowserPermission] = React.useState<NotificationPermission | "unsupported">("default")
   const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
+
+  // ─── Fetch Active Feedback Count ────────────────────────────
+  const fetchActiveFeedbackCount = React.useCallback(async () => {
+    if (!isSupabaseConfigured) return
+    try {
+      const token = (await supabase?.auth.getSession())?.data.session?.access_token || null
+      const count = await fetchActiveFeedbackCountAction(token)
+      setActiveFeedbackCount(count)
+    } catch (err) {
+      console.warn("fetchActiveFeedbackCount error:", err)
+    }
+  }, [])
 
   // ─── Fetch Active Paint War Player Count ────────────────────
   const fetchActivePaintWarCount = React.useCallback(async () => {
@@ -185,6 +200,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         setActivePantryCount(bootstrap.badges.pantry)
         setActiveSplitBillCount(bootstrap.badges.splitBills)
         setActivePaintWarCount(bootstrap.badges.paintWar)
+        setActiveFeedbackCount(bootstrap.badges.feedbacks ?? 0)
 
         if (bootstrap.unreadChatCount !== null) {
           setUnreadChatCount(bootstrap.unreadChatCount)
@@ -199,11 +215,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     const handleVoteChanged = () => fetchActiveVoteCount()
     const handlePantryChanged = () => fetchActivePantryCount()
     const handleSplitBillChanged = () => fetchActiveSplitBillCount()
+    const handleFeedbackChanged = () => fetchActiveFeedbackCount()
 
     if (typeof window !== "undefined") {
       window.addEventListener("vote-changed", handleVoteChanged)
       window.addEventListener("pantry-changed", handlePantryChanged)
       window.addEventListener("splitbill-changed", handleSplitBillChanged)
+      window.addEventListener("feedback-changed", handleFeedbackChanged)
     }
 
     if (!isSupabaseConfigured || !supabase) {
@@ -212,6 +230,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           window.removeEventListener("vote-changed", handleVoteChanged)
           window.removeEventListener("pantry-changed", handlePantryChanged)
           window.removeEventListener("splitbill-changed", handleSplitBillChanged)
+          window.removeEventListener("feedback-changed", handleFeedbackChanged)
         }
       }
     }
@@ -260,20 +279,33 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       )
       .subscribe()
 
+    const feedbackChannel = supabase
+      .channel("global-feedback-badges")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "feedbacks" },
+        () => {
+          fetchActiveFeedbackCount()
+        }
+      )
+      .subscribe()
+
     return () => {
       if (supabase) {
         supabase.removeChannel(voteChannel)
         supabase.removeChannel(pantryChannel)
         supabase.removeChannel(splitbillChannel)
         supabase.removeChannel(paintwarChannel)
+        supabase.removeChannel(feedbackChannel)
       }
       if (typeof window !== "undefined") {
         window.removeEventListener("vote-changed", handleVoteChanged)
         window.removeEventListener("pantry-changed", handlePantryChanged)
         window.removeEventListener("splitbill-changed", handleSplitBillChanged)
+        window.removeEventListener("feedback-changed", handleFeedbackChanged)
       }
     }
-  }, [fetchActiveVoteCount, fetchActivePantryCount, fetchActiveSplitBillCount, fetchActivePaintWarCount, fetchInitialUnreadChat])
+  }, [fetchActiveVoteCount, fetchActivePantryCount, fetchActiveSplitBillCount, fetchActivePaintWarCount, fetchActiveFeedbackCount, fetchInitialUnreadChat])
 
   const isMutedRef = React.useRef(isMuted)
   React.useEffect(() => {
@@ -559,6 +591,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         activePantryCount,
         activeSplitBillCount,
         activePaintWarCount,
+        activeFeedbackCount,
         activeToast,
         toggleMute,
         dismissToast,

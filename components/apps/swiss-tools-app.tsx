@@ -11,6 +11,10 @@ import { UuidTool } from "./swiss-tools/tools/uuid-tool"
 import { TimestampTool } from "./swiss-tools/tools/timestamp-tool"
 import { CaseTool } from "./swiss-tools/tools/case-tool"
 import { RegexTool } from "./swiss-tools/tools/regex-tool"
+import { PdfMergeTool } from "./swiss-tools/tools/pdf-merge-tool"
+import { PdfSplitTool } from "./swiss-tools/tools/pdf-split-tool"
+import { PdfConvertTool } from "./swiss-tools/tools/pdf-convert-tool"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   FileCode,
   KeyRound,
@@ -24,10 +28,16 @@ import {
   Wrench,
   ShieldCheck,
   Folder,
+  Files,
+  Scissors,
+  FileImage,
 } from "lucide-react"
 
 const TOOL_ICONS: Record<SwissToolId, React.ComponentType<{ className?: string }>> = {
   json: FileCode,
+  "pdf-merge": Files,
+  "pdf-split": Scissors,
+  "pdf-convert": FileImage,
   jwt: KeyRound,
   hash: Hash,
   encode: Binary,
@@ -49,6 +59,39 @@ export function SwissToolsApp() {
   const [activeToolId, setActiveToolId] = React.useState<SwissToolId>("json")
   const [searchQuery, setSearchQuery] = React.useState("")
   const [activeMenu, setActiveMenu] = React.useState<string | null>(null)
+
+  // Unsaved Changes Guard States
+  const [isToolDirty, setIsToolDirty] = React.useState(false)
+  const [pendingToolId, setPendingToolId] = React.useState<SwissToolId | null>(null)
+  const [isSwitchConfirmOpen, setIsSwitchConfirmOpen] = React.useState(false)
+  const [isCloseConfirmOpen, setIsCloseConfirmOpen] = React.useState(false)
+
+  // Helper untuk switch tool dengan validasi dirty
+  const requestSwitchTool = (targetId: SwissToolId) => {
+    if (targetId === activeToolId) return
+    if (isToolDirty) {
+      setPendingToolId(targetId)
+      setIsSwitchConfirmOpen(true)
+    } else {
+      setActiveToolId(targetId)
+    }
+  }
+
+  // Helper untuk close window dengan validasi dirty
+  const requestCloseWindow = React.useCallback(() => {
+    if (isToolDirty) {
+      setIsCloseConfirmOpen(true)
+    } else {
+      closeWindow("swisstools")
+    }
+  }, [isToolDirty, closeWindow])
+
+  // Listener untuk close request dari tombol [X] DesktopWindow
+  React.useEffect(() => {
+    const handler = () => requestCloseWindow()
+    window.addEventListener("swisstools:close-request", handler)
+    return () => window.removeEventListener("swisstools:close-request", handler)
+  }, [requestCloseWindow])
 
   const activeTool = React.useMemo(() => {
     return SWISS_TOOLS.find((t) => t.id === activeToolId) || SWISS_TOOLS[0]
@@ -86,6 +129,12 @@ export function SwissToolsApp() {
     switch (activeToolId) {
       case "json":
         return <JsonTool />
+      case "pdf-merge":
+        return <PdfMergeTool onDirtyChange={setIsToolDirty} />
+      case "pdf-split":
+        return <PdfSplitTool onDirtyChange={setIsToolDirty} />
+      case "pdf-convert":
+        return <PdfConvertTool onDirtyChange={setIsToolDirty} />
       case "jwt":
         return <JwtTool />
       case "hash":
@@ -127,7 +176,7 @@ export function SwissToolsApp() {
                 type="button"
                 onClick={() => {
                   setActiveMenu(null)
-                  closeWindow("swisstools")
+                  requestCloseWindow()
                 }}
                 className="w-full text-left px-3 py-1 hover:bg-[#000080] hover:text-white cursor-pointer font-sans"
               >
@@ -156,7 +205,7 @@ export function SwissToolsApp() {
                   key={t.id}
                   type="button"
                   onClick={() => {
-                    setActiveToolId(t.id)
+                    requestSwitchTool(t.id)
                     setActiveMenu(null)
                   }}
                   className={`w-full text-left px-3 py-1 hover:bg-[#000080] hover:text-white flex items-center justify-between cursor-pointer font-sans ${
@@ -199,7 +248,7 @@ export function SwissToolsApp() {
           id="mobile-tool-select"
           aria-label="Pilih Alat SwissTools"
           value={activeToolId}
-          onChange={(e) => setActiveToolId(e.target.value as SwissToolId)}
+          onChange={(e) => requestSwitchTool(e.target.value as SwissToolId)}
           className="flex-1 h-7 px-2 bg-white border border-t-[#808080] border-l-[#808080] border-r-white border-b-white text-[12px] font-sans outline-none cursor-pointer text-black"
         >
           {SWISS_TOOLS.map((t) => (
@@ -246,7 +295,7 @@ export function SwissToolsApp() {
                       <button
                         key={t.id}
                         type="button"
-                        onClick={() => setActiveToolId(t.id)}
+                        onClick={() => requestSwitchTool(t.id)}
                         className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-[2px] text-left transition-colors cursor-pointer group ${
                           isSelected
                             ? "bg-[#000080] text-white font-semibold shadow-xs"
@@ -343,6 +392,44 @@ export function SwissToolsApp() {
           <span className="text-emerald-800 font-bold">● Offline & Aman</span>
         </div>
       </div>
+
+      {/* Dialog Konfirmasi Pindah Tool saat ada berkas di antrean */}
+      <ConfirmDialog
+        isOpen={isSwitchConfirmOpen}
+        title="PINDAH_TOOL.EXE"
+        message="Ada dokumen atau data di antrean yang belum disimpan atau diekspor. Yakin ingin berpindah menu? Data antrean saat ini akan dibatalkan."
+        variant="warning"
+        confirmText="Ya, Pindah Menu"
+        cancelText="Tetap di Sini"
+        onConfirm={() => {
+          if (pendingToolId) {
+            setIsToolDirty(false)
+            setActiveToolId(pendingToolId)
+            setPendingToolId(null)
+          }
+          setIsSwitchConfirmOpen(false)
+        }}
+        onClose={() => {
+          setPendingToolId(null)
+          setIsSwitchConfirmOpen(false)
+        }}
+      />
+
+      {/* Dialog Konfirmasi Tutup Window saat ada berkas di antrean */}
+      <ConfirmDialog
+        isOpen={isCloseConfirmOpen}
+        title="TUTUP_SWISSTOOLS.EXE"
+        message="Ada dokumen PDF di antrean yang belum selesai diproses. Yakin ingin menutup Swiss Army Tools?"
+        variant="destructive"
+        confirmText="Ya, Tutup Aplikasi"
+        cancelText="Batal"
+        onConfirm={() => {
+          setIsToolDirty(false)
+          setIsCloseConfirmOpen(false)
+          closeWindow("swisstools")
+        }}
+        onClose={() => setIsCloseConfirmOpen(false)}
+      />
     </div>
   )
 }

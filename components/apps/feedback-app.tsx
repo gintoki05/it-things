@@ -223,6 +223,9 @@ export function FeedbackApp() {
 
       if (res.success && res.data) {
         playRetroNotificationSound()
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("feedback-changed"))
+        }
         // Reset form
         setFormTitle("")
         setFormDesc("")
@@ -308,6 +311,9 @@ export function FeedbackApp() {
 
       if (res.success) {
         playRetroNotificationSound()
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("feedback-changed"))
+        }
         setFeedbacks((prev) =>
           prev.map((item) =>
             item.id === editingFeedback.id
@@ -341,6 +347,9 @@ export function FeedbackApp() {
       })
 
       if (res.success) {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("feedback-changed"))
+        }
         setFeedbacks((prev) => prev.filter((item) => item.id !== deletingId))
         setDeletingId(null)
       } else {

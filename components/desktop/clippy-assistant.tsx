@@ -144,13 +144,35 @@ export function ClippyAssistant() {
   // Render Mini Docked Pill when Minimized
   if (minimized) {
     return (
-      <div
-        className="fixed z-40 left-3 sm:left-44 bottom-12 select-none animate-in fade-in slide-in-from-bottom-2 duration-150"
-        title="Klik untuk membuka Asisten Clippy & Jadwal Sholat"
-      >
+      <div className="fixed z-40 left-3 sm:left-44 bottom-12 select-none animate-in fade-in slide-in-from-bottom-2 duration-150">
+        {speechVisible && (
+          <div className="absolute bottom-full mb-2.5 left-0 w-[210px] sm:w-[230px] bg-[#FFFFE1] text-black rounded-[3px] p-2 border-2 border-t-white border-l-white border-r-black border-b-black shadow-[2px_2px_0px_rgba(0,0,0,0.35)] font-sans text-xs animate-in zoom-in-95 duration-150 pointer-events-auto z-50">
+            <div className="flex items-center justify-between gap-1 pb-1 mb-1 border-b border-black/20 text-[9px] font-mono text-slate-600">
+              <span className="font-bold text-[#102A45] flex items-center gap-1">
+                <span>📎</span>
+                <span>Asisten Tim IT</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setSpeechVisible(false)}
+                className="hover:bg-black/10 p-0.5 rounded text-slate-700 cursor-pointer"
+                title="Tutup Balon"
+              >
+                <X className="size-2.5" />
+              </button>
+            </div>
+            <p className="text-[10.5px] leading-snug text-slate-900 select-text">
+              {speechText || `🕌 ${nextPrayer.name} dalam ${nextPrayer.formattedCountdown} (${nextPrayer.time} ${selectedCity.tzLabel})`}
+            </p>
+            <div className="absolute -bottom-2 left-5 size-0 border-x-8 border-x-transparent border-t-8 border-t-black">
+              <div className="absolute -top-[9px] -left-[7px] size-0 border-x-7 border-x-transparent border-t-7 border-t-[#FFFFE1]" />
+            </div>
+          </div>
+        )}
         <button
           type="button"
           onClick={toggleMinimized}
+          title="Klik untuk membuka Asisten Clippy & Jadwal Sholat"
           className="flex items-center gap-1.5 px-2 py-0.5 bg-[#FFFFE1] hover:bg-white text-slate-900 font-mono text-[10px] font-bold rounded-[3px] border-2 border-t-white border-l-white border-r-[#404040] border-b-[#404040] shadow-[2px_2px_0px_rgba(0,0,0,0.3)] active:border-t-[#404040] active:border-l-[#404040] active:border-r-white active:border-b-white cursor-pointer"
         >
           <span className="text-xs">📎</span>
@@ -163,6 +185,8 @@ export function ClippyAssistant() {
     )
   }
 
+  const isNearTop = (position?.y ?? 0) < 140
+
   return (
     <div
       ref={containerRef}
@@ -170,7 +194,7 @@ export function ClippyAssistant() {
         left: `${position.x}px`,
         top: `${position.y}px`,
       }}
-      className={`fixed z-40 select-none flex flex-col items-start pointer-events-auto touch-none ${
+      className={`fixed z-40 select-none pointer-events-auto touch-none ${
         isDragging ? "cursor-grabbing opacity-90 scale-105" : "cursor-grab"
       } transition-transform duration-75`}
       onPointerDown={handlePointerDown}
@@ -178,9 +202,13 @@ export function ClippyAssistant() {
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
     >
-      {/* Speech Balloon */}
+      {/* Speech Balloon - Absolute positioned so Clippy's anchor position never jumps */}
       {speechVisible && (
-        <div className="relative mb-2 max-w-[195px] sm:max-w-[220px] bg-[#FFFFE1] text-black rounded-[3px] p-2 border-2 border-t-white border-l-white border-r-black border-b-black shadow-[2px_2px_0px_rgba(0,0,0,0.35)] font-sans text-xs animate-in zoom-in-95 duration-150">
+        <div
+          className={`absolute left-0 w-[210px] sm:w-[230px] bg-[#FFFFE1] text-black rounded-[3px] p-2 border-2 border-t-white border-l-white border-r-black border-b-black shadow-[2px_2px_0px_rgba(0,0,0,0.35)] font-sans text-xs animate-in zoom-in-95 duration-150 pointer-events-auto z-50 ${
+            isNearTop ? "top-full mt-2.5" : "bottom-full mb-2.5"
+          }`}
+        >
           {/* Header row in balloon */}
           <div className="flex items-center justify-between gap-1 pb-1 mb-1 border-b border-black/20 text-[9px] font-mono text-slate-600">
             <span className="font-bold text-[#102A45] flex items-center gap-1">
@@ -224,10 +252,16 @@ export function ClippyAssistant() {
             </button>
           </div>
 
-          {/* Speech Balloon Tail pointing down to Clippy */}
-          <div className="absolute -bottom-2 left-5 size-0 border-x-8 border-x-transparent border-t-8 border-t-black">
-            <div className="absolute -top-[9px] -left-[7px] size-0 border-x-7 border-x-transparent border-t-7 border-t-[#FFFFE1]" />
-          </div>
+          {/* Speech Balloon Tail pointing towards Clippy */}
+          {isNearTop ? (
+            <div className="absolute -top-2 left-5 size-0 border-x-8 border-x-transparent border-b-8 border-b-black">
+              <div className="absolute top-0.5 -left-[7px] size-0 border-x-7 border-x-transparent border-b-7 border-b-[#FFFFE1]" />
+            </div>
+          ) : (
+            <div className="absolute -bottom-2 left-5 size-0 border-x-8 border-x-transparent border-t-8 border-t-black">
+              <div className="absolute -top-[9px] -left-[7px] size-0 border-x-7 border-x-transparent border-t-7 border-t-[#FFFFE1]" />
+            </div>
+          )}
         </div>
       )}
 
