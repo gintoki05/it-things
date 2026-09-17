@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.32"
+export const APP_VERSION = "v2.3.33"
 export const APP_BUILD = "2026.09.17"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.33",
+    date: "17 Sep 2026",
+    codename: "Billiard 98 Resizable Window, Minimum Constraints & Focus Lock",
+    changes: [
+      "Window Resizing 8 Arah: Jendela POOL98.EXE kini dapat diubah ukurannya secara bebas dari tepi manapun (atas, bawah, kiri, kanan, serta 4 sudut) lengkap dengan grip retro diagonal khas Windows 98 di pojok kanan bawah.",
+      "Skala Meja Dinamis & Proporsional: Kanvas meja biliar dan rasio aspek 856:456 otomatis menyesuaikan ukuran jendela secara proporsional dan responsif tanpa terpotong maupun gepeng saat di-resize atau di-maximize.",
+      "Batas Ukuran Minimal Aman (minWidth: 680, minHeight: 480): Jendela tidak dapat diperkecil melebihi batas minimal meja biliar untuk menjaga keterbacaan bola, garis bidik, dan kenyamanan kontrol stik.",
+      "Disable Tombol Minimize (_): Tombol minimize dinonaktifkan khusus jendela Billiard untuk mencegah jendela tertutup atau ter-minimize secara tidak sengaja saat pertandingan sedang berlangsung.",
+      "Double-Click Title Bar: Mendukung klik ganda pada title bar untuk toggle Maximize dan Restore secara instan.",
+    ],
+  },
   {
     version: "v2.3.32",
     date: "17 Sep 2026",
