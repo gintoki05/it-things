@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.31"
+export const APP_VERSION = "v2.3.32"
 export const APP_BUILD = "2026.09.17"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.32",
+    date: "17 Sep 2026",
+    codename: "Billiard 98 Ball-in-Hand Freedom & Realtime Anti-False Disconnect Polish",
+    changes: [
+      "Bebas Pindahkan Bola Putih (Ball-in-Hand): Pemain kini dapat mengklik di mana saja di atas meja atau melakukan drag bebas untuk meletakkan bola putih.",
+      "Algoritma Auto-Snap Titik Legal (findClosestValidCuePlacement): Posisi bola putih otomatis digeser secara halus ke titik legal terdekat jika terlalu dekat bantalan atau bola lain tanpa pernah membatalkan penempatan.",
+      "Banner Aksi 'Siap Tembak' & Power Slider Langsung: Ditambahkan tombol konfirmasi 'Siap Tembak' serta dukungan menarik power slider langsung saat ball-in-hand untuk langsung mengunci posisi dan menembak.",
+      "Reset Status Animasi Bola Masuk: Membersihkan pocketAnimationProgress saat scratch dan penempatan bola agar bola putih tidak pernah terkunci dalam kondisi masuk lubang.",
+      "Stabilisasi Channel Realtime & Grace Period 15 Detik: Mencegah trigger leave palsu saat update posisi bola dan memberikan tenggat 15 detik bagi lawan yang koneksinya sempat terputus sebelum memvonis WO.",
+    ],
+  },
   {
     version: "v2.3.31",
     date: "17 Sep 2026",
