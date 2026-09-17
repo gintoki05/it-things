@@ -9,6 +9,7 @@ import {
   POCKETS,
   BALL_RADIUS,
   isValidCuePlacement,
+  findClosestValidCuePlacement,
 } from "@/lib/billiard/physics"
 
 interface BilliardCanvasProps {
@@ -91,8 +92,16 @@ export function BilliardCanvas({
 
   // ── Left Vertical Power Slider Interaction ──
   const handleSliderPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    const { canShoot, isAiming, isBallInHand } = propsRef.current
-    if (!canShoot || !isAiming || isBallInHand) return
+    const { canShoot, isAiming, isBallInHand, balls } = propsRef.current
+    if (!canShoot) return
+    // Jika masih ball-in-hand, kunci posisi bola putih saat ini lalu langsung izinkan atur power
+    if (isBallInHand) {
+      const cueBall = balls.find((b) => b.number === 0)
+      if (cueBall) {
+        const valid = findClosestValidCuePlacement(cueBall.x, cueBall.y, balls)
+        propsRef.current.onPlaceCueBall(valid.x, valid.y)
+      }
+    }
     isDraggingSliderRef.current = true
     updateSliderPower(e.clientY)
   }
@@ -132,7 +141,11 @@ export function BilliardCanvas({
         targetPowerRef.current = normalizedPower
       } else if (isDraggingCueBallRef.current) {
         const coords = getPlayfieldCoords(e.clientX, e.clientY)
-        tempCuePosRef.current = { x: coords.x, y: coords.y }
+        tempCuePosRef.current = findClosestValidCuePlacement(
+          coords.x,
+          coords.y,
+          propsRef.current.balls
+        )
       }
     }
 
@@ -159,10 +172,12 @@ export function BilliardCanvas({
       if (isDraggingCueBallRef.current) {
         isDraggingCueBallRef.current = false
         if (tempCuePosRef.current) {
-          const { x, y } = tempCuePosRef.current
-          if (isValidCuePlacement(x, y, propsRef.current.balls)) {
-            propsRef.current.onPlaceCueBall(x, y)
-          }
+          const finalPos = findClosestValidCuePlacement(
+            tempCuePosRef.current.x,
+            tempCuePosRef.current.y,
+            propsRef.current.balls
+          )
+          propsRef.current.onPlaceCueBall(finalPos.x, finalPos.y)
           tempCuePosRef.current = null
         }
       }
@@ -176,7 +191,7 @@ export function BilliardCanvas({
     }
   }, [getPlayfieldCoords])
 
-  // ── Canvas Pointer Down (Mulai Bidik / Tarik Stik) ──
+  // ── Canvas Pointer Down (Mulai Bidik / Tarik Stik / Pindahkan Bola Putih) ──
   const handleCanvasPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const { canShoot, isAiming, isBallInHand, balls } = propsRef.current
     if (!canShoot) return
@@ -187,18 +202,16 @@ export function BilliardCanvas({
     const coords = getPlayfieldCoords(e.clientX, e.clientY)
 
     if (isBallInHand) {
-      const dist = Math.hypot(coords.x - cueBall.x, coords.y - cueBall.y)
-      if (dist < BALL_RADIUS * 3.5) {
-        isDraggingCueBallRef.current = true
-        tempCuePosRef.current = { x: coords.x, y: coords.y }
-      }
+      // Izinkan klik di mana saja di meja untuk memindahkan bola putih ke titik valid terdekat
+      const valid = findClosestValidCuePlacement(coords.x, coords.y, balls)
+      isDraggingCueBallRef.current = true
+      tempCuePosRef.current = valid
       return
     }
 
     if (isAiming) {
       const dx = coords.x - cueBall.x
       const dy = coords.y - cueBall.y
-      const distToCue = Math.hypot(dx, dy)
 
       // Kunci sudut bidikan saat mulai tarik stik
       lockedAimAngleRef.current = Math.atan2(dy, dx)
@@ -213,7 +226,11 @@ export function BilliardCanvas({
   // ── Canvas Pointer Move (Arahkan Bidikan secara Halus) ──
   const handleCanvasPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const { canShoot, isAiming, isBallInHand, balls } = propsRef.current
-    if (!canShoot || !isAiming || isBallInHand) return
+    if (!canShoot) return
+
+    // Jika sedang dalam ball-in-hand dan sedang tidak drag, abaikan
+    if (isBallInHand && !isDraggingCueBallRef.current) return
+    if (!isAiming) return
 
     // Jika sedang tidak menarik stik (hanya mengarahkan mouse): update sudut bidik
     if (!isDraggingStickRef.current && !isDraggingSliderRef.current) {
@@ -842,7 +859,7 @@ export function BilliardCanvas({
       className="relative w-full aspect-[856/456] max-w-[856px] mx-auto bg-black select-none touch-none cursor-crosshair shadow-2xl flex items-center"
     >
       {/* ── Vertical Cue Stick & Power Meter (Authentic 8 Ball Pool di Sisi Kiri) ── */}
-      {propsRef.current.isAiming && propsRef.current.canShoot && !propsRef.current.isBallInHand && (
+      {propsRef.current.canShoot && (propsRef.current.isAiming || propsRef.current.isBallInHand) && (
         <div
           id="billiard-vertical-power-slider"
           onPointerDown={handleSliderPointerDown}

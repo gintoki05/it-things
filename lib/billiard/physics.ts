@@ -406,3 +406,51 @@ export function isValidCuePlacement(x: number, y: number, balls: Ball[]): boolea
 
   return true
 }
+
+/**
+ * Menemukan posisi valid terdekat untuk bola putih saat Ball-in-Hand.
+ * Jika koordinat yang diminta terhalang bola lain atau terlalu dekat bantalan/lubang,
+ * fungsi ini akan menggeser bola secara otomatis ke titik valid terdekat.
+ */
+export function findClosestValidCuePlacement(
+  targetX: number,
+  targetY: number,
+  balls: Ball[]
+): { x: number; y: number } {
+  const minX = BALL_RADIUS + 6
+  const maxX = TABLE_WIDTH - BALL_RADIUS - 6
+  const minY = BALL_RADIUS + 6
+  const maxY = TABLE_HEIGHT - BALL_RADIUS - 6
+
+  const clampedX = Math.max(minX, Math.min(maxX, targetX))
+  const clampedY = Math.max(minY, Math.min(maxY, targetY))
+
+  if (isValidCuePlacement(clampedX, clampedY, balls)) {
+    return { x: clampedX, y: clampedY }
+  }
+
+  // Spiral search ke luar untuk menemukan titik valid terdekat
+  const maxRadius = 80
+  const stepRadius = 4
+  const angleSteps = 16
+
+  for (let r = stepRadius; r <= maxRadius; r += stepRadius) {
+    for (let i = 0; i < angleSteps; i++) {
+      const angle = (i * 2 * Math.PI) / angleSteps
+      const testX = Math.max(minX, Math.min(maxX, clampedX + Math.cos(angle) * r))
+      const testY = Math.max(minY, Math.min(maxY, clampedY + Math.sin(angle) * r))
+      if (isValidCuePlacement(testX, testY, balls)) {
+        return { x: testX, y: testY }
+      }
+    }
+  }
+
+  // Fallback ke area aman head string
+  const fallbackX = TABLE_WIDTH * 0.25
+  const fallbackY = TABLE_HEIGHT * 0.5
+  if (isValidCuePlacement(fallbackX, fallbackY, balls)) {
+    return { x: fallbackX, y: fallbackY }
+  }
+
+  return { x: clampedX, y: clampedY }
+}

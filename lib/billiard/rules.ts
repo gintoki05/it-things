@@ -181,6 +181,7 @@ export function evaluateShot(
     const cueBall = balls.find((b) => b.number === 0)
     if (cueBall) {
       cueBall.isPocketed = false
+      cueBall.pocketAnimationProgress = undefined
       cueBall.x = TABLE_WIDTH * 0.25
       cueBall.y = TABLE_HEIGHT * 0.5
       cueBall.vx = 0

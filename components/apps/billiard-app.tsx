@@ -14,6 +14,7 @@ import {
   stepPhysics,
   areBallsAtRest,
   stopSlowBalls,
+  findClosestValidCuePlacement,
 } from "@/lib/billiard/physics"
 import { evaluateShot, countRemainingBalls } from "@/lib/billiard/rules"
 import {
@@ -267,10 +268,11 @@ export function BilliardApp() {
             cueBall.vx = 0
             cueBall.vy = 0
             cueBall.isPocketed = false
+            cueBall.pocketAnimationProgress = undefined
           }
           return next
         })
-        setGameState((prev) => ({ ...prev, phase: "aiming" }))
+        setGameState((prev) => ({ ...prev, phase: "aiming", foulMessage: null }))
       } else if (msg.type === "quick_chat") {
         setActiveChatBubble({ sender: msg.sender, text: msg.text })
         setTimeout(() => setActiveChatBubble(null), 3500)
@@ -688,14 +690,21 @@ export function BilliardApp() {
 
   // ── Letakkan Bola Putih saat Ball-in-Hand ──
   const handlePlaceCueBall = (x: number, y: number) => {
-    const cueBall = balls.find((b) => b.number === 0)
-    if (cueBall) {
-      cueBall.x = x
-      cueBall.y = y
-      cueBall.vx = 0
-      cueBall.vy = 0
-      cueBall.isPocketed = false
-    }
+    setBalls((prev) =>
+      prev.map((b) =>
+        b.number === 0
+          ? {
+              ...b,
+              x,
+              y,
+              vx: 0,
+              vy: 0,
+              isPocketed: false,
+              pocketAnimationProgress: undefined,
+            }
+          : b
+      )
+    )
 
     if (gameState.mode === "online") {
       sendEvent({
@@ -1738,6 +1747,32 @@ export function BilliardApp() {
               <span className="text-[10px] bg-red-200 px-1.5 py-0.2 rounded text-red-900 font-bold">
                 Ball in hand
               </span>
+            </div>
+          )}
+
+          {/* Ball-in-Hand Action Banner (Memastikan pemain tidak pernah bingung atau stuck) */}
+          {gameState.phase === "ball_in_hand" && canCurrentPlayerShoot && (
+            <div className="bg-[#FFFFCC] border-b border-[#808080] px-3 py-1 flex items-center justify-between gap-2 text-black text-xs font-bold shadow-sm">
+              <div className="flex items-center gap-1.5">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-600"></span>
+                </span>
+                <span>BALL-IN-HAND: Klik atau geser meja untuk memindahkan bola putih.</span>
+              </div>
+              <button
+                onClick={() => {
+                  const cueBall = balls.find((b) => b.number === 0)
+                  const target = cueBall
+                    ? findClosestValidCuePlacement(cueBall.x, cueBall.y, balls)
+                    : { x: 200, y: 200 }
+                  handlePlaceCueBall(target.x, target.y)
+                }}
+                className="px-2.5 py-0.5 bg-[#000080] text-white hover:bg-blue-800 active:translate-y-0.5 rounded-[2px] border border-white font-bold flex items-center gap-1 text-[11px] shadow cursor-pointer"
+              >
+                <Check className="w-3.5 h-3.5 text-green-300" />
+                <span>Siap Tembak</span>
+              </button>
             </div>
           )}
 
