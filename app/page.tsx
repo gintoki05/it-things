@@ -277,10 +277,7 @@ function DesktopWorkspace() {
       <DesktopWindow
         id="billiard"
         keepMountedOnMinimize
-        resizable
         canMinimize={false}
-        minWidth={680}
-        minHeight={480}
         bodyClassName="p-0 overflow-hidden flex flex-col"
       >
         <MemoizedBilliardApp />

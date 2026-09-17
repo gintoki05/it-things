@@ -5,12 +5,23 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.33"
+export const APP_VERSION = "v2.3.34"
 export const APP_BUILD = "2026.09.17"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.34",
+    date: "17 Sep 2026",
+    codename: "Billiard 98 Room Lock, Opponent Aim View, Auto Chat Broadcast & Locked Window",
+    changes: [
+      "Lock Room Multiplayer (Anti-Double Join): Room Billiard yang sudah memiliki 2 pemain (in_game) kini otomatis terkunci, ditampilkan sebagai Penuh (2/2) di lobby, dan menolak pemain ke-3 secara otomatis.",
+      "Tampilkan Stik Lawan Realtime (Opponent Cue Aiming): Saat menunggu giliran lawan, pemain kini dapat melihat rotasi stik lawan, tarikan power mundur, dan garis bidik kuning emas khas secara langsung di atas meja.",
+      "Auto-Post Notifikasi Room ke Chat Umum: Saat pemain membuat room Billiard baru atau memulai pertandingan Paint War, pesan pengumuman otomatis terkirim ke Chat Umum untuk mengajak teman kantor bermain.",
+      "Lock Window Billiard: Jendela POOL98.EXE dikembalikan ke ukuran tetap (fixed retro size) agar tata letak meja dan antarmuka biliar tetap kokoh dan stabil.",
+    ],
+  },
   {
     version: "v2.3.33",
     date: "17 Sep 2026",

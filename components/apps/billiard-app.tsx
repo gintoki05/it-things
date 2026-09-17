@@ -32,6 +32,8 @@ import {
 import { useAuth } from "@/lib/auth"
 import { supabase } from "@/lib/supabase"
 import { recordBilliardMatchAction } from "@/app/actions/billiard"
+import { announceGameRoomAction } from "@/app/actions/chat"
+import { cn } from "@/lib/utils"
 import { BilliardLeaderboard } from "./billiard/billiard-leaderboard"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { RetroIcon } from "@/components/ui/retro-icon"
@@ -154,6 +156,8 @@ export function BilliardApp() {
   const [isHost, setIsHost] = React.useState(true)
   const [isWaitingForOpponent, setIsWaitingForOpponent] = React.useState(false)
   const [isCopied, setIsCopied] = React.useState(false)
+  const [opponentAim, setOpponentAim] = React.useState<{ angle: number; power: number } | null>(null)
+  const [roomAlertMessage, setRoomAlertMessage] = React.useState<string | null>(null)
 
   // Hook untuk discovery room aktif di lobby
   const { activeRooms, announceRoom, leaveLobbyAnnouncement } = useBilliardLobby(myPlayerName)
@@ -231,7 +235,13 @@ export function BilliardApp() {
         // Lawan bergabung! Jika kita host dan sedang di waiting screen, langsung masuk ke meja
         setIsWaitingForOpponent(false)
         setAppView("game")
+        if (isHost && activeRoomCode) {
+          announceRoom(activeRoomCode, "in_game")
+        }
+      } else if (msg.type === "cue_aim") {
+        setOpponentAim({ angle: msg.angle, power: msg.power })
       } else if (msg.type === "shot_taken") {
+        setOpponentAim(null)
         // Terapkan pukulan dari lawan secara fungsional (bebas dependensi mutable `balls`)
         setBalls((prev) => {
           const next = [...prev]
@@ -379,8 +389,15 @@ export function BilliardApp() {
   const { isConnected, opponentName, sendEvent } = useBilliardOnline({
     roomCode: activeRoomCode,
     playerName: myPlayerName,
+    isHost,
     onMessageReceived: handleRemoteMessage,
     onOpponentDisconnected: handleOpponentDisconnected,
+    onRoomFull: (msg) => {
+      setActiveRoomCode(null)
+      setIsWaitingForOpponent(false)
+      setAppView("lobby")
+      setRoomAlertMessage(msg)
+    },
   })
 
   // Update opponent name when they connect or reconnect
@@ -398,8 +415,11 @@ export function BilliardApp() {
         setIsWaitingForOpponent(false)
         setAppView("game")
       }
+      if (isHost && activeRoomCode) {
+        announceRoom(activeRoomCode, "in_game")
+      }
     }
-  }, [opponentName, isWaitingForOpponent, clearDisconnectTimer])
+  }, [opponentName, isWaitingForOpponent, clearDisconnectTimer, isHost, activeRoomCode, announceRoom])
 
   // Toggle audio
   const handleToggleSound = () => {
@@ -752,6 +772,23 @@ export function BilliardApp() {
     setIsWaitingForOpponent(true)
     announceRoom(code, "waiting")
 
+    // Otomatis kirim pengumuman room aktif ke Chat Umum
+    void (async () => {
+      try {
+        const token =
+          (await supabase?.auth.getSession())?.data.session?.access_token ?? null
+        await announceGameRoomAction({
+          game: "billiard",
+          roomCode: code,
+          userName: myPlayerName,
+          userId: user?.id,
+          token,
+        })
+      } catch {
+        // Silently ignore
+      }
+    })()
+
     setBalls(createInitialBalls())
     setGameState((prev) => ({
       ...DEFAULT_GAME_STATE,
@@ -767,6 +804,14 @@ export function BilliardApp() {
   const handleJoinSpecificRoom = (code: string) => {
     const cleanCode = code.trim().toUpperCase()
     if (!cleanCode) return
+
+    // Cek apakah room sudah berstatus in_game / penuh
+    const targetRoom = activeRooms.find((r) => r.roomCode === cleanCode)
+    if (targetRoom && targetRoom.status === "in_game") {
+      setRoomAlertMessage(`Room [${cleanCode}] sedang dalam pertandingan dan sudah penuh (2/2 pemain).`)
+      return
+    }
+
     clearDisconnectTimer()
     matchSubmittedRef.current = null
     setActiveRoomCode(cleanCode)
@@ -839,6 +884,7 @@ export function BilliardApp() {
 
     matchSubmittedRef.current = null
     leaveLobbyAnnouncement()
+    setOpponentAim(null)
     setActiveRoomCode(null)
     setIsWaitingForOpponent(false)
     setAppView("lobby")
@@ -872,6 +918,25 @@ export function BilliardApp() {
     (gameState.mode === "online" &&
       ((isHost && gameState.currentTurn === "player1") ||
         (!isHost && gameState.currentTurn === "player2")))
+
+  // Broadcast sudut dan tarikan stik kita secara realtime ke lawan (saat giliran kita)
+  const lastAimSentRef = React.useRef(0)
+  const handleAimChange = React.useCallback(
+    (angle: number, power: number) => {
+      if (gameState.mode === "online" && canCurrentPlayerShoot) {
+        const now = Date.now()
+        if (now - lastAimSentRef.current > 40) {
+          lastAimSentRef.current = now
+          sendEvent({
+            type: "cue_aim",
+            angle,
+            power,
+          })
+        }
+      }
+    },
+    [gameState.mode, canCurrentPlayerShoot, sendEvent]
+  )
 
   // Posisi "tidak bermain" (menunggu giliran lawan atau bola sedang meluncur/simulating)
   const isWaitingOpponentTurn =
@@ -1116,27 +1181,41 @@ export function BilliardApp() {
                 </div>
               ) : (
                 <div className="space-y-1.5 max-h-36 overflow-y-auto">
-                  {activeRooms.map((r, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between p-2 bg-[#ECE9D8] border border-[#808080] rounded hover:bg-yellow-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 bg-[#000080] text-white font-mono font-bold text-xs rounded">
-                          {r.roomCode}
-                        </span>
-                        <span className="font-bold text-xs text-gray-800">
-                          Host: {r.hostName}
-                        </span>
-                      </div>
-                      <button
-                        onClick={() => handleJoinSpecificRoom(r.roomCode)}
-                        className="px-3 py-1 bg-green-700 text-white font-bold rounded text-xs hover:bg-green-800"
+                  {activeRooms.map((r, idx) => {
+                    const isFull = r.status === "in_game"
+                    return (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-2 bg-[#ECE9D8] border border-[#808080] rounded hover:bg-yellow-50 transition-colors"
                       >
-                        Join Room
-                      </button>
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 bg-[#000080] text-white font-mono font-bold text-xs rounded">
+                            {r.roomCode}
+                          </span>
+                          <span className="font-bold text-xs text-gray-800">
+                            Host: {r.hostName}
+                          </span>
+                          {isFull && (
+                            <span className="px-1.5 py-0.2 bg-red-100 border border-red-400 text-red-700 text-[10px] font-bold rounded">
+                              Penuh (2/2)
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleJoinSpecificRoom(r.roomCode)}
+                          disabled={isFull}
+                          className={cn(
+                            "px-3 py-1 font-bold rounded text-xs transition-colors",
+                            isFull
+                              ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                              : "bg-green-700 text-white hover:bg-green-800 cursor-pointer"
+                          )}
+                        >
+                          {isFull ? "Sedang Main" : "Join Room"}
+                        </button>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -1793,9 +1872,11 @@ export function BilliardApp() {
               isAiming={gameState.phase === "aiming"}
               isBallInHand={gameState.phase === "ball_in_hand"}
               canShoot={canCurrentPlayerShoot && gameState.phase !== "simulating"}
+              opponentAim={opponentAim}
               spin={cueSpin}
               onShoot={handleShoot}
               onPlaceCueBall={handlePlaceCueBall}
+              onAimChange={handleAimChange}
             />
 
             {/* Floating Spectator Reaction Dock (Khusus saat posisi tidak bermain / menunggu giliran lawan) */}
@@ -1959,6 +2040,18 @@ export function BilliardApp() {
             ? "Menyerah & Keluar"
             : "Kembali ke Lobby"
         }
+        variant="warning"
+      />
+
+      {/* ── Room Full / Rejected Alert Dialog ── */}
+      <ConfirmDialog
+        isOpen={Boolean(roomAlertMessage)}
+        onClose={() => setRoomAlertMessage(null)}
+        onConfirm={() => setRoomAlertMessage(null)}
+        title="ROOM_TERKUNCI.EXE"
+        message={roomAlertMessage || ""}
+        confirmText="OK"
+        cancelText="Tutup"
         variant="warning"
       />
 

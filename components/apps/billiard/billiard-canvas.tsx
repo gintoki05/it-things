@@ -17,9 +17,11 @@ interface BilliardCanvasProps {
   isAiming: boolean
   isBallInHand: boolean
   canShoot: boolean
+  opponentAim?: { angle: number; power: number } | null
   spin?: { x: number; y: number }
   onShoot: (angle: number, power: number, spin: { x: number; y: number }) => void
   onPlaceCueBall: (x: number, y: number) => void
+  onAimChange?: (angle: number, power: number) => void
 }
 
 export function BilliardCanvas({
@@ -27,9 +29,11 @@ export function BilliardCanvas({
   isAiming,
   isBallInHand,
   canShoot,
+  opponentAim,
   spin = { x: 0, y: 0 },
   onShoot,
   onPlaceCueBall,
+  onAimChange,
 }: BilliardCanvasProps) {
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null)
   const containerRef = React.useRef<HTMLDivElement | null>(null)
@@ -57,18 +61,22 @@ export function BilliardCanvas({
     isAiming,
     isBallInHand,
     canShoot,
+    opponentAim,
     spin,
     onShoot,
     onPlaceCueBall,
+    onAimChange,
   })
   propsRef.current = {
     balls,
     isAiming,
     isBallInHand,
     canShoot,
+    opponentAim,
     spin,
     onShoot,
     onPlaceCueBall,
+    onAimChange,
   }
 
   // Convert client mouse/touch coordinates to internal playfield coordinates
@@ -121,6 +129,10 @@ export function BilliardCanvas({
     const onWindowPointerMove = (e: PointerEvent) => {
       if (isDraggingSliderRef.current) {
         updateSliderPower(e.clientY)
+        propsRef.current.onAimChange?.(
+          lockedAimAngleRef.current || aimAngleRef.current,
+          targetPowerRef.current
+        )
       } else if (isDraggingStickRef.current && dragStartCoordsRef.current) {
         // Tarik stik ke belakang: Proyeksikan gerakan mouse HANYA sepanjang sumbu berlawanan stik
         const coords = getPlayfieldCoords(e.clientX, e.clientY)
@@ -139,6 +151,10 @@ export function BilliardCanvas({
         const maxPullDistance = 220
         const normalizedPower = Math.min(1.0, Math.max(0.0, projectedPull / maxPullDistance))
         targetPowerRef.current = normalizedPower
+        propsRef.current.onAimChange?.(
+          lockedAimAngleRef.current || aimAngleRef.current,
+          targetPowerRef.current
+        )
       } else if (isDraggingCueBallRef.current) {
         const coords = getPlayfieldCoords(e.clientX, e.clientY)
         tempCuePosRef.current = findClosestValidCuePlacement(
@@ -158,6 +174,7 @@ export function BilliardCanvas({
         isDraggingStickRef.current = false
         dragStartCoordsRef.current = null
         targetPowerRef.current = 0
+        propsRef.current.onAimChange?.(finalAngle, 0)
 
         // Lepaskan tembakan jika power cukup (> 4%)
         if (finalPower > 0.04 && propsRef.current.canShoot && propsRef.current.isAiming) {
@@ -242,6 +259,7 @@ export function BilliardCanvas({
       const dy = coords.y - cueBall.y
       aimAngleRef.current = Math.atan2(dy, dx)
       lockedAimAngleRef.current = aimAngleRef.current
+      propsRef.current.onAimChange?.(aimAngleRef.current, targetPowerRef.current)
     }
   }
 
@@ -412,12 +430,19 @@ export function BilliardCanvas({
         ctx.fill()
       }
 
-      // 5. Miniclip-style Aim Guideline & Ghost Ball (Saat Aiming)
-      if (isAiming && canShoot && cueBall && !isBallInHand) {
+      // 5. Miniclip-style Aim Guideline & Ghost Ball (Saat Aiming oleh kita ATAU lawan)
+      const isLocalAiming = isAiming && canShoot && cueBall && !isBallInHand
+      const isOpponentAiming = isAiming && !canShoot && opponentAim && cueBall && !isBallInHand
+
+      if ((isLocalAiming || isOpponentAiming) && cueBall) {
+        const activeAngle = isLocalAiming ? aimAngle : opponentAim!.angle
+        const activePower = isLocalAiming ? power : opponentAim!.power
+        const isRemote = isOpponentAiming
+
         const cx = cueBall.x + CUSHION_WIDTH
         const cy = cueBall.y + CUSHION_WIDTH
-        const dirX = Math.cos(aimAngle)
-        const dirY = Math.sin(aimAngle)
+        const dirX = Math.cos(activeAngle)
+        const dirY = Math.sin(activeAngle)
 
         // Raycasting deteksi bola sasaran pertama yang terkena
         let closestHitDist = 2000
@@ -458,27 +483,33 @@ export function BilliardCanvas({
         const ghostX = cx + dirX * closestHitDist
         const ghostY = cy + dirY * closestHitDist
 
-        // Garis putih utama dari bola putih ke ghost ball
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.85)"
+        // Garis bidik utama: putih untuk kita, emas/kuning bergaris untuk lawan
+        ctx.strokeStyle = isRemote ? "rgba(255, 215, 0, 0.75)" : "rgba(255, 255, 255, 0.85)"
         ctx.lineWidth = 1.5
+        if (isRemote) {
+          ctx.setLineDash([4, 4])
+        }
         ctx.beginPath()
         ctx.moveTo(cx, cy)
         ctx.lineTo(ghostX, ghostY)
         ctx.stroke()
+        if (isRemote) {
+          ctx.setLineDash([])
+        }
 
         // Jika menabrak bola sasaran: Gambar Ghost Ball Circle & Garis Trayektori
         if (targetHitBall) {
           const tbx = targetHitBall.x + CUSHION_WIDTH
           const tby = targetHitBall.y + CUSHION_WIDTH
 
-          // Lingkaran Ghost Ball (Miniclip white ring indicator)
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.9)"
+          // Lingkaran Ghost Ball (Miniclip indicator)
+          ctx.strokeStyle = isRemote ? "rgba(255, 215, 0, 0.85)" : "rgba(255, 255, 255, 0.9)"
           ctx.lineWidth = 2
           ctx.beginPath()
           ctx.arc(ghostX, ghostY, BALL_RADIUS, 0, Math.PI * 2)
           ctx.stroke()
 
-          ctx.fillStyle = "rgba(255, 255, 255, 0.15)"
+          ctx.fillStyle = isRemote ? "rgba(255, 215, 0, 0.15)" : "rgba(255, 255, 255, 0.15)"
           ctx.beginPath()
           ctx.arc(ghostX, ghostY, BALL_RADIUS, 0, Math.PI * 2)
           ctx.fill()
@@ -491,7 +522,7 @@ export function BilliardCanvas({
           const normY = normDy / normLen
 
           const targetLineLen = 65
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.85)"
+          ctx.strokeStyle = isRemote ? "rgba(255, 215, 0, 0.8)" : "rgba(255, 255, 255, 0.85)"
           ctx.lineWidth = 2
           ctx.beginPath()
           ctx.moveTo(tbx, tby)
@@ -505,7 +536,7 @@ export function BilliardCanvas({
           const deflLen = Math.hypot(deflX, deflY) || 1
           const deflLineLen = 40
 
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.5)"
+          ctx.strokeStyle = isRemote ? "rgba(255, 215, 0, 0.5)" : "rgba(255, 255, 255, 0.5)"
           ctx.lineWidth = 1.5
           ctx.setLineDash([3, 3])
           ctx.beginPath()
@@ -516,17 +547,17 @@ export function BilliardCanvas({
         }
 
         // Render Stik Biliar di belakang bola putih dengan tarikan mundur halus
-        const pullBackOffset = 18 + power * 75
-        const cueTipX = cx - Math.cos(aimAngle) * pullBackOffset
-        const cueTipY = cy - Math.sin(aimAngle) * pullBackOffset
+        const pullBackOffset = 18 + activePower * 75
+        const cueTipX = cx - Math.cos(activeAngle) * pullBackOffset
+        const cueTipY = cy - Math.sin(activeAngle) * pullBackOffset
         const cueLength = 260
 
         ctx.save()
         ctx.translate(cueTipX, cueTipY)
-        ctx.rotate(aimAngle + Math.PI)
+        ctx.rotate(activeAngle + Math.PI)
 
-        // Ujung stik (Tip biru kapur)
-        ctx.fillStyle = "#1E88E5"
+        // Ujung stik (Tip biru kapur / cyan untuk lawan)
+        ctx.fillStyle = isRemote ? "#00E5FF" : "#1E88E5"
         ctx.fillRect(0, -1.8, 4, 3.6)
 
         // Ferrule putih
@@ -535,8 +566,8 @@ export function BilliardCanvas({
 
         // Shaft kayu maple
         const shaftGrad = ctx.createLinearGradient(12, 0, 160, 0)
-        shaftGrad.addColorStop(0, "#F2DBB6")
-        shaftGrad.addColorStop(1, "#D6B27D")
+        shaftGrad.addColorStop(0, isRemote ? "#FFE082" : "#F2DBB6")
+        shaftGrad.addColorStop(1, isRemote ? "#FFB74D" : "#D6B27D")
         ctx.fillStyle = shaftGrad
         ctx.beginPath()
         ctx.moveTo(12, -2.2)
@@ -546,11 +577,11 @@ export function BilliardCanvas({
         ctx.closePath()
         ctx.fill()
 
-        // Handle kayu gelap
+        // Handle kayu gelap / mahogany
         const handleGrad = ctx.createLinearGradient(160, 0, cueLength, 0)
-        handleGrad.addColorStop(0, "#3E2723")
-        handleGrad.addColorStop(0.5, "#5D4037")
-        handleGrad.addColorStop(1, "#211410")
+        handleGrad.addColorStop(0, isRemote ? "#4E342E" : "#3E2723")
+        handleGrad.addColorStop(0.5, isRemote ? "#6D4C41" : "#5D4037")
+        handleGrad.addColorStop(1, isRemote ? "#271B18" : "#211410")
         ctx.fillStyle = handleGrad
         ctx.beginPath()
         ctx.moveTo(160, -3.2)

@@ -252,3 +252,51 @@ export async function toggleChatReactionAction(params: {
     }
   }
 }
+
+/**
+ * Otomatis mengirimkan pengumuman room game (Billiard atau Paint War) ke Chat Umum
+ */
+export async function announceGameRoomAction(params: {
+  game: "billiard" | "paintwar"
+  roomCode?: string
+  rounds?: number
+  userName: string
+  userId?: string
+  token?: string | null
+}): Promise<{ success: boolean; data?: DbChatMessage; error?: string }> {
+  const supabase = createServerSupabase(params.token)
+  if (!supabase) return { success: false, error: "Supabase belum terkonfigurasi" }
+
+  const messageText =
+    params.game === "billiard"
+      ? `🎱 [BILLIARD 98] ${params.userName} membuat Room Billiard 8-Ball! Kode: [${params.roomCode}]. Ayo tanding 1v1 di Pool Lounge 98!`
+      : `🎨 [PAINT WAR 98] ${params.userName} memulai pertandingan Paint War (${params.rounds || 5} Ronde)! Ayo masuk dan tebak gambarnya!`
+
+  try {
+    const payload = {
+      message: messageText,
+      mentions: ["all"],
+      user_id: params.userId || "system",
+      user_name: params.userName || "SYSTEM 98",
+      user_avatar: null,
+      user_role: "member",
+    }
+
+    const { data, error } = await supabase
+      .from("chat_messages")
+      .insert(payload)
+      .select()
+      .single()
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+    return { success: true, data }
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Gagal mengirim pengumuman room",
+    }
+  }
+}
+

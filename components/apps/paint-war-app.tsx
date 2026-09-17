@@ -9,6 +9,8 @@ import {
 } from "@/lib/paint-war-store"
 import { PaintCanvas } from "@/components/apps/paint-war/paint-canvas"
 import { useAuth } from "@/lib/auth"
+import { supabase } from "@/lib/supabase"
+import { announceGameRoomAction } from "@/app/actions/chat"
 import { cn } from "@/lib/utils"
 import {
   Send,
@@ -615,14 +617,31 @@ export function PaintWarApp() {
                   {/* Tombol Start Game */}
                   <button
                     type="button"
-                    onClick={() =>
+                    onClick={() => {
                       startNewGame({
                         totalRounds: selectedRounds,
                         roundDurationSec: selectedDuration,
                         category: selectedCategory,
                         targetDrawerId: user?.id,
                       })
-                    }
+
+                      // Lempar pengumuman room aktif ke Chat Umum
+                      void (async () => {
+                        try {
+                          const token =
+                            (await supabase?.auth.getSession())?.data.session?.access_token ?? null
+                          await announceGameRoomAction({
+                            game: "paintwar",
+                            rounds: selectedRounds,
+                            userName: user?.name || "Pemain",
+                            userId: user?.id,
+                            token,
+                          })
+                        } catch {
+                          // Silently ignore if chat announcement fails
+                        }
+                      })()
+                    }}
                     className="w-full py-2.5 bg-[#000080] hover:bg-blue-800 text-white font-bold text-xs border-2 border-white border-b-[#404040] border-r-[#404040] active:border-[#404040] shadow-md flex items-center justify-center gap-2 group transition-all"
                   >
                     <Play className="w-4 h-4 fill-white text-white group-hover:scale-110 transition-transform" />

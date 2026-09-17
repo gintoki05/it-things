@@ -113,3 +113,13 @@ export type BilliardRealtimeMessage =
       leaverId: PlayerId
       leaverName: string
     }
+  | {
+      type: "cue_aim"
+      angle: number
+      power: number
+    }
+  | {
+      type: "room_full"
+      roomCode: string
+      message?: string
+    }
