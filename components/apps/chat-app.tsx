@@ -265,10 +265,23 @@ function ChatLiveLink({
 }
 
 export function ChatApp() {
-  const { user, isGuest, isAdmin, signInWithGoogle } = useAuth()
+  const { user, isGuest, isAdmin, isLoading: isAuthLoading, signInWithGoogle } = useAuth()
   const { members } = useTeamStore()
   const { openWindow } = useDesktop()
   const { addTrack } = useWinamp()
+
+  const [isLoggingIn, setIsLoggingIn] = React.useState(false)
+
+  const handleGoogleLogin = async () => {
+    if (isLoggingIn) return
+    setIsLoggingIn(true)
+    try {
+      await signInWithGoogle()
+    } catch (err) {
+      console.error("Login error:", err)
+      setIsLoggingIn(false)
+    }
+  }
 
   // Map profil member terbaru berdasarkan user_id dan id untuk sinkronisasi realtime nama & avatar di chat
   const membersMap = React.useMemo(() => {
@@ -803,6 +816,23 @@ export function ChatApp() {
     })
   }
 
+  // ─── AUTH INITIALIZING STATE ─────────────────────────────────
+  if (isAuthLoading && !user) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-6 text-center select-none bg-[#D4DDE6]">
+        <div className="bg-[#CBD5E1] border-2 border-t-white border-l-white border-r-[#5E7287] border-b-[#5E7287] p-6 max-w-sm w-full shadow-[4px_4px_0px_rgba(0,0,0,0.25)] flex flex-col items-center">
+          <RotateCw className="size-7 text-[#1E4E8C] animate-spin mb-3" />
+          <h3 className="font-mono text-xs font-black text-[#102A45] tracking-wider mb-1 uppercase">
+            CHAT.EXE // MEMVERIFIKASI IDENTITAS...
+          </h3>
+          <p className="text-[11px] text-gray-700 font-sans">
+            Menghubungkan sesi akun ke server tim...
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   // ─── GUEST MODE LOCKED SCREEN ────────────────────────────────
   if (isGuest || !user) {
     return (
@@ -820,11 +850,24 @@ export function ChatApp() {
           </p>
           <button
             type="button"
-            onClick={signInWithGoogle}
-            className="flex items-center justify-center gap-2 w-full py-2 px-4 text-xs font-bold font-mono text-white bg-[#1E4E8C] hover:bg-[#153A6B] border-2 border-t-[#6BA3E8] border-l-[#6BA3E8] border-r-[#0D2440] border-b-[#0D2440] shadow-[2px_2px_0px_#0D2440] active:translate-y-px cursor-pointer"
+            onClick={handleGoogleLogin}
+            disabled={isLoggingIn}
+            className={cn(
+              "flex items-center justify-center gap-2 w-full py-2 px-4 text-xs font-bold font-mono text-white bg-[#1E4E8C] hover:bg-[#153A6B] border-2 border-t-[#6BA3E8] border-l-[#6BA3E8] border-r-[#0D2440] border-b-[#0D2440] shadow-[2px_2px_0px_#0D2440] active:translate-y-px cursor-pointer",
+              isLoggingIn && "opacity-75 cursor-wait pointer-events-none"
+            )}
           >
-            <LogIn className="size-4" />
-            <span>MASUK DENGAN GOOGLE</span>
+            {isLoggingIn ? (
+              <>
+                <RotateCw className="size-4 animate-spin" />
+                <span>MENGHUBUNGKAN KE GOOGLE...</span>
+              </>
+            ) : (
+              <>
+                <LogIn className="size-4" />
+                <span>MASUK DENGAN GOOGLE</span>
+              </>
+            )}
           </button>
         </div>
       </div>

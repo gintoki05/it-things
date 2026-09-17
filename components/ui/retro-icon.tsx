@@ -37,11 +37,13 @@ export const RETRO_ICON_NAMES = [
   "tomato",
   "bug",
   "folder",
+  "billiard",
 ] as const
 
 export type RetroIconName = typeof RETRO_ICON_NAMES[number]
 
 export const EMOJI_TO_RETRO_ICON: Record<string, RetroIconName> = {
+  "🎱": "billiard",
   "📁": "folder",
   "📂": "folder",
   "🍅": "pomodoro",
@@ -95,6 +97,7 @@ export function resolveRetroIcon(nameOrEmoji?: string | null): RetroIconName | n
   if (trimmed === "paintwar") return "paint"
   if (trimmed === "feedback") return "idea"
   if (trimmed === "snipper") return "bug"
+  if (trimmed === "pool" || trimmed === "pool98") return "billiard"
 
   // Exact match with emoji
   if (EMOJI_TO_RETRO_ICON[nameOrEmoji]) {
@@ -125,6 +128,9 @@ export function getRetroIconSrc(
   if (!iconName) return null
 
   // Custom vector icons for games / apps
+  if (iconName === "billiard") {
+    return "/icons/billiard.svg"
+  }
   if (iconName === "tower") {
     return "/icons/tower.svg"
   }

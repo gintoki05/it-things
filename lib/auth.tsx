@@ -68,11 +68,46 @@ const getSavedGuestAvatar = () => {
   }
 }
 
+const AUTH_USER_STORAGE_KEY = "it_things_auth_user_v1"
+
+const getInitialCachedUser = (): AuthUser | null => {
+  if (typeof window === "undefined") return null
+  try {
+    const isGuestSaved = localStorage.getItem("it_things_guest_session") === "true"
+    if (isGuestSaved) {
+      return {
+        id: "guest-user",
+        name: getSavedGuestName(),
+        avatarUrl: getSavedGuestAvatar(),
+        email: "tamu@it-internal.local",
+        role: "guest",
+        isGuest: true,
+      }
+    }
+    const raw = localStorage.getItem(AUTH_USER_STORAGE_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (parsed && parsed.id && !parsed.isGuest) {
+        return parsed
+      }
+    }
+  } catch {}
+  return null
+}
+
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = React.useState<AuthUser | null>(null)
-  const [isLoading, setIsLoading] = React.useState(true)
+  const [user, setUser] = React.useState<AuthUser | null>(getInitialCachedUser)
+  const [isLoading, setIsLoading] = React.useState<boolean>(() => {
+    if (typeof window === "undefined") return true
+    try {
+      const isGuestSaved = localStorage.getItem("it_things_guest_session") === "true"
+      const cached = localStorage.getItem(AUTH_USER_STORAGE_KEY)
+      if (isGuestSaved || cached) return false
+    } catch {}
+    return true
+  })
   const [isPasscodeVerified, setIsPasscodeVerified] = React.useState<boolean>(false)
   const [isPasscodeLoading, setIsPasscodeLoading] = React.useState<boolean>(true)
   const [isRecoveryMode, setIsRecoveryMode] = React.useState<boolean>(false)
@@ -330,8 +365,19 @@ const ROOT_ADMIN_EMAILS = [
   const mapAndSetSupabaseUser = async (sbUser: User) => {
     const meta = sbUser.user_metadata || {}
     const isRootAdmin = !!(sbUser.email && ROOT_ADMIN_EMAILS.includes(sbUser.email.toLowerCase()))
-    let role: UserRole = isRootAdmin ? "admin" : "member"
-    let displayName = meta.full_name || meta.name || sbUser.email?.split("@")[0] || "Anggota Tim"
+    
+    // Ambil cached role jika ada, fallback ke member/admin
+    let initialRole: UserRole = isRootAdmin ? "admin" : "member"
+    if (typeof window !== "undefined") {
+      try {
+        const savedRole = localStorage.getItem("it_things_user_role") as UserRole
+        if (savedRole && ["admin", "member", "guest"].includes(savedRole)) {
+          initialRole = isRootAdmin ? "admin" : savedRole
+        }
+      } catch {}
+    }
+
+    const displayName = meta.full_name || meta.name || sbUser.email?.split("@")[0] || "Anggota Tim"
 
     // Foto Google asli selalu tersimpan di meta.picture atau identity_data
     const googleIdentity = sbUser.identities?.find(
@@ -347,9 +393,45 @@ const ROOT_ADMIN_EMAILS = [
       ? rawGoogleAvatar
       : undefined
 
-    let avatarUrl = googleAvatarUrl
+    const avatarUrl = googleAvatarUrl
 
-    // Check team_members table for role & custom profile name via Server Action
+    // 1. SET USER SEGERA (Instant / Optimistic UI)!
+    // Jangan tunda sampai Server Action fetchTeamMemberProfileAction selesai lewat network
+    const immediateUser: AuthUser = {
+      id: sbUser.id,
+      email: sbUser.email || "",
+      name: displayName,
+      avatarUrl,
+      googleAvatarUrl,
+      role: initialRole,
+      realRole: initialRole,
+      isGuest: false,
+    }
+
+    setUser((prev) => {
+      // Pertahankan custom profile name/avatar lokal jika sudah ada untuk user yang sama
+      if (prev && prev.id === sbUser.id) {
+        return {
+          ...immediateUser,
+          name: prev.name || immediateUser.name,
+          avatarUrl: prev.avatarUrl !== undefined ? prev.avatarUrl : immediateUser.avatarUrl,
+          role: prev.role || immediateUser.role,
+        }
+      }
+      return immediateUser
+    })
+    setIsLoading(false)
+
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(immediateUser))
+        localStorage.setItem("it_things_user_role", initialRole)
+      } catch (e) {
+        console.warn("Storage write error:", e)
+      }
+    }
+
+    // 2. Sinkronkan profil kustom & role dari database team_members di background (non-blocking)
     try {
       if (supabase) {
         const token = (await supabase.auth.getSession()).data.session?.access_token || null
@@ -362,35 +444,37 @@ const ROOT_ADMIN_EMAILS = [
           token,
         })
 
-        role = profile.role
-        displayName = profile.name
-        if (profile.avatarUrl !== undefined && profile.avatarUrl !== null) {
-          avatarUrl = profile.avatarUrl
+        const updatedRole = profile.role
+        const updatedName = profile.name
+        const updatedAvatar = profile.avatarUrl ?? avatarUrl
+
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem("it_things_user_role", updatedRole)
+          } catch {}
+        }
+
+        const syncedUser: AuthUser = {
+          id: sbUser.id,
+          email: sbUser.email || "",
+          name: updatedName,
+          avatarUrl: updatedAvatar,
+          googleAvatarUrl,
+          role: updatedRole,
+          realRole: updatedRole,
+          isGuest: false,
+        }
+
+        setUser(syncedUser)
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(syncedUser))
+          } catch {}
         }
       }
     } catch (e) {
-      console.warn("Could not sync team_member data:", e)
+      console.warn("Could not sync team_member data in background:", e)
     }
-
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem("it_things_user_role", role)
-      } catch (e) {
-        console.warn("Storage write error:", e)
-      }
-    }
-
-    const authUser: AuthUser = {
-      id: sbUser.id,
-      email: sbUser.email || "",
-      name: displayName,
-      avatarUrl,
-      googleAvatarUrl,
-      role,
-      realRole: role,
-      isGuest: false,
-    }
-    setUser(authUser)
   }
 
   const isGuest = !!user?.isGuest || user?.id === "guest-user" || user?.role === "guest"
@@ -401,15 +485,20 @@ const ROOT_ADMIN_EMAILS = [
 
   const switchRole = async (role: UserRole) => {
     if (isGuest || !canSwitchRole) return
-    setUser((prev) => (prev ? { ...prev, role, realRole: role } : prev))
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem("it_things_user_role", role)
-      } catch (e) {
-        console.warn("Storage save error:", e)
+    setUser((prev) => {
+      if (!prev) return prev
+      const updated = { ...prev, role, realRole: role }
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(updated))
+          localStorage.setItem("it_things_user_role", role)
+        } catch (e) {
+          console.warn("Storage save error:", e)
+        }
+        window.dispatchEvent(new CustomEvent("profile-updated"))
       }
-      window.dispatchEvent(new CustomEvent("profile-updated"))
-    }
+      return updated
+    })
 
     if (supabase && user?.id && !isGuest) {
       try {
@@ -726,6 +815,11 @@ const ROOT_ADMIN_EMAILS = [
         // 3. Pastikan state lokal konsisten & broadcast event ke fitur lain
         setUser(updatedUser)
         if (typeof window !== "undefined") {
+          if (updatedUser) {
+            try {
+              localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(updatedUser))
+            } catch {}
+          }
           window.dispatchEvent(
             new CustomEvent("profile-updated", {
               detail: { name: trimmedName, avatarUrl: updates.avatarUrl },
@@ -751,6 +845,7 @@ const ROOT_ADMIN_EMAILS = [
   const signOut = async () => {
     if (typeof window !== "undefined") {
       try {
+        localStorage.removeItem(AUTH_USER_STORAGE_KEY)
         localStorage.removeItem("it_things_guest_session")
         localStorage.removeItem("it_things_guest_name")
         localStorage.removeItem("it_things_guest_avatar")

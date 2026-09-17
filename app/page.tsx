@@ -35,6 +35,7 @@ import { LapakApp } from "@/components/apps/lapak-app"
 import { IExploreApp } from "@/components/apps/iexplore-app"
 import { PaintWarApp } from "@/components/apps/paint-war-app"
 import { GameApp } from "@/components/apps/game-app"
+import { BilliardApp } from "@/components/apps/billiard-app"
 import { WordleApp } from "@/components/apps/wordle-app"
 import { WinampApp } from "@/components/apps/winamp-app"
 import { SwissToolsApp } from "@/components/apps/swiss-tools-app"
@@ -60,6 +61,7 @@ const MemoizedChatApp = React.memo(ChatApp)
 const MemoizedIExploreApp = React.memo(IExploreApp)
 const MemoizedPaintWarApp = React.memo(PaintWarApp)
 const MemoizedGameApp = React.memo(GameApp)
+const MemoizedBilliardApp = React.memo(BilliardApp)
 const MemoizedWordleApp = React.memo(WordleApp)
 const TowerApp = dynamic(() => import("@/components/apps/tower-app").then(module => module.TowerApp), {
   ssr: false,
@@ -269,6 +271,11 @@ function DesktopWorkspace() {
       {/* Retro Window: game.exe (Koleksi Game & Arcade 98) */}
       <DesktopWindow id="game" bodyClassName="p-0 overflow-hidden flex flex-col">
         <MemoizedGameApp />
+      </DesktopWindow>
+
+      {/* Retro Window: pool98.exe (Billiard 98 - 8 Ball Pool) */}
+      <DesktopWindow id="billiard" keepMountedOnMinimize bodyClassName="p-0 overflow-hidden flex flex-col">
+        <MemoizedBilliardApp />
       </DesktopWindow>
 
 

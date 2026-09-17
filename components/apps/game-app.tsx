@@ -9,12 +9,12 @@ import { Play, Sparkles, Users, Gamepad2, Award } from "lucide-react"
 
 interface GameItem {
   id: string
-  appId?: "paintwar" | "wordle" | "tower"
+  appId?: "paintwar" | "wordle" | "tower" | "billiard"
   title: string
   filename: string
   category: string
   description: string
-  iconName: "game" | "task" | "idea" | "edit" | "tower" | "paint"
+  iconName: "game" | "task" | "idea" | "edit" | "tower" | "paint" | "billiard"
   isLive?: boolean
   isComingSoon?: boolean
 }
@@ -24,6 +24,16 @@ export function GameApp() {
   const { activePaintWarCount } = useNotification()
 
   const games: GameItem[] = [
+    {
+      id: "billiard",
+      appId: "billiard",
+      title: "Billiard 98",
+      filename: "POOL98.EXE",
+      category: "Multiplayer 8-Ball Pool",
+      description:
+        "Adu sodok bola biliar klasik 8-Ball. Main 1v1 online atau adu mekanik lokal 1 layar dengan fisika realistis!",
+      iconName: "billiard",
+    },
     {
       id: "tower",
       appId: "tower",
@@ -76,7 +86,7 @@ export function GameApp() {
     },
   ]
 
-  const handleLaunchGame = (appId?: "paintwar" | "wordle" | "tower") => {
+  const handleLaunchGame = (appId?: "paintwar" | "wordle" | "tower" | "billiard") => {
     if (appId) {
       openWindow(appId)
     }

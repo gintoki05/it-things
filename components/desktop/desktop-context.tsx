@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
 
-export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "wordle" | "winamp" | "tower" | "swisstools" | "pomodoro" | "feedback" | "snipper" | "tools"
+export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "wordle" | "winamp" | "tower" | "swisstools" | "pomodoro" | "feedback" | "snipper" | "tools" | "billiard"
 
 export interface WindowState {
   id: AppId
@@ -254,6 +254,21 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     defaultPos: { x: 260, y: 30 },
     hideFromDesktop: true,
   },
+  billiard: {
+    id: "billiard",
+    title: "POOL98.EXE - Billiard 98 (8-Ball)",
+    icon: "billiard",
+    filename: "pool98.exe",
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    zIndex: 14,
+    position: { x: 120, y: 30 },
+    size: { width: 880, height: 600 },
+    defaultSize: { width: 880, height: 600 },
+    defaultPos: { x: 120, y: 30 },
+    hideFromDesktop: true,
+  },
   winamp: {
     id: "winamp",
     title: "WINAMP.EXE - Winamp 2.91 Media Player",
@@ -389,6 +404,7 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
       "feedback",
       "snipper",
       "tools",
+      "billiard",
     ]
     const targetApp = requestedApp && validApps.includes(requestedApp) ? requestedApp : null
     const wasPomodoroOpen = typeof window !== "undefined" && localStorage.getItem("it-things_pomodoro_window_open") === "true"

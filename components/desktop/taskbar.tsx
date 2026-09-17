@@ -183,7 +183,7 @@ export function Taskbar({ onOpenLoginModal }: TaskbarProps) {
       },
       {
         name: "Hiburan & Game",
-        ids: ["game", "winamp", "paintwar", "wordle", "tower"],
+        ids: ["game", "winamp", "paintwar", "wordle", "tower", "billiard"],
       },
       {
         name: "Sistem & Informasi",

@@ -1588,3 +1588,53 @@ BEGIN
   END;
 END $$;
 
+-- 28. Table: billiard_leaderboard (Klasemen & Statistik Pemain Billiard 98)
+CREATE TABLE IF NOT EXISTS public.billiard_leaderboard (
+  user_id TEXT PRIMARY KEY,
+  user_name TEXT NOT NULL CHECK (char_length(user_name) BETWEEN 1 AND 80),
+  wins INTEGER NOT NULL DEFAULT 0,
+  losses INTEGER NOT NULL DEFAULT 0,
+  matches_played INTEGER NOT NULL DEFAULT 0,
+  balls_pocketed INTEGER NOT NULL DEFAULT 0,
+  win_streak INTEGER NOT NULL DEFAULT 0,
+  highest_streak INTEGER NOT NULL DEFAULT 0,
+  rating_points INTEGER NOT NULL DEFAULT 1000,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+ALTER TABLE public.billiard_leaderboard ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS billiard_leaderboard_select ON public.billiard_leaderboard;
+CREATE POLICY billiard_leaderboard_select ON public.billiard_leaderboard
+  FOR SELECT TO authenticated, anon USING (true);
+
+DROP POLICY IF EXISTS billiard_leaderboard_insert ON public.billiard_leaderboard;
+CREATE POLICY billiard_leaderboard_insert ON public.billiard_leaderboard
+  FOR INSERT TO authenticated WITH CHECK (
+    auth.uid() IS NOT NULL AND user_id = auth.uid()::text
+  );
+
+DROP POLICY IF EXISTS billiard_leaderboard_update ON public.billiard_leaderboard;
+CREATE POLICY billiard_leaderboard_update ON public.billiard_leaderboard
+  FOR UPDATE TO authenticated
+  USING (user_id = auth.uid()::text OR public.is_admin())
+  WITH CHECK (user_id = auth.uid()::text OR public.is_admin());
+
+DROP POLICY IF EXISTS billiard_leaderboard_delete ON public.billiard_leaderboard;
+CREATE POLICY billiard_leaderboard_delete ON public.billiard_leaderboard
+  FOR DELETE TO authenticated USING (public.is_admin());
+
+CREATE INDEX IF NOT EXISTS billiard_leaderboard_ranking_idx
+  ON public.billiard_leaderboard(wins DESC, rating_points DESC, balls_pocketed DESC);
+
+GRANT ALL ON public.billiard_leaderboard TO anon, authenticated, service_role;
+REVOKE TRUNCATE, REFERENCES, TRIGGER ON public.billiard_leaderboard FROM anon, authenticated;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime'
+    AND schemaname = 'public' AND tablename = 'billiard_leaderboard') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.billiard_leaderboard;
+  END IF;
+END $$;
+
+

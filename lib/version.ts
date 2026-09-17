@@ -5,12 +5,25 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.30"
-export const APP_BUILD = "2026.09.14"
+export const APP_VERSION = "v2.3.31"
+export const APP_BUILD = "2026.09.17"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.31",
+    date: "17 Sep 2026",
+    codename: "Billiard 98 Pro (8 Ball Pool Online, 3D Rolling, Reactions, Leaderboard & Auto WO Win)",
+    changes: [
+      "Billiard 98 (POOL98.EXE): Game biliar 8-Ball retro Windows 98 lengkap dengan Room Lobby multiplayer realtime, matchmaking online, dan mode lokal (Pass & Play).",
+      "Fisika 3D Natural & Replikasi 8 Ball Pool: Rotasi gulir bola 3D Rodrigues dengan dual-pole badges, efek sabuk pita stripe sferis melengkung, cue ball spin control (top/back/sidespin), aim ghost ball guideline, dan zero-lag smooth cue dragging.",
+      "Emoji Spectator Reaction & Quick Chat: Tombol reaksi cepat mengambang (floating emoji), tabbed chat popup (20 emoji + frasa obrolan cepat), dan efek suara retro synthesizer Web Audio API.",
+      "Papan Klasemen Tim (billiard_leaderboard): Peringkat 50 pemain terbaik dengan podium medali Top 3, statistik win rate, streak kemenangan, rating poin, dan sinkronisasi otomatis via Supabase Realtime.",
+      "Deteksi Walkover (WO) & Disconnect Auto-Win: Kemenangan otomatis bagi pemain yang bertahan saat lawan tiba-tiba menutup browser/tab atau menyerah di mode multiplayer online, dengan pencatatan rekor klasemen instan.",
+      "Custom Retro Icon: Ikon retro kustom meja biliar kayu mahogany dengan bola 8 hitam 3D dan stik kapur biru di taskbar, title bar, dan menu launcher.",
+    ],
+  },
   {
     version: "v2.3.30",
     date: "14 Sep 2026",
