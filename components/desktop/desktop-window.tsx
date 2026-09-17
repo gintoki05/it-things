@@ -12,6 +12,10 @@ interface DesktopWindowProps {
   bodyClassName?: string
   keepMountedOnMinimize?: boolean
   onCloseRequest?: () => void
+  resizable?: boolean
+  canMinimize?: boolean
+  minWidth?: number
+  minHeight?: number
 }
 
 export function DesktopWindow({
@@ -21,6 +25,10 @@ export function DesktopWindow({
   bodyClassName,
   keepMountedOnMinimize = false,
   onCloseRequest,
+  resizable = false,
+  canMinimize = true,
+  minWidth = 360,
+  minHeight = 240,
 }: DesktopWindowProps) {
   const {
     windows,
@@ -30,6 +38,7 @@ export function DesktopWindow({
     minimizeWindow,
     maximizeWindow,
     updatePosition,
+    updateSize,
   } = useDesktop()
 
   const win = windows[id]
@@ -37,8 +46,9 @@ export function DesktopWindow({
   const [viewportHeight, setViewportHeight] = React.useState<number | null>(null)
   const [isKeyboardOpen, setIsKeyboardOpen] = React.useState(false)
 
-  // Dragging state
+  // Dragging & Resizing state
   const [isDragging, setIsDragging] = React.useState(false)
+  const [isResizing, setIsResizing] = React.useState(false)
   const windowRef = React.useRef<HTMLDivElement>(null)
 
   // Detect mobile and visual viewport for virtual keyboard
@@ -173,6 +183,119 @@ export function DesktopWindow({
     window.addEventListener("pointercancel", onPointerUp)
   }
 
+  // Handle Resizing (8 directions)
+  type ResizeDirection = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw"
+
+  const handleResizePointerDown = (dir: ResizeDirection, e: React.PointerEvent<HTMLDivElement>) => {
+    if (isMobile || win.isMaximized) return
+    if (e.button !== 0 && e.pointerType === "mouse") return
+    e.stopPropagation()
+
+    if (activeWindowId !== id) {
+      bringToFront(id)
+    }
+
+    const handleEl = e.currentTarget
+    const windowEl = windowRef.current
+    if (!windowEl) return
+
+    const pointerId = e.pointerId
+    try {
+      handleEl.setPointerCapture(pointerId)
+    } catch {
+      // ignore
+    }
+
+    setIsResizing(true)
+
+    const startMouseX = e.clientX
+    const startMouseY = e.clientY
+    const startW = win.size.width
+    const startH = win.size.height
+    const startX = win.position.x
+    const startY = win.position.y
+
+    let currentW = startW
+    let currentH = startH
+    let currentX = startX
+    let currentY = startY
+    let rafId: number | null = null
+
+    const effectiveMinWidth = minWidth || 320
+    const effectiveMinHeight = minHeight || 200
+    const maxWidth = window.innerWidth - 20
+    const maxHeight = window.innerHeight - 50
+
+    const onPointerMove = (moveEvent: PointerEvent) => {
+      const deltaX = moveEvent.clientX - startMouseX
+      const deltaY = moveEvent.clientY - startMouseY
+
+      let newW = startW
+      let newH = startH
+      let newX = startX
+      let newY = startY
+
+      if (dir.includes("e")) {
+        newW = Math.min(maxWidth, Math.max(effectiveMinWidth, startW + deltaX))
+      } else if (dir.includes("w")) {
+        const tentativeW = startW - deltaX
+        const clampedW = Math.min(maxWidth, Math.max(effectiveMinWidth, tentativeW))
+        newW = clampedW
+        newX = startX + (startW - clampedW)
+      }
+
+      if (dir.includes("s")) {
+        newH = Math.min(maxHeight, Math.max(effectiveMinHeight, startH + deltaY))
+      } else if (dir.includes("n")) {
+        const tentativeH = startH - deltaY
+        const clampedH = Math.min(maxHeight, Math.max(effectiveMinHeight, tentativeH))
+        newH = clampedH
+        newY = startY + (startH - clampedH)
+      }
+
+      currentW = newW
+      currentH = newH
+      currentX = newX
+      currentY = newY
+
+      if (rafId === null) {
+        rafId = requestAnimationFrame(() => {
+          if (windowEl) {
+            windowEl.style.width = `${currentW}px`
+            windowEl.style.height = `${currentH}px`
+            windowEl.style.left = `${currentX}px`
+            windowEl.style.top = `${currentY}px`
+          }
+          rafId = null
+        })
+      }
+    }
+
+    const onPointerUp = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId)
+        rafId = null
+      }
+      try {
+        handleEl.releasePointerCapture(pointerId)
+      } catch {
+        // ignore
+      }
+
+      window.removeEventListener("pointermove", onPointerMove)
+      window.removeEventListener("pointerup", onPointerUp)
+      window.removeEventListener("pointercancel", onPointerUp)
+
+      setIsResizing(false)
+
+      updateSize(id, { width: currentW, height: currentH }, { x: currentX, y: currentY })
+    }
+
+    window.addEventListener("pointermove", onPointerMove, { passive: true })
+    window.addEventListener("pointerup", onPointerUp)
+    window.addEventListener("pointercancel", onPointerUp)
+  }
+
   // Calculate window style based on state
   const windowStyle: React.CSSProperties = isMobile
     ? {
@@ -203,8 +326,10 @@ export function DesktopWindow({
         left: `${win.position.x}px`,
         top: `${win.position.y}px`,
         width: `${win.size.width}px`,
+        minWidth: minWidth ? `${minWidth}px` : undefined,
         maxWidth: "calc(100vw - 20px)",
         height: `${win.size.height}px`,
+        minHeight: minHeight ? `${minHeight}px` : undefined,
         maxHeight: "calc(100dvh - 65px)",
         zIndex: win.zIndex,
       }
@@ -220,7 +345,7 @@ export function DesktopWindow({
       }}
       style={{
         ...windowStyle,
-        willChange: isDragging ? "transform" : "auto",
+        willChange: isDragging ? "transform" : isResizing ? "width, height, left, top" : "auto",
         display: win.isMinimized ? "none" : undefined,
       }}
       className={cn(
@@ -229,6 +354,7 @@ export function DesktopWindow({
         "border-t-[#E8EEF5] border-l-[#E8EEF5] border-r-[#5E7287] border-b-[#5E7287] bg-[#D4DDE6] shadow-[2px_2px_12px_rgba(0,0,0,0.35)]",
         isActive ? "ring-1 ring-[#1A365D]/40" : "opacity-95",
         isDragging && "shadow-[4px_8px_24px_rgba(0,0,0,0.45)] cursor-move",
+        isResizing && "shadow-[4px_8px_24px_rgba(0,0,0,0.45)]",
         win.isMinimized && "hidden pointer-events-none",
         className
       )}
@@ -236,6 +362,11 @@ export function DesktopWindow({
       {/* Retro Title Bar */}
       <div
         onPointerDown={handlePointerDown}
+        onDoubleClick={() => {
+          if (!isMobile) {
+            maximizeWindow(id)
+          }
+        }}
         className={cn(
           "h-9 md:h-8 px-2 flex items-center justify-between font-mono text-xs font-bold shrink-0 cursor-move select-none",
           isActive
@@ -255,12 +386,18 @@ export function DesktopWindow({
         >
           <button
             type="button"
+            disabled={!canMinimize}
+            aria-disabled={!canMinimize}
             onClick={(e) => {
               e.stopPropagation()
+              if (!canMinimize) return
               minimizeWindow(id)
             }}
-            title="Minimize"
-            className="size-8 md:size-5 flex items-center justify-center text-xs md:text-[10px] font-bold bg-[#D4DDE6] text-[#14253D] border border-[#7D8E9E] border-t-white border-l-white active:border-t-[#7D8E9E] active:border-l-[#7D8E9E] active:border-r-white active:border-b-white rounded-[2px]"
+            title={canMinimize ? "Minimize" : undefined}
+            className={cn(
+              "size-8 md:size-5 flex items-center justify-center text-xs md:text-[10px] font-bold bg-[#D4DDE6] text-[#14253D] border border-[#7D8E9E] border-t-white border-l-white active:border-t-[#7D8E9E] active:border-l-[#7D8E9E] active:border-r-white active:border-b-white rounded-[2px]",
+              !canMinimize && "opacity-35 cursor-not-allowed active:border-t-white active:border-l-white active:border-r-[#7D8E9E] active:border-b-[#7D8E9E]"
+            )}
           >
             _
           </button>
@@ -298,13 +435,67 @@ export function DesktopWindow({
       {/* Window Body */}
       <div 
         className={cn(
-          "flex-1 overflow-auto bg-[#F4F6F9] text-[#1A202C] p-3 text-xs select-text",
-          isDragging && "pointer-events-none select-none",
+          "flex-1 overflow-auto bg-[#F4F6F9] text-[#1A202C] p-3 text-xs select-text relative",
+          (isDragging || isResizing) && "pointer-events-none select-none",
           bodyClassName
         )}
       >
         {children}
       </div>
+
+      {/* Resizing Handles (only desktop, resizable, and not maximized) */}
+      {resizable && !isMobile && !win.isMaximized && (
+        <>
+          <div
+            onPointerDown={(e) => handleResizePointerDown("n", e)}
+            className="absolute top-0 left-3 right-3 h-1.5 cursor-n-resize z-30"
+          />
+          <div
+            onPointerDown={(e) => handleResizePointerDown("s", e)}
+            className="absolute bottom-0 left-3 right-3 h-1.5 cursor-s-resize z-30"
+          />
+          <div
+            onPointerDown={(e) => handleResizePointerDown("w", e)}
+            className="absolute top-3 bottom-3 left-0 w-1.5 cursor-w-resize z-30"
+          />
+          <div
+            onPointerDown={(e) => handleResizePointerDown("e", e)}
+            className="absolute top-3 bottom-3 right-0 w-1.5 cursor-e-resize z-30"
+          />
+          <div
+            onPointerDown={(e) => handleResizePointerDown("nw", e)}
+            className="absolute top-0 left-0 size-3 cursor-nw-resize z-30"
+          />
+          <div
+            onPointerDown={(e) => handleResizePointerDown("ne", e)}
+            className="absolute top-0 right-0 size-3 cursor-ne-resize z-30"
+          />
+          <div
+            onPointerDown={(e) => handleResizePointerDown("sw", e)}
+            className="absolute bottom-0 left-0 size-3 cursor-sw-resize z-30"
+          />
+          <div
+            onPointerDown={(e) => handleResizePointerDown("se", e)}
+            className="absolute bottom-0 right-0 size-4 cursor-se-resize z-30 flex items-end justify-end p-0.5 pointer-events-auto"
+            title="Ubah ukuran window"
+          >
+            {/* Retro 98 corner grip */}
+            <svg
+              className="w-2.5 h-2.5 text-[#5E7287] select-none pointer-events-none"
+              viewBox="0 0 10 10"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <line x1="8" y1="2" x2="2" y2="8" stroke="#FFFFFF" strokeWidth="1" />
+              <line x1="9" y1="3" x2="3" y2="9" stroke="#5E7287" strokeWidth="1" />
+              <line x1="8" y1="5" x2="5" y2="8" stroke="#FFFFFF" strokeWidth="1" />
+              <line x1="9" y1="6" x2="6" y2="9" stroke="#5E7287" strokeWidth="1" />
+              <line x1="8" y1="8" x2="8" y2="8" stroke="#FFFFFF" strokeWidth="1" />
+              <line x1="9" y1="9" x2="9" y2="9" stroke="#5E7287" strokeWidth="1" />
+            </svg>
+          </div>
+        </>
+      )}
     </div>
   )
 }

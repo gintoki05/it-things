@@ -274,7 +274,15 @@ function DesktopWorkspace() {
       </DesktopWindow>
 
       {/* Retro Window: pool98.exe (Billiard 98 - 8 Ball Pool) */}
-      <DesktopWindow id="billiard" keepMountedOnMinimize bodyClassName="p-0 overflow-hidden flex flex-col">
+      <DesktopWindow
+        id="billiard"
+        keepMountedOnMinimize
+        resizable
+        canMinimize={false}
+        minWidth={680}
+        minHeight={480}
+        bodyClassName="p-0 overflow-hidden flex flex-col"
+      >
         <MemoizedBilliardApp />
       </DesktopWindow>
 

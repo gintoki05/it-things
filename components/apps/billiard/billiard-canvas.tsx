@@ -856,7 +856,7 @@ export function BilliardCanvas({
   return (
     <div
       ref={containerRef}
-      className="relative w-full aspect-[856/456] max-w-[856px] mx-auto bg-black select-none touch-none cursor-crosshair shadow-2xl flex items-center"
+      className="relative w-full h-full max-w-full max-h-full aspect-[856/456] mx-auto bg-black select-none touch-none cursor-crosshair shadow-2xl flex items-center justify-center"
     >
       {/* ── Vertical Cue Stick & Power Meter (Authentic 8 Ball Pool di Sisi Kiri) ── */}
       {propsRef.current.canShoot && (propsRef.current.isAiming || propsRef.current.isBallInHand) && (

@@ -35,6 +35,7 @@ interface DesktopContextType {
   bringToFront: (id: AppId) => void
   toggleWindow: (id: AppId) => void
   updatePosition: (id: AppId, pos: { x: number; y: number }) => void
+  updateSize: (id: AppId, size: { width: number; height: number }, pos?: { x: number; y: number }) => void
   openComingSoonDialog: (app: WindowState) => void
   closeComingSoonDialog: () => void
   isAboutOpen: boolean
@@ -688,6 +689,24 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
     })
   }, [])
 
+  const updateSize = React.useCallback(
+    (id: AppId, size: { width: number; height: number }, pos?: { x: number; y: number }) => {
+      setWindows((curr) => {
+        const win = curr[id]
+        if (!win) return curr
+        return {
+          ...curr,
+          [id]: {
+            ...win,
+            size,
+            ...(pos ? { position: pos } : {}),
+          },
+        }
+      })
+    },
+    []
+  )
+
   const [minimizedSnapshot, setMinimizedSnapshot] = React.useState<AppId[]>([])
   const [lastFocusedId, setLastFocusedId] = React.useState<AppId | null>(null)
 
@@ -782,6 +801,7 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
       bringToFront,
       toggleWindow,
       updatePosition,
+      updateSize,
       openComingSoonDialog,
       closeComingSoonDialog,
       isAboutOpen,
@@ -804,6 +824,7 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
       bringToFront,
       toggleWindow,
       updatePosition,
+      updateSize,
       openComingSoonDialog,
       closeComingSoonDialog,
       isAboutOpen,
