@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>GBA & Retro Arcade Player</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #101014;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+
+    #game-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #game {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Win98 styled initial placeholder when no ROM is loaded */
+    #empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+      background: #c0c0c0;
+      border: 2px solid;
+      border-color: #dfdfdf #808080 #808080 #dfdfdf;
+      box-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+      color: #000;
+      max-width: 460px;
+      width: 90%;
+    }
+
+    .retro-title-bar {
+      width: 100%;
+      background: #000080;
+      color: #fff;
+      font-weight: bold;
+      font-size: 11px;
+      padding: 3px 6px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .retro-content {
+      font-size: 12px;
+      line-height: 1.5;
+      margin-bottom: 14px;
+    }
+
+    .drop-zone {
+      width: 100%;
+      border: 2px dashed #808080;
+      background: #ece9d8;
+      padding: 24px 12px;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .drop-zone.dragover {
+      background: #d0e0ff;
+      border-color: #000080;
+    }
+
+    .retro-btn {
+      background: #c0c0c0;
+      border: 2px solid;
+      border-color: #dfdfdf #404040 #404040 #dfdfdf;
+      padding: 4px 14px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #000;
+      outline: none;
+    }
+
+    .retro-btn:active {
+      border-color: #404040 #dfdfdf #dfdfdf #404040;
+    }
+
+    /* CRT scanline overlay effect */
+    .crt-overlay {
+      pointer-events: none;
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+      background-size: 100% 4px;
+      z-index: 99;
+      opacity: 0.7;
+      display: none;
+    }
+
+    body.crt-enabled .crt-overlay {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div class="crt-overlay" id="crt"></div>
+    <div id="game"></div>
+
+    <div id="empty-state">
+      <div class="retro-title-bar">
+        <span>🎮</span>
+        <span>SLOT KASET GBA KOSONG</span>
+      </div>
+      <div class="retro-content">
+        Silakan pilih game dari rak koleksi di atas, atau masukkan kaset ROM (<strong>.gba</strong> / <strong>.zip</strong>) milik kamu sendiri ke slot di bawah:
+      </div>
+      <div class="drop-zone" id="drop-zone">
+        <div style="font-size: 28px;">💾</div>
+        <div style="font-weight: bold; font-size: 12px;">Tarik & Lepas File ROM ke Sini</div>
+        <div style="font-size: 10px; color: #666;">Format yang didukung: .gba, .zip, .nes</div>
+        <input type="file" id="file-input" accept=".gba,.zip,.7z,.nes,.bin" style="display: none;">
+        <button class="retro-btn" type="button" onclick="document.getElementById('file-input').click()">Cari File di Komputer...</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let emulatorLoaded = false;
+
+    function initEmulator(gameUrl, core) {
+      document.getElementById('empty-state').style.display = 'none';
+
+      // Clear previous container content if any
+      const gameDiv = document.getElementById('game');
+      gameDiv.innerHTML = '';
+
+      window.EJS_player = '#game';
+      window.EJS_core = core || 'gba';
+      window.EJS_gameUrl = gameUrl;
+      window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+      window.EJS_startOnLoaded = true;
+      window.EJS_color = '#000080';
+      window.EJS_threads = false;
+
+      const script = document.createElement('script');
+      script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+      script.async = true;
+      script.onload = () => {
+        emulatorLoaded = true;
+        window.parent.postMessage({ type: 'EMULATOR_READY' }, '*');
+      };
+      script.onerror = () => {
+        alert('Gagal memuat engine emulator dari CDN. Periksa koneksi internet Anda.');
+      };
+      document.body.appendChild(script);
+    }
+
+    // Handle incoming postMessage from Next.js parent app
+    window.addEventListener('message', (event) => {
+      if (!event.data) return;
+
+      if (event.data.type === 'LOAD_ROM') {
+        const { romUrl, core } = event.data;
+        if (romUrl) {
+          initEmulator(romUrl, core || 'gba');
+        }
+      } else if (event.data.type === 'TOGGLE_CRT') {
+        document.body.classList.toggle('crt-enabled', !!event.data.enabled);
+      }
+    });
+
+    // Handle drag & drop files
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.add('dragover');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('dragover');
+      });
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        handleFile(files[0]);
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        handleFile(e.target.files[0]);
+      }
+    });
+
+    function handleFile(file) {
+      const ext = file.name.split('.').pop().toLowerCase();
+      let core = 'gba';
+      if (ext === 'nes') core = 'nes';
+      else if (ext === 'sfc' || ext === 'smc') core = 'snes';
+      else if (ext === 'md' || ext === 'gen') core = 'segaMD';
+      else if (ext === 'gb') core = 'gb';
+      else if (ext === 'gbc') core = 'gbc';
+
+      const blobUrl = URL.createObjectURL(file);
+      initEmulator(blobUrl, core);
+
+      window.parent.postMessage({
+        type: 'CUSTOM_ROM_LOADED',
+        fileName: file.name,
+        fileSize: file.size
+      }, '*');
+    }
+
+    // Check URL query parameters if provided (e.g. ?rom=https://...&core=gba)
+    const urlParams = new URLSearchParams(window.location.search);
+    const directRom = urlParams.get('rom');
+    const directCore = urlParams.get('core') || 'gba';
+    if (directRom) {
+      initEmulator(directRom, directCore);
+    }
+  </script>
+</body>
+</html>

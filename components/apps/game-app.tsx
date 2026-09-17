@@ -9,7 +9,7 @@ import { Play, Sparkles, Users, Gamepad2, Award } from "lucide-react"
 
 interface GameItem {
   id: string
-  appId?: "paintwar" | "wordle" | "tower"
+  appId?: "paintwar" | "wordle" | "tower" | "arcade"
   title: string
   filename: string
   category: string
@@ -24,6 +24,16 @@ export function GameApp() {
   const { activePaintWarCount } = useNotification()
 
   const games: GameItem[] = [
+    {
+      id: "arcade",
+      appId: "arcade",
+      title: "Retro Arcade & GBA",
+      filename: "ARCADE.EXE",
+      category: "GBA & Retro Console Emulator",
+      description:
+        "Mainkan game retro legendaris seperti Metal Slug Advance, Castlevania, Zelda, Pokemon, dan pasang kaset ROM (.gba) milikmu sendiri!",
+      iconName: "game",
+    },
     {
       id: "tower",
       appId: "tower",
@@ -76,7 +86,7 @@ export function GameApp() {
     },
   ]
 
-  const handleLaunchGame = (appId?: "paintwar" | "wordle" | "tower") => {
+  const handleLaunchGame = (appId?: "paintwar" | "wordle" | "tower" | "arcade") => {
     if (appId) {
       openWindow(appId)
     }
