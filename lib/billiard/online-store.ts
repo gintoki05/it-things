@@ -102,6 +102,13 @@ export function useBilliardOnline({
   const [isConnected, setIsConnected] = React.useState(false)
   const [opponentName, setOpponentName] = React.useState<string | null>(null)
 
+  // Simpan callback dalam ref agar useEffect channel tidak ter-trigger ulang saat callback berubah
+  const onMessageReceivedRef = React.useRef(onMessageReceived)
+  onMessageReceivedRef.current = onMessageReceived
+
+  const onOpponentDisconnectedRef = React.useRef(onOpponentDisconnected)
+  onOpponentDisconnectedRef.current = onOpponentDisconnected
+
   React.useEffect(() => {
     if (!roomCode || !supabase) {
       setIsConnected(false)
@@ -127,7 +134,7 @@ export function useBilliardOnline({
           if (msg.type === "player_joined") {
             setOpponentName(msg.playerName)
           }
-          onMessageReceived(msg)
+          onMessageReceivedRef.current(msg)
         }
       })
       .on("presence", { event: "sync" }, () => {
@@ -138,9 +145,14 @@ export function useBilliardOnline({
           setOpponentName(otherPlayer)
         }
       })
+      .on("presence", { event: "join" }, ({ key }) => {
+        if (key && key !== playerName) {
+          setOpponentName(key)
+        }
+      })
       .on("presence", { event: "leave" }, ({ key }) => {
         if (key && key !== playerName) {
-          onOpponentDisconnected?.(key)
+          onOpponentDisconnectedRef.current?.(key)
         }
       })
       .subscribe((status) => {
@@ -173,7 +185,7 @@ export function useBilliardOnline({
       setIsConnected(false)
       setOpponentName(null)
     }
-  }, [roomCode, playerName, onMessageReceived])
+  }, [roomCode, playerName])
 
   const sendEvent = React.useCallback(
     (message: BilliardRealtimeMessage) => {

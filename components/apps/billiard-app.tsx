@@ -197,45 +197,79 @@ export function BilliardApp() {
     }, 2500)
   }, [])
 
+  // ── Disconnect Grace Period State (Cegah false WO saat reconnect singkat / lag sesaat) ──
+  const [disconnectCountdown, setDisconnectCountdown] = React.useState<number | null>(null)
+  const disconnectTimerRef = React.useRef<NodeJS.Timeout | null>(null)
+  const disconnectIntervalRef = React.useRef<NodeJS.Timeout | null>(null)
+
+  const clearDisconnectTimer = React.useCallback(() => {
+    if (disconnectTimerRef.current) {
+      clearTimeout(disconnectTimerRef.current)
+      disconnectTimerRef.current = null
+    }
+    if (disconnectIntervalRef.current) {
+      clearInterval(disconnectIntervalRef.current)
+      disconnectIntervalRef.current = null
+    }
+    setDisconnectCountdown(null)
+  }, [])
+
+  React.useEffect(() => {
+    return () => {
+      clearDisconnectTimer()
+    }
+  }, [clearDisconnectTimer])
+
   // ── Online Realtime Message Handler ──
   const handleRemoteMessage = React.useCallback(
     (msg: BilliardRealtimeMessage) => {
+      // Setiap kali ada pesan dari lawan, bersihkan timer disconnect karena lawan terbukti aktif
+      clearDisconnectTimer()
+
       if (msg.type === "player_joined") {
         // Lawan bergabung! Jika kita host dan sedang di waiting screen, langsung masuk ke meja
         setIsWaitingForOpponent(false)
         setAppView("game")
       } else if (msg.type === "shot_taken") {
-        // Terapkan pukulan dari lawan
-        const cueBall = balls.find((b) => b.number === 0)
-        if (cueBall) {
-          cueBall.x = msg.cueX
-          cueBall.y = msg.cueY
-          const speed = msg.power * 24
-          cueBall.vx = Math.cos(msg.angle) * speed
-          cueBall.vy = Math.sin(msg.angle) * speed
-          playCueHitSound(msg.power)
-
-          shotTrackerRef.current = {
-            cueBallPocketed: false,
-            eightBallPocketed: false,
-            pocketedBalls: [],
-            firstBallHit: null,
-            cushionsHit: 0,
-            spinX: msg.spinX || 0,
-            spinY: msg.spinY || 0,
-            shotAngle: msg.angle,
+        // Terapkan pukulan dari lawan secara fungsional (bebas dependensi mutable `balls`)
+        setBalls((prev) => {
+          const next = [...prev]
+          const cueBall = next.find((b) => b.number === 0)
+          if (cueBall) {
+            cueBall.x = msg.cueX
+            cueBall.y = msg.cueY
+            const speed = msg.power * 24
+            cueBall.vx = Math.cos(msg.angle) * speed
+            cueBall.vy = Math.sin(msg.angle) * speed
           }
-          setGameState((prev) => ({ ...prev, phase: "simulating" }))
+          return next
+        })
+        playCueHitSound(msg.power)
+
+        shotTrackerRef.current = {
+          cueBallPocketed: false,
+          eightBallPocketed: false,
+          pocketedBalls: [],
+          firstBallHit: null,
+          cushionsHit: 0,
+          spinX: msg.spinX || 0,
+          spinY: msg.spinY || 0,
+          shotAngle: msg.angle,
         }
+        setGameState((prev) => ({ ...prev, phase: "simulating" }))
       } else if (msg.type === "ball_placed") {
-        const cueBall = balls.find((b) => b.number === 0)
-        if (cueBall) {
-          cueBall.x = msg.x
-          cueBall.y = msg.y
-          cueBall.vx = 0
-          cueBall.vy = 0
-          cueBall.isPocketed = false
-        }
+        setBalls((prev) => {
+          const next = [...prev]
+          const cueBall = next.find((b) => b.number === 0)
+          if (cueBall) {
+            cueBall.x = msg.x
+            cueBall.y = msg.y
+            cueBall.vx = 0
+            cueBall.vy = 0
+            cueBall.isPocketed = false
+          }
+          return next
+        })
         setGameState((prev) => ({ ...prev, phase: "aiming" }))
       } else if (msg.type === "quick_chat") {
         setActiveChatBubble({ sender: msg.sender, text: msg.text })
@@ -266,6 +300,8 @@ export function BilliardApp() {
           pocketedOrder: msg.pocketedOrder || prev.pocketedOrder,
         }))
       } else if (msg.type === "rematch") {
+        matchSubmittedRef.current = null
+        clearDisconnectTimer()
         setBalls(createInitialBalls())
         setGameState((prev) => ({
           ...DEFAULT_GAME_STATE,
@@ -276,6 +312,7 @@ export function BilliardApp() {
           player2: prev.player2,
         }))
       } else if (msg.type === "player_forfeited") {
+        clearDisconnectTimer()
         const myPlayerId: PlayerId = isHost ? "player1" : "player2"
         setGameState((prev) => {
           if (prev.mode !== "online" || prev.winner) return prev
@@ -289,25 +326,52 @@ export function BilliardApp() {
         playVictorySound()
       }
     },
-    [balls, activeRoomCode, isHost, triggerReaction]
+    [activeRoomCode, isHost, triggerReaction, clearDisconnectTimer]
   )
 
-  // Lawan tiba-tiba menutup browser/tab atau koneksinya putus (Supabase Presence leave)
+  // Lawan terputus koneksi (Supabase Presence leave) — berikan grace period 15 detik sebelum memutuskan WO
   const handleOpponentDisconnected = React.useCallback(
     (leaverName?: string) => {
       setGameState((prev) => {
         if (prev.mode !== "online" || prev.winner) return prev
-        const myPlayerId: PlayerId = isHost ? "player1" : "player2"
-        return {
-          ...prev,
-          winner: myPlayerId,
-          winReason: `${leaverName || prev.player2.name || "Lawan"} terputus atau menutup game (WO). Kemenangan otomatis diberikan kepadamu!`,
-          phase: "game_over",
-        }
+        // Jangan timpa jika timer WO sedang berjalan
+        if (disconnectTimerRef.current) return prev
+
+        let remaining = 15
+        setDisconnectCountdown(remaining)
+
+        disconnectIntervalRef.current = setInterval(() => {
+          remaining -= 1
+          if (remaining <= 0) {
+            if (disconnectIntervalRef.current) {
+              clearInterval(disconnectIntervalRef.current)
+              disconnectIntervalRef.current = null
+            }
+            setDisconnectCountdown(null)
+          } else {
+            setDisconnectCountdown(remaining)
+          }
+        }, 1000)
+
+        disconnectTimerRef.current = setTimeout(() => {
+          clearDisconnectTimer()
+          setGameState((current) => {
+            if (current.mode !== "online" || current.winner) return current
+            const myPlayerId: PlayerId = isHost ? "player1" : "player2"
+            return {
+              ...current,
+              winner: myPlayerId,
+              winReason: `${leaverName || current.player2.name || "Lawan"} terputus dan tidak kembali dalam batas waktu (WO). Kemenangan otomatis diberikan kepadamu!`,
+              phase: "game_over",
+            }
+          })
+          playVictorySound()
+        }, 15000)
+
+        return prev
       })
-      playVictorySound()
     },
-    [isHost]
+    [isHost, clearDisconnectTimer]
   )
 
   const { isConnected, opponentName, sendEvent } = useBilliardOnline({
@@ -317,9 +381,10 @@ export function BilliardApp() {
     onOpponentDisconnected: handleOpponentDisconnected,
   })
 
-  // Update opponent name when they connect
+  // Update opponent name when they connect or reconnect
   React.useEffect(() => {
     if (opponentName) {
+      clearDisconnectTimer()
       setGameState((prev) => ({
         ...prev,
         player2: {
@@ -332,7 +397,7 @@ export function BilliardApp() {
         setAppView("game")
       }
     }
-  }, [opponentName, isWaitingForOpponent])
+  }, [opponentName, isWaitingForOpponent, clearDisconnectTimer])
 
   // Toggle audio
   const handleToggleSound = () => {
@@ -650,6 +715,7 @@ export function BilliardApp() {
 
   // Restart / Reset Game
   const resetGame = () => {
+    clearDisconnectTimer()
     matchSubmittedRef.current = null
     setBalls(createInitialBalls())
     setGameState((prev) => ({
@@ -669,6 +735,7 @@ export function BilliardApp() {
 
   // ── Buat Room Online Baru ──
   const handleCreateRoom = () => {
+    clearDisconnectTimer()
     matchSubmittedRef.current = null
     const code = Math.random().toString(36).substring(2, 6).toUpperCase()
     setActiveRoomCode(code)
@@ -691,6 +758,7 @@ export function BilliardApp() {
   const handleJoinSpecificRoom = (code: string) => {
     const cleanCode = code.trim().toUpperCase()
     if (!cleanCode) return
+    clearDisconnectTimer()
     matchSubmittedRef.current = null
     setActiveRoomCode(cleanCode)
     setIsHost(false)
@@ -709,6 +777,7 @@ export function BilliardApp() {
 
   // ── Mulai Mode Lokal (Pass & Play) ──
   const handleStartLocalGame = () => {
+    clearDisconnectTimer()
     matchSubmittedRef.current = null
     setActiveRoomCode(null)
     setIsWaitingForOpponent(false)
@@ -726,6 +795,7 @@ export function BilliardApp() {
 
   // ── Tinggalkan Game & Kembali ke Lobby ──
   const handleLeaveToLobby = () => {
+    clearDisconnectTimer()
     // Jika sedang di tengah permainan online dan belum selesai, pemain yang keluar dianggap WO (kalah)
     if (gameState.mode === "online" && appView === "game" && !gameState.winner) {
       const myPlayerId: PlayerId = isHost ? "player1" : "player2"
@@ -1673,6 +1743,16 @@ export function BilliardApp() {
 
           {/* Table & Canvas Area */}
           <div className="flex-1 bg-[#12161f] flex items-center justify-center p-2 sm:p-4 overflow-hidden relative">
+            {/* Disconnect Grace Period Alert Banner */}
+            {disconnectCountdown !== null && (
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-40 bg-[#FFFFCC] text-black px-3.5 py-1.5 rounded-[2px] border-2 border-red-600 shadow-[3px_3px_0px_rgba(0,0,0,0.5)] font-bold flex items-center gap-2 text-xs animate-pulse">
+                <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                <span>
+                  Lawan terputus! Menunggu koneksi kembali... ({disconnectCountdown}s)
+                </span>
+              </div>
+            )}
+
             <BilliardCanvas
               balls={balls}
               isAiming={gameState.phase === "aiming"}
