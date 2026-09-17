@@ -1316,14 +1316,14 @@ export function BilliardApp() {
                   {chatMenuTab === "phrases" && (
                     <div className="flex flex-col gap-0.5 max-h-48 overflow-y-auto">
                       {[
-                        "Good luck! 🍀",
-                        "Nice shot! 🎯",
-                        "Thanks! 🙏",
-                        "Oops! 😅",
-                        "Well played! 👏",
-                        "Unlucky! 💔",
-                        "In your dreams! 😜",
-                        "You got this! 🔥",
+                        "Semangat! 🍀",
+                        "Tembakan bagus! 🎯",
+                        "Makasih! 🙏",
+                        "Aduh nyasar! 😅",
+                        "Mainnya bagus! 👏",
+                        "Sial banget! 💔",
+                        "Mimpi aja dulu! 😜",
+                        "Gas terus! 🔥",
                         "Aduh kena foul! 🤦‍♂️",
                         "Cepat woy kelamaan! ⏳",
                       ].map((phrase, idx) => (
