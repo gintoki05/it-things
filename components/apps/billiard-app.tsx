@@ -8,13 +8,18 @@ import {
   PlayerId,
   ShotResult,
   BilliardRealtimeMessage,
+  AiDifficulty,
 } from "@/lib/billiard/types"
+import { findBestShot, getBotComment } from "@/lib/billiard/ai-bot"
 import {
   createInitialBalls,
   stepPhysics,
   areBallsAtRest,
   stopSlowBalls,
   findClosestValidCuePlacement,
+  TABLE_WIDTH,
+  TABLE_HEIGHT,
+  CUSHION_WIDTH,
 } from "@/lib/billiard/physics"
 import { evaluateShot, countRemainingBalls } from "@/lib/billiard/rules"
 import {
@@ -56,6 +61,9 @@ import {
   MessageCircle,
   Smile,
   X,
+  Bot,
+  ChevronDown,
+  Cpu,
 } from "lucide-react"
 
 function getBallColor(num: number): string {
@@ -158,6 +166,11 @@ export function BilliardApp() {
   const [isCopied, setIsCopied] = React.useState(false)
   const [opponentAim, setOpponentAim] = React.useState<{ angle: number; power: number } | null>(null)
   const [roomAlertMessage, setRoomAlertMessage] = React.useState<string | null>(null)
+
+  // AI Bot state
+  const [aiDifficulty, setAiDifficulty] = React.useState<AiDifficulty>("medium")
+  const [aiBotPhase, setAiBotPhase] = React.useState<"idle" | "thinking" | "aiming" | "shooting">("idle")
+  const [aiDifficultyMenuOpen, setAiDifficultyMenuOpen] = React.useState(false)
 
   // Hook untuk discovery room aktif di lobby
   const { activeRooms, announceRoom, leaveLobbyAnnouncement } = useBilliardLobby(myPlayerName)
@@ -742,6 +755,128 @@ export function BilliardApp() {
     }))
   }
 
+  // ── AI Bot Turn Controller (Vs Komputer) ──
+  React.useEffect(() => {
+    if (appView !== "game" || gameState.mode !== "ai" || gameState.winner) return
+    if (gameState.currentTurn !== "player2") {
+      setAiBotPhase("idle")
+      return
+    }
+
+    let isCancelled = false
+    let timeoutId1: NodeJS.Timeout | null = null
+    let timeoutId2: NodeJS.Timeout | null = null
+    let timeoutId3: NodeJS.Timeout | null = null
+
+    // 1. AI Ball-in-Hand
+    if (gameState.phase === "ball_in_hand") {
+      timeoutId1 = setTimeout(() => {
+        if (isCancelled) return
+        const targetGroup = gameState.player2.group
+        const targetBalls = balls.filter(
+          (b) =>
+            !b.isPocketed &&
+            b.number !== 0 &&
+            (targetGroup ? b.type === targetGroup : b.number !== 8)
+        )
+        let placementX = TABLE_WIDTH * 0.25
+        let placementY = TABLE_HEIGHT * 0.5
+        if (targetBalls.length > 0) {
+          const target = targetBalls[0]
+          placementX = Math.max(
+            CUSHION_WIDTH + 30,
+            Math.min(TABLE_WIDTH - CUSHION_WIDTH - 30, target.x - 100)
+          )
+          placementY = Math.max(
+            CUSHION_WIDTH + 30,
+            Math.min(TABLE_HEIGHT - CUSHION_WIDTH - 30, target.y)
+          )
+        }
+        const valid = findClosestValidCuePlacement(placementX, placementY, balls)
+        handlePlaceCueBall(valid.x, valid.y)
+      }, 900)
+
+      return () => {
+        isCancelled = true
+        if (timeoutId1) clearTimeout(timeoutId1)
+      }
+    }
+
+    // 2. AI Aiming & Shooting Sequence
+    if (gameState.phase === "aiming") {
+      setAiBotPhase("thinking")
+
+      // Random bot chat occasionally (20% chance)
+      if (Math.random() < 0.2) {
+        const comment = getBotComment("thinking")
+        setActiveChatBubble({ sender: "player2", text: comment })
+        setTimeout(() => setActiveChatBubble(null), 2000)
+      }
+
+      timeoutId1 = setTimeout(() => {
+        if (isCancelled) return
+        const shot = findBestShot(
+          balls,
+          gameState.player2.group,
+          gameState,
+          aiDifficulty
+        )
+
+        // Tahap A: Bidik sudut bola
+        setAiBotPhase("aiming")
+        setOpponentAim({ angle: shot.angle, power: 0.06 })
+
+        timeoutId2 = setTimeout(() => {
+          if (isCancelled) return
+          // Tahap B: Tarik stik biliar ke belakang sesuai power
+          setAiBotPhase("shooting")
+          setOpponentAim({ angle: shot.angle, power: shot.power })
+
+          timeoutId3 = setTimeout(() => {
+            if (isCancelled) return
+            // Tahap C: Lepas tembakan!
+            setOpponentAim(null)
+            setAiBotPhase("idle")
+            handleShoot(shot.angle, shot.power, { x: 0, y: 0 })
+          }, 500)
+        }, 650)
+      }, 850)
+
+      return () => {
+        isCancelled = true
+        if (timeoutId1) clearTimeout(timeoutId1)
+        if (timeoutId2) clearTimeout(timeoutId2)
+        if (timeoutId3) clearTimeout(timeoutId3)
+      }
+    }
+  }, [
+    appView,
+    gameState.mode,
+    gameState.currentTurn,
+    gameState.phase,
+    gameState.winner,
+    gameState.player2.group,
+    gameState.openTable,
+    balls,
+    aiDifficulty,
+  ])
+
+  // ── Bot Reaction saat Game Selesai (Vs Komputer) ──
+  React.useEffect(() => {
+    if (appView !== "game" || gameState.mode !== "ai" || !gameState.winner) return
+    const timer = setTimeout(() => {
+      if (gameState.winner === "player2") {
+        triggerReaction("player2", "😎")
+        setActiveChatBubble({ sender: "player2", text: getBotComment("win") })
+      } else {
+        triggerReaction("player2", "👏")
+        setActiveChatBubble({ sender: "player2", text: "GG! Selamat ya!" })
+      }
+      setTimeout(() => setActiveChatBubble(null), 3000)
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [appView, gameState.mode, gameState.winner, triggerReaction])
+
   // Restart / Reset Game
   const resetGame = () => {
     clearDisconnectTimer()
@@ -847,6 +982,32 @@ export function BilliardApp() {
     setAppView("game")
   }
 
+  // ── Mulai Mode Vs AI ──
+  const handleStartAiGame = (difficulty: AiDifficulty) => {
+    clearDisconnectTimer()
+    matchSubmittedRef.current = null
+    setActiveRoomCode(null)
+    setIsWaitingForOpponent(false)
+    setAiBotPhase("idle")
+    leaveLobbyAnnouncement()
+
+    const botNames: Record<AiDifficulty, string> = {
+      easy: "Bot Pemula 🟢",
+      medium: "Bot Handal 🟡",
+      hard: "Bot Master 🔴",
+    }
+
+    setBalls(createInitialBalls())
+    setGameState({
+      ...DEFAULT_GAME_STATE,
+      mode: "ai",
+      player1: { ...DEFAULT_GAME_STATE.player1, name: myPlayerName },
+      player2: { ...DEFAULT_GAME_STATE.player2, name: botNames[difficulty] },
+    })
+    setAiDifficulty(difficulty)
+    setAppView("game")
+  }
+
   // ── Tinggalkan Game & Kembali ke Lobby ──
   const handleLeaveToLobby = () => {
     clearDisconnectTimer()
@@ -917,7 +1078,17 @@ export function BilliardApp() {
     gameState.mode === "local" ||
     (gameState.mode === "online" &&
       ((isHost && gameState.currentTurn === "player1") ||
-        (!isHost && gameState.currentTurn === "player2")))
+        (!isHost && gameState.currentTurn === "player2"))) ||
+    // Mode AI: hanya boleh tembak saat giliran player1 (manusia)
+    (gameState.mode === "ai" && gameState.currentTurn === "player1")
+
+  // Posisi "tidak bermain" (menunggu giliran lawan atau bola sedang meluncur/simulating)
+  const isWaitingOpponentTurn =
+    gameState.mode === "online"
+      ? !canCurrentPlayerShoot || gameState.phase === "simulating"
+      : gameState.mode === "ai"
+      ? gameState.currentTurn === "player2" || gameState.phase === "simulating"
+      : true
 
   // Broadcast sudut dan tarikan stik kita secara realtime ke lawan (saat giliran kita)
   const lastAimSentRef = React.useRef(0)
@@ -938,11 +1109,6 @@ export function BilliardApp() {
     [gameState.mode, canCurrentPlayerShoot, sendEvent]
   )
 
-  // Posisi "tidak bermain" (menunggu giliran lawan atau bola sedang meluncur/simulating)
-  const isWaitingOpponentTurn =
-    gameState.mode === "online"
-      ? !canCurrentPlayerShoot || gameState.phase === "simulating"
-      : true
 
   const currentShooterName =
     gameState.currentTurn === "player1"
@@ -1218,6 +1384,48 @@ export function BilliardApp() {
                   })}
                 </div>
               )}
+            </div>
+
+            {/* Opsi Mode Vs AI (Bot Komputer) */}
+            <div className="p-3 bg-[#E8EEF5] border-2 border-[#5B82A6] rounded shadow flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded bg-[#102A45] border border-blue-400 text-yellow-300 flex items-center justify-center font-black text-lg shadow shrink-0">
+                  <Bot className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5 font-bold text-xs text-[#000080]">
+                    <span>MAIN LAWAN KOMPUTER (VS BOT)</span>
+                    <span className="text-[10px] px-1.5 py-0.2 bg-blue-100 border border-blue-400 rounded text-blue-800 font-mono font-bold">
+                      Offline
+                    </span>
+                  </div>
+                  <p className="text-gray-600 text-[11px]">
+                    Latihan tembakan melawan bot AI tanpa perlu nunggu teman online
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 w-full sm:w-auto justify-end">
+                <span className="text-[11px] font-bold text-gray-700 hidden sm:inline">Level:</span>
+                {(["easy", "medium", "hard"] as const).map((lvl) => (
+                  <button
+                    key={lvl}
+                    type="button"
+                    onClick={() => handleStartAiGame(lvl)}
+                    className={cn(
+                      "px-2.5 py-1 text-xs font-bold rounded-[2px] border-2 border-white shadow active:translate-y-0.5 cursor-pointer flex items-center gap-1",
+                      lvl === "easy" && "bg-emerald-700 text-white hover:bg-emerald-800",
+                      lvl === "medium" && "bg-amber-600 text-white hover:bg-amber-700",
+                      lvl === "hard" && "bg-rose-700 text-white hover:bg-rose-800"
+                    )}
+                    title={`Mulai main lawan Bot level ${lvl.toUpperCase()}`}
+                  >
+                    <span>
+                      {lvl === "easy" ? "🟢 Pemula" : lvl === "medium" ? "🟡 Handal" : "🔴 Master"}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Opsi Mode Offline / Lokal */}
@@ -1697,15 +1905,25 @@ export function BilliardApp() {
                       : "border-[#4A6572] opacity-80"
                   } overflow-hidden flex items-center justify-center text-white font-black text-xs shadow-inner`}
                 >
-                  <span className="bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-300">
-                    P2
-                  </span>
+                  {gameState.mode === "ai" ? (
+                    <Bot className="w-5 h-5 text-cyan-300 drop-shadow" />
+                  ) : (
+                    <span className="bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-300">
+                      P2
+                    </span>
+                  )}
                 </div>
               </div>
 
               {/* Blue Star Level Badge */}
               <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-[#1976D2] to-[#42A5F5] text-white font-black text-[9px] flex items-center justify-center border-2 border-white/80 shadow-md">
-                46
+                {gameState.mode === "ai"
+                  ? aiDifficulty === "easy"
+                    ? "BOT"
+                    : aiDifficulty === "medium"
+                    ? "PRO"
+                    : "MAX"
+                  : "46"}
               </div>
             </div>
 
@@ -1891,6 +2109,16 @@ export function BilliardApp() {
                     {gameState.mode === "online"
                       ? !canCurrentPlayerShoot
                         ? "Giliran Lawan... Reaksi:"
+                        : "Bola Bergulir... Reaksi:"
+                      : gameState.mode === "ai"
+                      ? gameState.currentTurn === "player2"
+                        ? aiBotPhase === "thinking"
+                          ? "Bot sedang berpikir... Reaksi:"
+                          : aiBotPhase === "aiming"
+                          ? "Bot sedang membidik... Reaksi:"
+                          : aiBotPhase === "shooting"
+                          ? "Bot menembak... Reaksi:"
+                          : "Giliran Bot... Reaksi:"
                         : "Bola Bergulir... Reaksi:"
                       : gameState.currentTurn === "player1"
                       ? "Reaksi P2 (Menunggu):"

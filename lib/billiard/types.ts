@@ -44,8 +44,10 @@ export interface ShotResult {
   isLegalBreak: boolean
 }
 
+export type { AiDifficulty } from "./ai-bot"
+
 export interface GameState {
-  mode: "local" | "online"
+  mode: "local" | "online" | "ai"
   roomCode?: string
   isHost?: boolean
   currentTurn: PlayerId

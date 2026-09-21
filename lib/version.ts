@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.34"
-export const APP_BUILD = "2026.09.17"
+export const APP_VERSION = "v2.3.35"
+export const APP_BUILD = "2026.09.21"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.35",
+    date: "21 Sep 2026",
+    codename: "Billiard 98 Mode Vs AI (Lawan Bot Komputer)",
+    changes: [
+      "Fitur Main Lawan Bot (Vs AI): Pemain kini dapat bertanding biliar melawan komputer secara offline langsung dari lobby tanpa perlu menunggu pemain lain.",
+      "Algoritma Bot Murni TypeScript (ai-bot.ts): Menggunakan kalkulasi ghost ball vector, raycasting pengecekan rintangan, dan filter cut angle untuk memilih sudut tembakan terbaik.",
+      "3 Tingkat Kesulitan Bot: Tersedia pilihan level Pemula (🟢 Easy), Handal (🟡 Medium), dan Master (🔴 Hard) dengan variasi toleransi deviasi sudut dan pengaturan power.",
+      "Animasi Membidik & Tarik Stik Realistis: Siklus giliran bot dilengkapi jeda berpikir, animasi stik mengarah ke sudut bidikan, tarikan stik mundur sesuai power, serta dukungan auto ball-in-hand.",
+      "Indikator Status & Personality Bot: Menampilkan ikon bot khusus pada Player 2, badge tingkat kesulitan, status aktivitas bot realtime di reaction bar, serta komentar/reaksi retro dari bot.",
+    ],
+  },
   {
     version: "v2.3.34",
     date: "17 Sep 2026",
