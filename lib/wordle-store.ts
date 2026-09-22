@@ -8,7 +8,13 @@ import {
   playRetroBuzzerSound,
   playRetroNotificationSound,
 } from "@/lib/sound-effects"
-import { fetchWordleTodayAction, submitWordleGuessAction } from "@/app/actions/wordle"
+import {
+  fetchWordleTodayAction,
+  submitWordleGuessAction,
+  type WordleQuizData,
+  type WordleTodayResult,
+} from "@/app/actions/wordle"
+import type { WordleHint } from "@/lib/server/wordle"
 
 // ─── 1. Date Helper ─────────────────────────────────────────
 export function getTodayDateString(): string {
@@ -27,52 +33,8 @@ export interface EvaluatedLetter {
   status: LetterStatus
 }
 
-// Fallback client evaluator (if needed for preview/offline)
-export function evaluateGuess(guess: string, targetWord?: string): EvaluatedLetter[] {
-  const cleanGuess = (guess || "").toUpperCase().trim()
-  if (!targetWord) {
-    return Array.from({ length: 5 }, (_, i) => ({
-      char: cleanGuess[i] || "",
-      status: "absent",
-    }))
-  }
+export { type WordleHint, type WordleQuizData, type WordleTodayResult }
 
-  const cleanTarget = targetWord.toUpperCase().trim()
-  const result: EvaluatedLetter[] = Array.from({ length: 5 }, (_, i) => ({
-    char: cleanGuess[i] || "",
-    status: "absent",
-  }))
-
-  const targetChars = cleanTarget.split("")
-  const letterCounts: Record<string, number> = {}
-
-  for (const c of targetChars) {
-    letterCounts[c] = (letterCounts[c] || 0) + 1
-  }
-
-  for (let i = 0; i < 5; i++) {
-    if (cleanGuess[i] === targetChars[i]) {
-      result[i].status = "correct"
-      letterCounts[cleanGuess[i]] -= 1
-    }
-  }
-
-  for (let i = 0; i < 5; i++) {
-    if (result[i].status !== "correct") {
-      const char = cleanGuess[i]
-      if (char && letterCounts[char] && letterCounts[char] > 0) {
-        result[i].status = "present"
-        letterCounts[char] -= 1
-      } else {
-        result[i].status = "absent"
-      }
-    }
-  }
-
-  return result
-}
-
-// ─── 3. Types ───────────────────────────────────────────────
 export interface WordleDailyEntry {
   id: string
   userId: string
@@ -92,21 +54,62 @@ export type KeyboardStatusMap = Record<string, LetterStatus>
 export interface WordlePuzzleMeta {
   dayNumber: number
   targetDate: string
+  quizNumber: 1 | 2
+  hint: WordleHint
   word?: string // Only sent by server after game is finished
 }
 
 // ─── Shared In-Memory State & Deduplication ───────────────────
 interface WordleSharedState {
-  puzzle: WordlePuzzleMeta
+  targetDate: string
+  quizzes: {
+    1: WordleQuizData
+    2: WordleQuizData
+  }
   entry: WordleDailyEntry | null
   leaderboard: WordleDailyEntry[]
 }
 
+const defaultHint: WordleHint = {
+  category: "Kata Harian",
+  clue: "Tebak kata 5 huruf rahasia hari ini",
+  firstLetter: "",
+}
+
+const defaultQuiz1: WordleQuizData = {
+  quizNumber: 1,
+  dayNumber: 1,
+  targetDate: getTodayDateString(),
+  hint: defaultHint,
+  guesses: [],
+  evaluatedGuesses: [],
+  isSolved: false,
+  isGameOver: false,
+  attempts: 0,
+}
+
+const defaultQuiz2: WordleQuizData = {
+  quizNumber: 2,
+  dayNumber: 1,
+  targetDate: getTodayDateString(),
+  hint: defaultHint,
+  guesses: [],
+  evaluatedGuesses: [],
+  isSolved: false,
+  isGameOver: false,
+  attempts: 0,
+}
+
 let cachedWordleState: WordleSharedState = {
-  puzzle: { dayNumber: 1, targetDate: getTodayDateString() },
+  targetDate: getTodayDateString(),
+  quizzes: {
+    1: defaultQuiz1,
+    2: defaultQuiz2,
+  },
   entry: null,
   leaderboard: [],
 }
+
 let inFlightWordlePromise: Promise<WordleSharedState> | null = null
 const wordleListeners = new Set<(state: WordleSharedState) => void>()
 
@@ -126,9 +129,10 @@ async function fetchWordleDataDeduplicated(): Promise<WordleSharedState> {
       }
 
       const data = await fetchWordleTodayAction(token)
-      if (!data.error) {
+      if (!data.error && data.quizzes) {
         cachedWordleState = {
-          puzzle: data.puzzle || cachedWordleState.puzzle,
+          targetDate: data.quizzes[1]?.targetDate || cachedWordleState.targetDate,
+          quizzes: data.quizzes,
           entry: data.entry || null,
           leaderboard: Array.isArray(data.leaderboard) ? data.leaderboard : [],
         }
@@ -151,20 +155,12 @@ export function useWordle() {
   const { user } = useAuth()
   const todayStr = getTodayDateString()
 
-  const [puzzle, setPuzzle] = React.useState<WordlePuzzleMeta>(cachedWordleState.puzzle)
-  const [myEntry, setMyEntry] = React.useState<WordleDailyEntry | null>(cachedWordleState.entry)
-  const [guesses, setGuesses] = React.useState<string[]>(cachedWordleState.entry?.guesses || [])
-  const [evaluatedGuesses, setEvaluatedGuesses] = React.useState<EvaluatedLetter[][]>(
-    cachedWordleState.entry?.evaluatedGuesses || []
+  const [activeQuiz, setActiveQuiz] = React.useState<1 | 2>(1)
+  const [quizzes, setQuizzes] = React.useState<{ 1: WordleQuizData; 2: WordleQuizData }>(
+    cachedWordleState.quizzes
   )
   const [currentGuess, setCurrentGuess] = React.useState<string>("")
-  const [isSolved, setIsSolved] = React.useState<boolean>(Boolean(cachedWordleState.entry?.isSolved))
-  const [isGameOver, setIsGameOver] = React.useState<boolean>(
-    Boolean(
-      cachedWordleState.entry?.isSolved ||
-        (cachedWordleState.entry?.guesses && cachedWordleState.entry.guesses.length >= 6)
-    )
-  )
+  const [showHint, setShowHint] = React.useState<boolean>(false)
   const [leaderboard, setLeaderboard] = React.useState<WordleDailyEntry[]>(
     cachedWordleState.leaderboard
   )
@@ -172,29 +168,18 @@ export function useWordle() {
   const [isSubmitting, setIsSubmitting] = React.useState<boolean>(false)
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
 
+  const activeQuizData = quizzes[activeQuiz] || defaultQuiz1
+
   const applyState = React.useCallback((state: WordleSharedState) => {
-    if (state.puzzle) setPuzzle(state.puzzle)
-    if (state.entry) {
-      setMyEntry(state.entry)
-      setGuesses(state.entry.guesses || [])
-      setEvaluatedGuesses(state.entry.evaluatedGuesses || [])
-      setIsSolved(Boolean(state.entry.isSolved))
-      setIsGameOver(
-        Boolean(state.entry.isSolved || (state.entry.guesses && state.entry.guesses.length >= 6))
-      )
-    } else {
-      setMyEntry(null)
-      setGuesses([])
-      setEvaluatedGuesses([])
-      setIsSolved(false)
-      setIsGameOver(false)
+    if (state.quizzes) {
+      setQuizzes(state.quizzes)
     }
     if (Array.isArray(state.leaderboard)) {
       setLeaderboard(state.leaderboard)
     }
   }, [])
 
-  // ─── Fetch Today's Puzzle & Safe Leaderboard via API ────────
+  // ─── Fetch Today's Puzzle & Safe Leaderboard via Server Action ──
   const fetchWordleData = React.useCallback(async () => {
     setIsLoading(true)
     const result = await fetchWordleDataDeduplicated()
@@ -240,10 +225,10 @@ export function useWordle() {
     }
   }, [todayStr, fetchWordleData])
 
-  // ─── Keyboard Status Aggregator ───────────────────────────
+  // ─── Keyboard Status Aggregator per Active Quiz ────────────
   const keyboardStatuses = React.useMemo<KeyboardStatusMap>(() => {
     const map: KeyboardStatusMap = {}
-    for (const row of evaluatedGuesses) {
+    for (const row of activeQuizData.evaluatedGuesses || []) {
       for (const { char, status } of row) {
         const current = map[char]
         if (status === "correct") {
@@ -256,23 +241,31 @@ export function useWordle() {
       }
     }
     return map
-  }, [evaluatedGuesses])
+  }, [activeQuizData.evaluatedGuesses])
+
+  // ─── Switch Active Quiz ────────────────────────────────────
+  const switchQuiz = (quizNumber: 1 | 2) => {
+    if (activeQuiz === quizNumber) return
+    setActiveQuiz(quizNumber)
+    setCurrentGuess("")
+    setErrorMessage(null)
+  }
 
   // ─── Actions ──────────────────────────────────────────────
   const addLetter = (letter: string) => {
-    if (isGameOver || currentGuess.length >= 5) return
+    if (activeQuizData.isGameOver || currentGuess.length >= 5) return
     setCurrentGuess((prev) => (prev + letter).slice(0, 5).toUpperCase())
     setErrorMessage(null)
   }
 
   const removeLetter = () => {
-    if (isGameOver || currentGuess.length === 0) return
+    if (activeQuizData.isGameOver || currentGuess.length === 0) return
     setCurrentGuess((prev) => prev.slice(0, -1))
     setErrorMessage(null)
   }
 
   const submitGuess = async () => {
-    if (isGameOver || isSubmitting) return
+    if (activeQuizData.isGameOver || isSubmitting) return
 
     if (currentGuess.length < 5) {
       setErrorMessage("Kata harus terdiri dari 5 huruf!")
@@ -296,6 +289,7 @@ export function useWordle() {
 
       const data = await submitWordleGuessAction({
         guess: cleanGuess,
+        quizNumber: activeQuiz,
         userName: user?.name,
         userAvatar: user?.avatarUrl || user?.googleAvatarUrl,
         token,
@@ -307,20 +301,12 @@ export function useWordle() {
         return
       }
 
-      // Update state with server-verified evaluations
-      const newGuesses = data.guesses || [...guesses, cleanGuess]
-      const newEvaluations: EvaluatedLetter[][] =
-        data.allEvaluations || (data.evaluation ? [...evaluatedGuesses, data.evaluation] : evaluatedGuesses)
-
-      setGuesses(newGuesses)
-      setEvaluatedGuesses(newEvaluations)
-      setIsSolved(Boolean(data.isSolved))
-      setIsGameOver(Boolean(data.isGameOver))
-      setCurrentGuess("")
-
-      if (data.targetWord) {
-        setPuzzle((prev) => ({ ...prev, word: data.targetWord }))
+      if (data.quizzes) {
+        setQuizzes(data.quizzes)
+        cachedWordleState.quizzes = data.quizzes
       }
+
+      setCurrentGuess("")
 
       if (data.isSolved) {
         playRetroCorrectSound()
@@ -341,39 +327,72 @@ export function useWordle() {
     }
   }
 
-  // ─── Copy / Share Emoji Grid ──────────────────────────────
+  // ─── Copy / Share Emoji Grid for Both Quizzes ──────────────
   const generateShareText = () => {
-    const attemptStr = isSolved ? `${guesses.length}/6` : "X/6"
-    let text = `WORDLE98.EXE #${puzzle.dayNumber} ${attemptStr}\n\n`
+    const q1 = quizzes[1]
+    const q2 = quizzes[2]
+    const attemptStr1 = q1.isSolved ? `${q1.guesses.length}/6` : q1.isGameOver ? "X/6" : "-/6"
+    const attemptStr2 = q2.isSolved ? `${q2.guesses.length}/6` : q2.isGameOver ? "X/6" : "-/6"
 
-    for (const row of evaluatedGuesses) {
-      const rowStr = row
-        .map((l) => {
-          if (l.status === "correct") return "🟩"
-          if (l.status === "present") return "🟨"
-          return "⬛"
-        })
-        .join("")
-      text += `${rowStr}\n`
+    let text = `WORDLE98.EXE #${q1.dayNumber}\n\n`
+    text += `[KUIS 1] (${attemptStr1})\n`
+    if (q1.evaluatedGuesses && q1.evaluatedGuesses.length > 0) {
+      for (const row of q1.evaluatedGuesses) {
+        text +=
+          row
+            .map((l) => (l.status === "correct" ? "🟩" : l.status === "present" ? "🟨" : "⬛"))
+            .join("") + "\n"
+      }
+    } else {
+      text += "Belum dimainkan\n"
+    }
+
+    text += `\n[KUIS 2] (${attemptStr2})\n`
+    if (q2.evaluatedGuesses && q2.evaluatedGuesses.length > 0) {
+      for (const row of q2.evaluatedGuesses) {
+        text +=
+          row
+            .map((l) => (l.status === "correct" ? "🟩" : l.status === "present" ? "🟨" : "⬛"))
+            .join("") + "\n"
+      }
+    } else {
+      text += "Belum dimainkan\n"
     }
 
     text += `\nIT-THINGS 98 // ${todayStr}`
     return text
   }
 
+  const isAllGameOver = Boolean(quizzes[1]?.isGameOver && quizzes[2]?.isGameOver)
+  const isAllSolved = Boolean(quizzes[1]?.isSolved && quizzes[2]?.isSolved)
+
   return {
-    puzzle,
-    myEntry,
-    guesses,
-    evaluatedGuesses,
+    activeQuiz,
+    quizzes,
+    activeQuizData,
+    puzzle: {
+      dayNumber: activeQuizData.dayNumber,
+      targetDate: activeQuizData.targetDate,
+      quizNumber: activeQuiz,
+      hint: activeQuizData.hint,
+      word: activeQuizData.word,
+    },
+    guesses: activeQuizData.guesses || [],
+    evaluatedGuesses: activeQuizData.evaluatedGuesses || [],
     currentGuess,
-    isSolved,
-    isGameOver,
+    isSolved: activeQuizData.isSolved,
+    isGameOver: activeQuizData.isGameOver,
+    isAllGameOver,
+    isAllSolved,
     isLoading,
     isSubmitting,
     errorMessage,
     keyboardStatuses,
     leaderboard,
+    showHint,
+    setShowHint,
+    toggleHint: () => setShowHint((prev) => !prev),
+    switchQuiz,
     addLetter,
     removeLetter,
     submitGuess,

@@ -202,21 +202,109 @@ export function drawTower(ctx: CanvasRenderingContext2D, game: TowerGame, width:
   const screenX = (x: number) => width / 2 + x * scale
   const screenY = (y: number) => ground - (y - game.cameraBase) * scale
   ctx.imageSmoothingEnabled = false
-  ctx.fillStyle = "#87bfda"
+  // Dynamic sky atmosphere based on altitude (floor count & cameraBase)
+  const alt = game.count
+  let skyFill = "#87bfda"
+  if (alt >= 21) {
+    // Cosmic Orbit / Space
+    skyFill = "#030712"
+  } else if (alt >= 13) {
+    // Starry Night
+    skyFill = "#0f172a"
+  } else if (alt >= 6) {
+    // Golden Sunset / Dusk
+    skyFill = "#b45309"
+  }
+
+  ctx.fillStyle = skyFill
   ctx.fillRect(0, 0, width, height)
 
-  // Quiet parallax: the sky moves with the camera, never the physics bodies.
-  for (let i = 0; i < 6; i++) {
-    const x = ((i * 137 + 24) % (width + 90)) - 45
-    const y = ((i * 113 + 56 + game.cameraBase * scale * 0.2) % (height + 80)) - 40
-    ctx.fillStyle = "#68a2bd"
-    ctx.fillRect(x + 5, y + 17, 74, 8)
-    ctx.fillStyle = "#d7eff2"
-    ctx.fillRect(x, y + 9, 72, 12)
-    ctx.fillRect(x + 15, y + 1, 36, 11)
-    ctx.fillStyle = "#f0f7ee"
-    ctx.fillRect(x + 19, y, 24, 6)
+  // Sunset gradient or night sky overlay
+  if (alt >= 6 && alt < 13) {
+    const grad = ctx.createLinearGradient(0, 0, 0, height)
+    grad.addColorStop(0, "#b45309")
+    grad.addColorStop(0.5, "#ea580c")
+    grad.addColorStop(1, "#fbbf24")
+    ctx.fillStyle = grad
+    ctx.fillRect(0, 0, width, height)
+
+    // Retro pixel sun sinking in the background
+    const sunY = screenY(10)
+    if (sunY > -40 && sunY < height + 40) {
+      ctx.fillStyle = "#fef08a"
+      ctx.fillRect(width * 0.7 - 20, sunY - 20, 40, 40)
+      ctx.fillStyle = "#fde047"
+      ctx.fillRect(width * 0.7 - 16, sunY - 16, 32, 32)
+    }
+  } else if (alt >= 13 && alt < 21) {
+    const grad = ctx.createLinearGradient(0, 0, 0, height)
+    grad.addColorStop(0, "#090d16")
+    grad.addColorStop(1, "#1e1b4b")
+    ctx.fillStyle = grad
+    ctx.fillRect(0, 0, width, height)
+
+    // Retro crescent moon
+    const moonY = screenY(22)
+    if (moonY > -30 && moonY < height + 30) {
+      ctx.fillStyle = "#fef08a"
+      ctx.fillRect(width * 0.2, moonY, 18, 18)
+      ctx.fillStyle = "#090d16"
+      ctx.fillRect(width * 0.2 + 6, moonY - 3, 16, 16)
+    }
+  } else if (alt >= 21) {
+    // Deep cosmic space with nebula hints
+    const grad = ctx.createLinearGradient(0, 0, 0, height)
+    grad.addColorStop(0, "#020617")
+    grad.addColorStop(1, "#172554")
+    ctx.fillStyle = grad
+    ctx.fillRect(0, 0, width, height)
   }
+
+  // Twinkling pixel stars in Night & Space
+  if (alt >= 13) {
+    for (let s = 0; s < 24; s++) {
+      const sx = (s * 47 + 13) % width
+      const sy = (s * 73 + 19) % (height - 30)
+      const twinkle = Math.sin(game.time * 4 + s) > 0.3
+      ctx.fillStyle = twinkle ? "#ffffff" : "#94a3b8"
+      ctx.fillRect(sx, sy, 2, 2)
+      if (twinkle && s % 4 === 0) {
+        ctx.fillStyle = alt >= 21 ? "#38bdf8" : "#fef08a"
+        ctx.fillRect(sx - 1, sy, 4, 1)
+        ctx.fillRect(sx, sy - 1, 1, 4)
+      }
+    }
+  }
+
+  // Quiet parallax clouds (day & sunset)
+  if (alt < 13) {
+    for (let i = 0; i < 6; i++) {
+      const x = ((i * 137 + 24) % (width + 90)) - 45
+      const y = ((i * 113 + 56 + game.cameraBase * scale * 0.2) % (height + 80)) - 40
+      ctx.fillStyle = alt >= 6 ? "#9a3412" : "#68a2bd"
+      ctx.fillRect(x + 5, y + 17, 74, 8)
+      ctx.fillStyle = alt >= 6 ? "#fdba74" : "#d7eff2"
+      ctx.fillRect(x, y + 9, 72, 12)
+      ctx.fillRect(x + 15, y + 1, 36, 11)
+      ctx.fillStyle = alt >= 6 ? "#ffedd5" : "#f0f7ee"
+      ctx.fillRect(x + 19, y, 24, 6)
+    }
+  }
+
+  // Wind streaks when wind is active
+  if (game.wind !== 0) {
+    const dir = Math.sign(game.wind)
+    const speed = Math.abs(game.wind) * 140
+    ctx.fillStyle = alt >= 13 ? "rgba(255, 255, 255, 0.28)" : "rgba(255, 255, 255, 0.55)"
+    for (let w = 0; w < 5; w++) {
+      const wx = ((w * 79 + game.time * speed * dir) % (width + 70) + (width + 70)) % (width + 70) - 35
+      const wy = 35 + (w * 67) % (height - 70)
+      const len = 14 + (w % 3) * 8
+      ctx.fillRect(wx, wy, len, 1.5)
+      ctx.fillRect(wx + (dir > 0 ? len : -2), wy - 0.5, 2, 2.5)
+    }
+  }
+
   if (game.cameraBase < 3) {
     for (let i = 0; i < 12; i++) {
       const x = i * 43 - 12
@@ -442,24 +530,25 @@ export function drawTower(ctx: CanvasRenderingContext2D, game: TowerGame, width:
       ctx.save()
       ctx.globalAlpha = alpha
 
-      const bw = 66
-      const bh = 14
+      const isMilestone = floor.floatingText.includes("★")
+      const bw = isMilestone ? 128 : 68
+      const bh = 15
       const bx = w / 2 - bw / 2
-      ctx.fillStyle = "#101820"
-      ctx.fillRect(bx, popupY - 11, bw, bh)
-      ctx.strokeStyle = "#fbbf24"
-      ctx.lineWidth = 1.5
-      ctx.strokeRect(bx, popupY - 11, bw, bh)
+      ctx.fillStyle = isMilestone ? "#451a03" : "#101820"
+      ctx.fillRect(bx, popupY - 12, bw, bh)
+      ctx.strokeStyle = isMilestone ? "#f59e0b" : "#fbbf24"
+      ctx.lineWidth = isMilestone ? 2 : 1.5
+      ctx.strokeRect(bx, popupY - 12, bw, bh)
 
-      ctx.font = "bold 9px monospace"
+      ctx.font = isMilestone ? "bold 8px monospace" : "bold 9px monospace"
       ctx.textAlign = "center"
-      ctx.fillStyle = "#fef08a"
+      ctx.fillStyle = isMilestone ? "#fde047" : "#fef08a"
       ctx.fillText(floor.floatingText, w / 2, popupY)
 
       if (progress >= 0.6) {
-        const icons = ["♥", "✦", "♪"]
-        ctx.fillStyle = "#ef4444"
-        ctx.font = "bold 8px monospace"
+        const icons = isMilestone ? ["★", "✦", "★"] : ["♥", "✦", "♪"]
+        ctx.fillStyle = isMilestone ? "#eab308" : "#ef4444"
+        ctx.font = "bold 9px monospace"
         for (let k = 0; k < 3; k++) {
           const hx = w * (0.2 + k * 0.3)
           const hy = h * 0.15 - (phaseTime - 0.4) * 18
@@ -478,8 +567,36 @@ export function drawTower(ctx: CanvasRenderingContext2D, game: TowerGame, width:
   for (let floor = 5; floor <= game.count + 8; floor += 5) {
     const y = screenY(floor * FLOOR_HEIGHT)
     if (y < 24 || y > height - 20) continue
-    ctx.fillStyle = "#315568"
+    ctx.fillStyle = game.count >= 13 ? "#94a3b8" : "#315568"
     ctx.fillRect(0, y, 10, 2)
     ctx.fillText(`${floor}F`, 15, y + 4)
+  }
+
+  // ── Retro Wind Vane HUD (bottom right of canvas) ──
+  if (game.count >= 5) {
+    const boxW = 86
+    const boxH = 18
+    const bx = width - boxW - 6
+    const by = height - boxH - 6
+    ctx.fillStyle = "#d4d0c8"
+    ctx.fillRect(bx, by, boxW, boxH)
+    ctx.fillStyle = "#ffffff"
+    ctx.fillRect(bx, by, boxW, 1)
+    ctx.fillRect(bx, by, 1, boxH)
+    ctx.fillStyle = "#808080"
+    ctx.fillRect(bx + boxW - 1, by, 1, boxH)
+    ctx.fillRect(bx, by + boxH - 1, boxW, 1)
+
+    const absWind = Math.abs(game.wind)
+    const arrow = game.wind > 0
+      ? (absWind > 0.8 ? "▶▶" : "▶")
+      : game.wind < 0
+      ? (absWind > 0.8 ? "◀◀" : "◀")
+      : "•"
+
+    ctx.font = "bold 8.5px monospace"
+    ctx.textAlign = "center"
+    ctx.fillStyle = absWind > 0.8 ? "#991b1b" : absWind > 0.3 ? "#b45309" : "#166534"
+    ctx.fillText(`ANGIN ${arrow} ${absWind.toFixed(1)}m/s`, bx + boxW / 2, by + 12)
   }
 }

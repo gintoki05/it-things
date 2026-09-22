@@ -4,7 +4,15 @@ import * as React from "react"
 import { useWordle } from "@/lib/wordle-store"
 import { cn } from "@/lib/utils"
 import { RetroIcon } from "@/components/ui/retro-icon"
-import { Trophy, HelpCircle, Share2, Check, RefreshCw, Sparkles, Award } from "lucide-react"
+import {
+  Trophy,
+  HelpCircle,
+  Share2,
+  Check,
+  Sparkles,
+  Lightbulb,
+  ArrowRight,
+} from "lucide-react"
 
 const KEYBOARD_ROWS = [
   ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
@@ -14,16 +22,22 @@ const KEYBOARD_ROWS = [
 
 export function WordleApp() {
   const {
+    activeQuiz,
+    quizzes,
     puzzle,
     guesses,
     evaluatedGuesses,
     currentGuess,
     isSolved,
     isGameOver,
-    isLoading,
+    isAllGameOver,
     errorMessage,
     keyboardStatuses,
     leaderboard,
+    showHint,
+    setShowHint,
+    toggleHint,
+    switchQuiz,
     addLetter,
     removeLetter,
     submitGuess,
@@ -65,6 +79,9 @@ export function WordleApp() {
     }
   }
 
+  const otherQuiz = activeQuiz === 1 ? 2 : 1
+  const otherQuizData = quizzes[otherQuiz]
+
   return (
     <div className="flex flex-col h-full bg-[#C0C0C0] font-sans text-xs select-none">
       {/* ── Top Header Toolbar ── */}
@@ -79,7 +96,7 @@ export function WordleApp() {
               </span>
             </div>
             <div className="font-mono text-[9px] text-gray-600 truncate">
-              {puzzle.targetDate} <span className="hidden sm:inline">// Kata Harian</span>
+              {puzzle.targetDate} <span className="hidden sm:inline">// 2 Kuis Harian</span>
             </div>
           </div>
         </div>
@@ -129,18 +146,131 @@ export function WordleApp() {
       </div>
 
       {/* ── Main Body ── */}
-      <div className="flex-1 overflow-y-auto p-3 flex flex-col items-center justify-between">
+      <div className="flex-1 overflow-y-auto p-2 sm:p-3 flex flex-col items-center justify-between gap-2">
         {activeTab === "game" && (
-          <div className="flex flex-col items-center justify-between w-full max-w-sm h-full gap-3">
+          <div className="flex flex-col items-center justify-between w-full max-w-sm h-full gap-2">
+            {/* ── Quiz Switcher Bar & Hint Button ── */}
+            <div className="w-full flex items-center justify-between gap-1 p-1 bg-[#D4D0C8] border-2 border-t-[#808080] border-l-[#808080] border-r-white border-b-white shrink-0">
+              <div className="flex items-center gap-1">
+                {([1, 2] as const).map((qNum) => {
+                  const qData = quizzes[qNum]
+                  const isCurrent = activeQuiz === qNum
+                  const isQSolved = qData?.isSolved
+                  const isQOver = qData?.isGameOver
+                  const count = qData?.guesses?.length || 0
+
+                  return (
+                    <button
+                      key={qNum}
+                      type="button"
+                      onClick={() => switchQuiz(qNum)}
+                      className={cn(
+                        "px-2 sm:px-2.5 py-1 text-[10px] sm:text-[11px] font-bold border-2 transition-all flex items-center gap-1",
+                        isCurrent
+                          ? "bg-[#000080] text-white border-t-[#404040] border-l-[#404040] border-r-white border-b-white shadow-inner"
+                          : "bg-[#C0C0C0] text-gray-800 border-t-white border-l-white border-r-[#808080] border-b-[#808080] hover:bg-[#D4D0C8]"
+                      )}
+                    >
+                      <span>KUIS {qNum}</span>
+                      {isQSolved ? (
+                        <span
+                          className={cn(
+                            "text-[9px] px-1 py-0.2 rounded font-mono font-bold",
+                            isCurrent ? "bg-green-600 text-white" : "bg-green-100 text-green-800 border border-green-300"
+                          )}
+                        >
+                          ✓ {count}/6
+                        </span>
+                      ) : isQOver ? (
+                        <span
+                          className={cn(
+                            "text-[9px] px-1 py-0.2 rounded font-mono font-bold",
+                            isCurrent ? "bg-red-600 text-white" : "bg-red-100 text-red-800 border border-red-300"
+                          )}
+                        >
+                          ✗
+                        </span>
+                      ) : (
+                        <span
+                          className={cn(
+                            "text-[9px] font-mono",
+                            isCurrent ? "text-blue-200" : "text-gray-600"
+                          )}
+                        >
+                          ({count}/6)
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Hint Toggle Button */}
+              <button
+                type="button"
+                onClick={toggleHint}
+                className={cn(
+                  "px-2 sm:px-2.5 py-1 text-[10px] sm:text-[11px] font-bold border-2 transition-all flex items-center gap-1 shrink-0",
+                  showHint
+                    ? "bg-amber-100 text-amber-900 border-t-[#808080] border-l-[#808080] border-r-white border-b-white shadow-inner"
+                    : "bg-[#C0C0C0] text-gray-800 border-t-white border-l-white border-r-[#808080] border-b-[#808080] hover:bg-[#D4D0C8] active:border-t-[#808080] active:border-l-[#808080]"
+                )}
+                title="Buka / Tutup Petunjuk Kata"
+              >
+                <Lightbulb className={cn("w-3.5 h-3.5", showHint ? "text-amber-600 fill-amber-500" : "text-amber-600")} />
+                <span>HINT</span>
+              </button>
+            </div>
+
+            {/* ── Retro Hint Callout Box ── */}
+            {showHint && puzzle.hint && (
+              <div className="w-full p-2 bg-[#FFFDE8] border-2 border-t-[#808080] border-l-[#808080] border-r-white border-b-white shadow-sm font-mono text-[11px] space-y-1 animate-in fade-in duration-150 shrink-0">
+                <div className="flex items-center justify-between font-bold text-xs text-[#000080] border-b border-amber-300 pb-0.5">
+                  <span className="flex items-center gap-1">
+                    <Lightbulb className="w-3.5 h-3.5 text-amber-600 fill-amber-400" />
+                    <span>PETUNJUK: KUIS #{activeQuiz}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowHint(false)}
+                    className="text-gray-500 hover:text-black px-1 font-bold"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-1.5 pt-0.5">
+                  <span className="text-gray-600 font-bold shrink-0">Kategori:</span>
+                  <span className="font-bold text-black bg-amber-200/60 px-1 py-0.2 rounded border border-amber-300 text-[10px] sm:text-[11px]">
+                    {puzzle.hint.category}
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-gray-600 font-bold">Kisi-kisi:</span>
+                  <span className="italic text-gray-800 bg-white p-1.5 border border-amber-200 rounded leading-tight shadow-inner">
+                    &ldquo;{puzzle.hint.clue}&rdquo;
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-[10px] text-gray-600 pt-0.5">
+                  <span>
+                    Huruf Ke-1: <strong className="text-blue-900 font-bold text-xs font-mono">{puzzle.hint.firstLetter}</strong> _ _ _ _
+                  </span>
+                  <span className="italic text-gray-500">5 Huruf A-Z</span>
+                </div>
+              </div>
+            )}
+
             {/* Error Message banner */}
             {errorMessage && (
-              <div className="w-full px-2 py-1 bg-red-600 text-white font-mono text-[11px] font-bold text-center rounded border border-red-800 animate-bounce">
+              <div className="w-full px-2 py-1 bg-red-600 text-white font-mono text-[11px] font-bold text-center rounded border border-red-800 animate-bounce shrink-0">
                 {errorMessage}
               </div>
             )}
 
             {/* 6x5 Wordle Letter Grid */}
-            <div className="grid grid-rows-6 gap-1 sm:gap-1.5 w-full max-w-[250px] sm:max-w-[280px] p-1.5 sm:p-2 bg-[#D4D0C8] border-2 border-t-[#808080] border-l-[#808080] border-r-white border-b-white shadow-inner">
+            <div className="grid grid-rows-6 gap-1 sm:gap-1.5 w-full max-w-[240px] sm:max-w-[270px] p-1.5 sm:p-2 bg-[#D4D0C8] border-2 border-t-[#808080] border-l-[#808080] border-r-white border-b-white shadow-inner shrink-0">
               {Array.from({ length: 6 }).map((_, rowIndex) => {
                 const isSubmitted = rowIndex < guesses.length
                 const isCurrent = rowIndex === guesses.length
@@ -188,21 +318,38 @@ export function WordleApp() {
               })}
             </div>
 
-            {/* End of game banner */}
+            {/* End of game banner / Transition to next quiz */}
             {isGameOver && (
-              <div className="w-full p-2.5 bg-[#EAE8E3] border-2 border-t-white border-l-white border-r-[#808080] border-b-[#808080] shadow flex flex-col items-center gap-1.5 text-center">
+              <div className="w-full p-2 bg-[#EAE8E3] border-2 border-t-white border-l-white border-r-[#808080] border-b-[#808080] shadow flex flex-col items-center gap-1.5 text-center shrink-0">
                 {isSolved ? (
-                  <div className="flex items-center gap-1.5 text-green-700 font-bold text-sm">
-                    <Sparkles className="w-4 h-4" />
-                    <span>KERJA BAGUS! KATA TERTEBAK ({guesses.length}/6)</span>
+                  <div className="flex items-center gap-1.5 text-green-700 font-bold text-xs sm:text-sm">
+                    <Sparkles className="w-4 h-4 text-green-600" />
+                    <span>KUIS {activeQuiz} BERHASIL! ({guesses.length}/6)</span>
                   </div>
                 ) : (
                   <div className="text-red-700 font-bold text-xs">
-                    KESEMPATAN HABIS! KATA HARI INI:{" "}
+                    KUIS {activeQuiz} SELESAI! KATA HARI INI:{" "}
                     <span className="font-mono text-sm underline text-black">{puzzle.word || "???"}</span>
                   </div>
                 )}
-                <div className="flex items-center gap-2">
+
+                {/* If the other quiz is not finished, prompt to switch */}
+                {!otherQuizData?.isGameOver ? (
+                  <button
+                    type="button"
+                    onClick={() => switchQuiz(otherQuiz)}
+                    className="px-3 py-1 bg-[#008080] text-white font-bold text-xs border-2 border-t-white border-l-white border-r-[#104040] border-b-[#104040] flex items-center gap-1 shadow-sm active:border-[#104040]"
+                  >
+                    <span>LANJUT KE KUIS {otherQuiz}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                ) : (
+                  <div className="font-bold text-[11px] text-blue-900 bg-blue-100 px-2 py-0.5 border border-blue-300 rounded font-mono">
+                    {isAllGameOver ? "SEMUA KUIS HARI INI SELESAI!" : ""}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 flex-wrap justify-center">
                   <button
                     type="button"
                     onClick={handleCopyResult}
@@ -329,7 +476,7 @@ export function WordleApp() {
                               : "bg-red-100 text-red-800 border border-red-300"
                           )}
                         >
-                          {item.isSolved ? `${item.attempts}/6` : "X/6"}
+                          {item.isSolved ? `${item.attempts} Tebakan` : `${item.attempts} Tebakan (X)`}
                         </span>
                       </div>
                     </div>
@@ -360,8 +507,18 @@ export function WordleApp() {
             </div>
 
             <p className="text-xs text-gray-700 leading-relaxed">
-              Tebak kata rahasia <strong>5 huruf</strong> dalam <strong>6 kesempatan</strong>. Tiap hari (jam 00:00 WIB), sistem mengeluarkan 1 kata rahasia baru yang sama untuk seluruh tim IT.
+              Tiap hari terdapat <strong>2 KUIS BERBEDA</strong> (Kuis 1 & Kuis 2). Setiap kuis berisi 1 kata rahasia <strong>5 huruf</strong> dengan batas <strong>6 kesempatan</strong> tebakan.
             </p>
+
+            <div className="p-2 bg-amber-50 border border-amber-300 text-[11px] text-amber-950 rounded space-y-1">
+              <div className="font-bold flex items-center gap-1">
+                <Lightbulb className="w-3.5 h-3.5 text-amber-600 fill-amber-400" />
+                <span>Fitur Hint (Petunjuk):</span>
+              </div>
+              <div>
+                Tekan tombol <strong>HINT</strong> di atas grid untuk melihat kisi-kisi kategori, petunjuk makna kata, dan bocoran huruf pertama kata tersebut.
+              </div>
+            </div>
 
             <div className="space-y-2">
               <div className="font-bold text-xs text-black">Indikator Warna:</div>
@@ -408,7 +565,7 @@ export function WordleApp() {
 
       {/* ── Bottom Status Bar ── */}
       <div className="px-2 py-1 bg-[#D4D0C8] border-t border-[#808080] flex items-center justify-between text-[11px] text-gray-600 font-mono">
-        <span>STATUS: {isSolved ? "SELESAI" : isGameOver ? "KALAH" : "BERMAIN"}</span>
+        <span>KUIS #{activeQuiz}: {isSolved ? "SELESAI" : isGameOver ? "KALAH" : "BERMAIN"}</span>
         <span>TEBAKAN: {guesses.length}/6</span>
       </div>
     </div>

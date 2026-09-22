@@ -15,7 +15,7 @@ import { supabase } from "@/lib/supabase"
 
 import { TowerLeaderboard } from "./tower-leaderboard"
 
-const INITIAL: TowerSnapshot = { phase: "ready", difficulty: "normal", score: 0, floors: 0, combo: 0, residents: 0, message: "Bangun setinggi mungkin." }
+const INITIAL: TowerSnapshot = { phase: "ready", difficulty: "normal", score: 0, floors: 0, combo: 0, residents: 0, message: "Bangun setinggi mungkin.", wind: 0 }
 
 export function TowerApp() {
   const { windows, activeWindowId } = useDesktop()
@@ -106,7 +106,8 @@ export function TowerApp() {
           setSnapshot(next)
           if (!live.current.muted && next.phase !== lastPhase) {
             if (next.phase === "landed") {
-              if (next.combo) playRetroCorrectSound(0.1)
+              if (next.milestone) playRetroCorrectSound(0.18)
+              else if (next.combo) playRetroCorrectSound(0.1)
               else playRetroNotificationSound(0.1)
             }
             if (next.phase === "over") playRetroBuzzerSound(0.1)
@@ -255,15 +256,22 @@ export function TowerApp() {
           </div>
         </div>
 
-        {/* Floating Combo Indicator */}
-        {snapshot.combo > 1 && (
+        {/* Floating Milestone Banner or Combo Indicator */}
+        {snapshot.milestone && snapshot.phase === "landed" ? (
+          <div className="pointer-events-none absolute inset-x-0 top-14 flex justify-center select-none z-10">
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-400 text-black font-mono font-black text-xs border-2 border-amber-600 rounded-[2px] shadow-xl animate-bounce">
+              <Trophy className="w-3.5 h-3.5 text-red-700" />
+              <span>★ {snapshot.milestone}! ★</span>
+            </div>
+          </div>
+        ) : snapshot.combo > 1 ? (
           <div className="pointer-events-none absolute inset-x-0 top-14 flex justify-center select-none">
             <div className="flex items-center gap-1 px-2.5 py-1 bg-amber-400 text-black font-mono font-black text-xs border-2 border-amber-600 rounded-[2px] shadow-lg animate-bounce">
               <Sparkles className="w-3.5 h-3.5 text-red-600" />
               <span>COMBO x{snapshot.combo}!</span>
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* ── Authentic Win98 Dialog Overlay ── */}
         {(snapshot.phase === "ready" || snapshot.phase === "over" || paused || error) && (

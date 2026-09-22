@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.35"
-export const APP_BUILD = "2026.09.21"
+export const APP_VERSION = "v2.3.36"
+export const APP_BUILD = "2026.09.22"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.36",
+    date: "22 Sep 2026",
+    codename: "Tower 98 Altitude Dynamics & Wordle Two Quizzes Hint",
+    changes: [
+      "Fix Fisika Tower 98 (Stabilisasi Lantai Tinggi): Memperbaiki bug false game-over pada menara tinggi dengan scaling timeout jatuh dinamis dan grace period kontak lantai bawah.",
+      "Efek Angin & HUD Kompas Win98 (Lantai 5+): Menambahkan hembusan angin dinamis yang mendorong balok saat jatuh secara realistis, dilengkapi visual wind streaks dan indikator HUD retro.",
+      "Atmosfer Langit Bertahap: Ketinggian menara kini mengubah latar belakang secara dinamis dari Siang Cerah (1-5F), Sunset Lembayung (6-12F), Starry Night Berbintang (13-20F), hingga Orbit Luar Angkasa (21F+).",
+      "Milestone Ketinggian: Perayaan visual dan banner khusus saat mencapai lantai 5F, 10F, 15F, 20F, 25F, dan 30F dengan feedback audio dan skor ekstra.",
+      "Wordle 98 Hint & Dua Kuis Harian: Peningkatan petunjuk kata dan format kuis harian pada modul Wordle.",
+    ],
+  },
   {
     version: "v2.3.35",
     date: "21 Sep 2026",

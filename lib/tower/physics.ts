@@ -110,6 +110,8 @@ export interface TowerSnapshot {
   combo: number
   residents: number
   message: string
+  wind: number
+  milestone?: string
 }
 
 export function createTowerWorld(foundationHalfWidth = 2.5, friction = 0.8) {
@@ -140,14 +142,16 @@ export function createFloor(
 
 // Only upward support connected to the foundation counts as a landing.
 // A side collision or contact with another falling floor cannot earn points.
-export function hasSupport(body: Body, foundation: Body, visited = new Set<Body>()): boolean {
+// maxDepth prevents pathological recursion in degenerate contact graphs; 64 is
+// well above any reachable tower height so normal play is never affected.
+export function hasSupport(body: Body, foundation: Body, visited = new Set<Body>(), depth = 0): boolean {
   if (body === foundation) return true
-  if (visited.has(body)) return false
+  if (visited.has(body) || depth > 64) return false
   visited.add(body)
   for (let edge = body.getContactList(); edge; edge = edge.next) {
     if (!edge.other || !edge.contact.isTouching()) continue
     if (edge.other.getPosition().y >= body.getPosition().y - FLOOR_HEIGHT * 0.35) continue
-    if (hasSupport(edge.other, foundation, visited)) return true
+    if (hasSupport(edge.other, foundation, visited, depth + 1)) return true
   }
   return false
 }
@@ -168,6 +172,8 @@ export class TowerGame {
   time = 0
   cameraBase = 0
   message = "Mulai menara retro kamu."
+  wind = 0
+  milestone = ""
   private phaseTime = 0
   private stableTime = 0
   private swingTime = 0
@@ -192,6 +198,8 @@ export class TowerGame {
       combo: this.combo,
       residents: this.residents,
       message: this.message,
+      wind: this.wind,
+      milestone: this.milestone || undefined,
     }
   }
 
@@ -211,6 +219,14 @@ export class TowerGame {
     this.pivotCenter = Math.max(-2, Math.min(2, previous?.body.getPosition().x ?? 0))
     this.swingDirection = this.count % 2 === 0 ? 1 : -1
     this.swingTime = 0
+    // Dynamic wind kicks in after floor 4 (floor count >= 5)
+    if (this.count >= 5) {
+      const cycle = Math.sin(this.count * 1.57)
+      const maxWind = this.difficulty === "santai" ? 0.6 : this.difficulty === "normal" ? 1.0 : 1.4
+      this.wind = Math.round(cycle * maxWind * 10) / 10
+    } else {
+      this.wind = 0
+    }
     const startX = this.pivotCenter + this.swingDirection * 2.8
     this.pivot = this.world.createKinematicBody(Vec2(startX, top + 8.2))
     const body = createFloor(this.world, startX, top + 4.2, 0, {
@@ -287,14 +303,25 @@ export class TowerGame {
     if (this.phase === "landed" && this.phaseTime > 0.85) this.spawn()
     if (this.phase !== "falling" || !this.current) return
     const body = this.current.body
+    if (this.wind !== 0) {
+      body.applyForceToCenter(Vec2(this.wind * 1.8, 0), true)
+    }
     const position = body.getPosition()
-    if (position.y < this.dropBase - 5 || Math.abs(position.x) > 12 || this.phaseTime > 12) {
+    // Timeout scales with floor count: tall towers need more time for the whole
+    // stack to settle. Cap at 24 s to keep the game from feeling broken.
+    const fallingTimeout = Math.min(12 + this.count * 0.4, 24)
+    if (position.y < this.dropBase - 5 || Math.abs(position.x) > 12 || this.phaseTime > fallingTimeout) {
       this.finish("Lantainya gagal bertahan.")
       return
     }
     const below = this.floors.filter(floor => floor.scored).at(-1)?.body ?? this.foundation
+    // Require foundation support immediately; require support from the floor
+    // directly below only after a short grace window so that micro-oscillations
+    // in a tall stack don't permanently prevent the hasSupport check from passing.
+    const supportedByFoundation = hasSupport(body, this.foundation)
+    const supportedByBelow = this.stableTime > 0.3 ? true : hasSupport(body, below)
     const stable = body.getLinearVelocity().length() < 0.22 && Math.abs(body.getAngularVelocity()) < 0.12
-      && Math.abs(body.getAngle()) < config.stableAngle && hasSupport(body, this.foundation) && hasSupport(body, below)
+      && Math.abs(body.getAngle()) < config.stableAngle && supportedByFoundation && supportedByBelow
     this.stableTime = stable ? this.stableTime + STEP : 0
     if (this.stableTime < 0.45) return
     const perfect = Math.abs(position.x - below.getPosition().x) < 0.18 && Math.abs(body.getAngle()) < 0.06
@@ -308,7 +335,23 @@ export class TowerGame {
     this.current.placedY = position.y
     this.phase = "landed"
     this.phaseTime = 0
-    this.message = perfect ? `PERFECT! +${points} • +${newResidents} Warga!` : `Mantap! +${points} • +${newResidents} Warga!`
+
+    const MILESTONES: Record<number, string> = {
+      5: "GEDUNG TINGKAT DUA",
+      10: "KOMPLEKS PERKANTORAN",
+      15: "PENCAKAR LANGIT",
+      20: "MENEMBUS AWAN",
+      25: "STRATOSFER RETRO",
+      30: "STASIUN ORBIT 98",
+    }
+    const hitMilestone = MILESTONES[this.count]
+    if (hitMilestone) {
+      this.milestone = hitMilestone
+      this.message = `★ ${hitMilestone}! (+${points} POIN) ★`
+    } else {
+      this.milestone = ""
+      this.message = perfect ? `PERFECT! +${points} • +${newResidents} Warga!` : `Mantap! +${points} • +${newResidents} Warga!`
+    }
 
     const residentColors = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4"]
     const hairColors = ["#451a03", "#1f2937", "#b45309", "#78350f", "#374151"]

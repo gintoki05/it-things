@@ -64,26 +64,6 @@ export function GameApp() {
       iconName: "paint",
       isLive: activePaintWarCount > 0,
     },
-    {
-      id: "minesweeper",
-      title: "Minesweeper 98",
-      filename: "MINESWEEPER.EXE",
-      category: "Single Player Puzzle",
-      description:
-        "Game klasik pembersih ranjau legendaris Windows 98 buat nemenin waktu nunggu compile atau deploy production.",
-      iconName: "task",
-      isComingSoon: true,
-    },
-    {
-      id: "typeracer",
-      title: "Type Racer 98",
-      filename: "TYPE_RACER.EXE",
-      category: "Multiplayer WPM Battle",
-      description:
-        "Adu kecepatan ngetik cuplikan syntax TypeScript & SQL. Buktikan siapa yang punya mechanical fingers tercepat di tim!",
-      iconName: "idea",
-      isComingSoon: true,
-    },
   ]
 
   const handleLaunchGame = (appId?: "paintwar" | "wordle" | "tower" | "billiard") => {
