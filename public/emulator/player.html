@@ -151,21 +151,45 @@
 
   <script>
     let emulatorLoaded = false;
+    let isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
-    function initEmulator(gameUrl, core) {
+    function initEmulator(gameUrl, core, gameName) {
       document.getElementById('empty-state').style.display = 'none';
 
       // Clear previous container content if any
       const gameDiv = document.getElementById('game');
       gameDiv.innerHTML = '';
 
+      const sanitizedGameName = (gameName || 'retro-game')
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]/g, '_');
+
       window.EJS_player = '#game';
       window.EJS_core = core || 'gba';
       window.EJS_gameUrl = gameUrl;
+      window.EJS_gameName = sanitizedGameName;
       window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
       window.EJS_startOnLoaded = true;
       window.EJS_color = '#000080';
       window.EJS_threads = false;
+      window.EJS_volume = 1.0;
+      window.EJS_virtualGamepad = isTouch;
+
+      // Event hooks to notify parent Next.js application
+      window.EJS_onGameStart = function() {
+        window.parent.postMessage({
+          type: 'GAME_STARTED',
+          gameName: sanitizedGameName
+        }, '*');
+      };
+
+      window.EJS_onSaveState = function(state) {
+        window.parent.postMessage({ type: 'STATE_SAVED' }, '*');
+      };
+
+      window.EJS_onLoadState = function(state) {
+        window.parent.postMessage({ type: 'STATE_LOADED' }, '*');
+      };
 
       const script = document.createElement('script');
       script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
@@ -175,7 +199,10 @@
         window.parent.postMessage({ type: 'EMULATOR_READY' }, '*');
       };
       script.onerror = () => {
-        alert('Gagal memuat engine emulator dari CDN. Periksa koneksi internet Anda.');
+        window.parent.postMessage({
+          type: 'EMULATOR_ERROR',
+          message: 'Gagal memuat engine emulator dari CDN. Periksa koneksi internet.'
+        }, '*');
       };
       document.body.appendChild(script);
     }
@@ -184,13 +211,58 @@
     window.addEventListener('message', (event) => {
       if (!event.data) return;
 
-      if (event.data.type === 'LOAD_ROM') {
-        const { romUrl, core } = event.data;
+      const type = event.data.type;
+
+      if (type === 'LOAD_ROM') {
+        const { romUrl, core, gameName } = event.data;
         if (romUrl) {
-          initEmulator(romUrl, core || 'gba');
+          initEmulator(romUrl, core || 'gba', gameName);
         }
-      } else if (event.data.type === 'TOGGLE_CRT') {
+      } else if (type === 'TOGGLE_CRT') {
         document.body.classList.toggle('crt-enabled', !!event.data.enabled);
+      } else if (type === 'TOGGLE_PAUSE') {
+        const gm = window.EJS_emulator?.gameManager;
+        if (gm) {
+          const nextPaused = !gm.isPaused;
+          if (typeof gm.pause === 'function') gm.pause(nextPaused);
+          window.parent.postMessage({ type: 'PAUSE_STATE_CHANGED', isPaused: nextPaused }, '*');
+        }
+      } else if (type === 'TOGGLE_TURBO') {
+        const gm = window.EJS_emulator?.gameManager;
+        if (gm) {
+          const nextFast = !gm.isFastForward;
+          if (typeof gm.setFastForward === 'function') gm.setFastForward(nextFast);
+          window.parent.postMessage({ type: 'TURBO_STATE_CHANGED', isTurbo: nextFast }, '*');
+        }
+      } else if (type === 'TOGGLE_MUTE') {
+        const gm = window.EJS_emulator?.gameManager;
+        if (gm) {
+          const isMuted = !!gm.isMuted;
+          if (typeof gm.mute === 'function') {
+            gm.mute(!isMuted);
+          } else if (typeof gm.setVolume === 'function') {
+            gm.setVolume(isMuted ? 1.0 : 0);
+          }
+          window.parent.postMessage({ type: 'MUTE_STATE_CHANGED', isMuted: !isMuted }, '*');
+        }
+      } else if (type === 'QUICK_SAVE') {
+        const gm = window.EJS_emulator?.gameManager;
+        if (gm && typeof gm.saveState === 'function') {
+          gm.saveState();
+          window.parent.postMessage({ type: 'NOTIFICATION', message: '💾 Save State berhasil dibuat!' }, '*');
+        }
+      } else if (type === 'QUICK_LOAD') {
+        const gm = window.EJS_emulator?.gameManager;
+        if (gm && typeof gm.loadState === 'function') {
+          gm.loadState();
+          window.parent.postMessage({ type: 'NOTIFICATION', message: '📂 Save State berhasil dimuat!' }, '*');
+        }
+      } else if (type === 'RESTART_GAME') {
+        const gm = window.EJS_emulator?.gameManager;
+        if (gm && typeof gm.restart === 'function') {
+          gm.restart();
+          window.parent.postMessage({ type: 'NOTIFICATION', message: '🔄 Game direstart!' }, '*');
+        }
       }
     });
 
@@ -237,7 +309,8 @@
       else if (ext === 'gbc') core = 'gbc';
 
       const blobUrl = URL.createObjectURL(file);
-      initEmulator(blobUrl, core);
+      const gameName = file.name.replace(/\.[^/.]+$/, "");
+      initEmulator(blobUrl, core, gameName);
 
       window.parent.postMessage({
         type: 'CUSTOM_ROM_LOADED',
@@ -246,12 +319,13 @@
       }, '*');
     }
 
-    // Check URL query parameters if provided (e.g. ?rom=https://...&core=gba)
+    // Check URL query parameters if provided (e.g. ?rom=https://...&core=gba&gameName=metalslug)
     const urlParams = new URLSearchParams(window.location.search);
     const directRom = urlParams.get('rom');
     const directCore = urlParams.get('core') || 'gba';
+    const directGameName = urlParams.get('gameName') || urlParams.get('title') || 'retro-game';
     if (directRom) {
-      initEmulator(directRom, directCore);
+      initEmulator(directRom, directCore, directGameName);
     }
   </script>
 </body>
