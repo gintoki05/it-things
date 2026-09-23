@@ -5,12 +5,22 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.36"
-export const APP_BUILD = "2026.09.22"
+export const APP_VERSION = "v2.3.37"
+export const APP_BUILD = "2026.09.23"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.37",
+    date: "23 Sep 2026",
+    codename: "Wordle 98 Category Hint Polish & Two Daily Quizzes",
+    changes: [
+      "Penyederhanaan Hint Wordle 98: Menghapus kisi-kisi teks dan huruf awal, memfokuskan petunjuk hanya pada Kategori kata agar permainan tetap menantang.",
+      "Dua Kuis Harian Terpisah (Kuis 1 & Kuis 2): Pemain dapat memainkan dua kata rahasia berbeda per hari dengan switcher retro dan tombol cepat lanjut ke kuis berikutnya.",
+      "Panel Callout Hint Retro: Desain banner petunjuk kategori khas Windows 98 yang ringkas dan ramah tampilan mobile.",
+    ],
+  },
   {
     version: "v2.3.36",
     date: "22 Sep 2026",

@@ -228,7 +228,7 @@ export function WordleApp() {
                 <div className="flex items-center justify-between font-bold text-xs text-[#000080] border-b border-amber-300 pb-0.5">
                   <span className="flex items-center gap-1">
                     <Lightbulb className="w-3.5 h-3.5 text-amber-600 fill-amber-400" />
-                    <span>PETUNJUK: KUIS #{activeQuiz}</span>
+                    <span>PETUNJUK KATEGORI (KUIS #{activeQuiz})</span>
                   </span>
                   <button
                     type="button"
@@ -239,25 +239,11 @@ export function WordleApp() {
                   </button>
                 </div>
 
-                <div className="flex items-center gap-1.5 pt-0.5">
+                <div className="flex items-center gap-1.5 py-1">
                   <span className="text-gray-600 font-bold shrink-0">Kategori:</span>
-                  <span className="font-bold text-black bg-amber-200/60 px-1 py-0.2 rounded border border-amber-300 text-[10px] sm:text-[11px]">
+                  <span className="font-bold text-black bg-amber-200/70 px-2 py-0.5 rounded border border-amber-300 text-xs">
                     {puzzle.hint.category}
                   </span>
-                </div>
-
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-gray-600 font-bold">Kisi-kisi:</span>
-                  <span className="italic text-gray-800 bg-white p-1.5 border border-amber-200 rounded leading-tight shadow-inner">
-                    &ldquo;{puzzle.hint.clue}&rdquo;
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between text-[10px] text-gray-600 pt-0.5">
-                  <span>
-                    Huruf Ke-1: <strong className="text-blue-900 font-bold text-xs font-mono">{puzzle.hint.firstLetter}</strong> _ _ _ _
-                  </span>
-                  <span className="italic text-gray-500">5 Huruf A-Z</span>
                 </div>
               </div>
             )}
@@ -516,7 +502,7 @@ export function WordleApp() {
                 <span>Fitur Hint (Petunjuk):</span>
               </div>
               <div>
-                Tekan tombol <strong>HINT</strong> di atas grid untuk melihat kisi-kisi kategori, petunjuk makna kata, dan bocoran huruf pertama kata tersebut.
+                Tekan tombol <strong>HINT</strong> di atas grid untuk melihat kategori kata rahasia tersebut.
               </div>
             </div>
 

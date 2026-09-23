@@ -72,8 +72,6 @@ interface WordleSharedState {
 
 const defaultHint: WordleHint = {
   category: "Kata Harian",
-  clue: "Tebak kata 5 huruf rahasia hari ini",
-  firstLetter: "",
 }
 
 const defaultQuiz1: WordleQuizData = {
