@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
 
-export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "wordle" | "winamp" | "tower" | "swisstools" | "pomodoro" | "feedback" | "snipper" | "tools" | "billiard"
+export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "wordle" | "winamp" | "tower" | "swisstools" | "pomodoro" | "feedback" | "snipper" | "tools" | "arcade" | "billiard"
 
 export interface WindowState {
   id: AppId
@@ -225,6 +225,20 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     defaultSize: { width: 560, height: 420 },
     defaultPos: { x: 230, y: 60 },
   },
+  arcade: {
+    id: "arcade",
+    title: "ARCADE.EXE - Retro Arcade & GBA Emulator",
+    icon: "game",
+    filename: "arcade.exe",
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    zIndex: 14,
+    position: { x: 190, y: 30 },
+    size: { width: 840, height: 600 },
+    defaultSize: { width: 840, height: 600 },
+    defaultPos: { x: 190, y: 30 },
+  },
   wordle: {
     id: "wordle",
     title: "Wordle98.exe - Tebak Kata Harian 98",
@@ -406,6 +420,7 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
       "snipper",
       "tools",
       "billiard",
+      "arcade",
     ]
     const targetApp = requestedApp && validApps.includes(requestedApp) ? requestedApp : null
     const wasPomodoroOpen = typeof window !== "undefined" && localStorage.getItem("it-things_pomodoro_window_open") === "true"

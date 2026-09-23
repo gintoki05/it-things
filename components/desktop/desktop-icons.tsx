@@ -15,6 +15,7 @@ const DESKTOP_ICON_ORDER: AppId[] = [
   "lapak",
   "chat",
   "game",
+  "arcade",
   "tools",
 ]
 
