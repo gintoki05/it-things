@@ -5,12 +5,20 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.38"
+export const APP_VERSION = "v2.3.39"
 export const APP_BUILD = "2026.09.23"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.39",
+    date: "23 Sep 2026",
+    codename: "Temporary Arcade Module Standby",
+    changes: [
+      "Standby Modul ARCADE.EXE: Menyembunyikan sementara ikon desktop dan kartu Game Hub untuk kalibrasi ulang mapping kontrol keyboard.",
+    ],
+  },
   {
     version: "v2.3.38",
     date: "23 Sep 2026",
