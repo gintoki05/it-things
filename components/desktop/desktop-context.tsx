@@ -238,6 +238,7 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 840, height: 600 },
     defaultSize: { width: 840, height: 600 },
     defaultPos: { x: 190, y: 30 },
+    hideFromDesktop: true,
   },
   wordle: {
     id: "wordle",

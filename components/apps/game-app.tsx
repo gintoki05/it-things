@@ -25,16 +25,6 @@ export function GameApp() {
 
   const games: GameItem[] = [
     {
-      id: "arcade",
-      appId: "arcade",
-      title: "Retro Arcade & GBA",
-      filename: "ARCADE.EXE",
-      category: "GBA & Retro Console Emulator",
-      description:
-        "Mainkan game retro legendaris seperti Metal Slug Advance, Castlevania, Zelda, Pokemon, dan pasang kaset ROM (.gba) milikmu sendiri!",
-      iconName: "game",
-    },
-    {
       id: "billiard",
       appId: "billiard",
       title: "Billiard 98",
