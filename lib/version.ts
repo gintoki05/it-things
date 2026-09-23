@@ -5,12 +5,26 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.37"
+export const APP_VERSION = "v2.3.38"
 export const APP_BUILD = "2026.09.23"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.38",
+    date: "23 Sep 2026",
+    codename: "ARCADE.EXE - Retro Arcade & GBA Emulator with Curated Classics",
+    changes: [
+      "Peluncuran ARCADE.EXE: Emulator retro GBA bawaan desktop Windows 98 yang ditenagai WebAssembly EmulatorJS.",
+      "Rak Kaset Kurasi 6 Game Klasik: Koleksi game siap main (Metal Slug Advance, Castlevania Aria of Sorrow, Zelda The Minish Cap, Pokemon Emerald, Sonic Advance, dan Anguna) lengkap dengan box art otentik beresolusi tinggi.",
+      "Proxy ROM Server-Side & Streaming Cepat: Endpoint API /api/emulator/rom dengan caching HTTP efisien dan streaming aman tanpa auto-download awal.",
+      "Retro Loading Dialog Win98: Dialog status MENGUNDUH_KASET.EXE berpetak biru khas Windows 98 dengan indikator progres unduhan dan inisialisasi BIOS.",
+      "Quick Controls di Toolbar: Akses tombol cepat Pause/Resume, Turbo 2x (Fast Forward untuk RPG), Mute Suara, CRT Tube TV Toggle, serta Quick Save & Quick Load State terisolasi per game.",
+      "Dukungan Kaset ROM Eksternal: Slot file drag-and-drop / file picker untuk memuat file ROM lokal (.gba, .zip, .nes) dan pemuatan direct link URL kaset.",
+      "Responsif Mobile Penuh: Mode switcher tab Layar Game vs Rak Kaset di perangkat mobile serta aktivasi otomatis Virtual Touchscreen Gamepad.",
+    ],
+  },
   {
     version: "v2.3.37",
     date: "23 Sep 2026",
