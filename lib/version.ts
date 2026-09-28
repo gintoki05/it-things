@@ -5,12 +5,22 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.41"
+export const APP_VERSION = "v2.3.42"
 export const APP_BUILD = "2026.09.28"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.42",
+    date: "28 Sep 2026",
+    codename: "DOODLE.EXE - Dedicated Private Lobbies & WebRTC Connection Fix",
+    changes: [
+      "Hapus Public Lobby & Matchmaking Global: Menghilangkan mode Quick Play, radio button public/private, dan list lobby publik agar fokus 100% pada Private Lobby & Ajak Mabar internal tim kantor.",
+      "Perbaikan WebRTC DataConnection (Connecting Terus): Memperbaiki race condition penanganan event open pada PeerJS host & direct connection yang sebelumnya menyebabkan client tertahan di status connecting tanpa henti.",
+      "Stabilisasi Iframe & Direct Join: Menghilangkan reload iframe yang tidak perlu saat menerima undangan room dari Chat dan mengoptimalkan knocking connection langsung ke host asli tanpa phantom peer.",
+    ],
+  },
   {
     version: "v2.3.41",
     date: "28 Sep 2026",

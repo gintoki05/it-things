@@ -38,27 +38,25 @@ export function DoodleApp() {
 
   // Multiplayer room state
   const [currentLobbyCode, setCurrentLobbyCode] = React.useState<string | null>(null)
-  const [joinRoomCode, setJoinRoomCode] = React.useState<string | null>(null)
   const [isSharing, setIsSharing] = React.useState<boolean>(false)
   const [notificationMsg, setNotificationMsg] = React.useState<string | null>(null)
   const [isCopied, setIsCopied] = React.useState<boolean>(false)
+  const pendingRoomRef = React.useRef<string | null>(null)
 
   const nickname = React.useMemo(() => {
     return (user?.name || "Player").trim().slice(0, 14)
   }, [user?.name])
 
-  const iframeSrc = React.useMemo(() => {
+  // Initial iframeSrc that only regenerates when explicitly restarted via key
+  const [iframeSrc, setIframeSrc] = React.useState<string>(() => {
     const params = new URLSearchParams()
     if (nickname) {
       params.set("name", nickname)
     }
-    if (joinRoomCode) {
-      params.set("room", joinRoomCode)
-    }
     params.set("ink", String(selectedInk))
     const q = params.toString()
     return `/games/doodle/index.html${q ? `?${q}` : ""}`
-  }, [nickname, joinRoomCode, selectedInk])
+  })
 
   const handleSelectInk = React.useCallback((inkId: number) => {
     setSelectedInk(inkId)
@@ -70,8 +68,15 @@ export function DoodleApp() {
 
   const handleRestart = React.useCallback(() => {
     setShowRestartConfirm(false)
+    const params = new URLSearchParams()
+    if (nickname) {
+      params.set("name", nickname)
+    }
+    params.set("ink", String(selectedInk))
+    const q = params.toString()
+    setIframeSrc(`/games/doodle/index.html${q ? `?${q}` : ""}`)
     setKey((prev) => prev + 1)
-  }, [])
+  }, [nickname, selectedInk])
 
   const handleToggleFullscreen = React.useCallback(() => {
     if (!containerRef.current) return
@@ -125,6 +130,15 @@ export function DoodleApp() {
         if (e.data.roomCode) {
           void handleShareToChat(e.data.roomCode)
         }
+      } else if (e.data?.type === "DOODLE_READY") {
+        if (pendingRoomRef.current) {
+          const room = pendingRoomRef.current
+          pendingRoomRef.current = null
+          iframeRef.current?.contentWindow?.postMessage(
+            { type: "JOIN_ROOM", roomCode: room },
+            "*"
+          )
+        }
       }
     }
     window.addEventListener("message", handleMessage)
@@ -137,12 +151,15 @@ export function DoodleApp() {
       const custom = e as CustomEvent<{ roomCode: string }>
       const code = custom.detail?.roomCode?.trim().toUpperCase()
       if (code) {
-        setJoinRoomCode(code)
-        // If iframe is already running, send postMessage immediately
-        iframeRef.current?.contentWindow?.postMessage(
-          { type: "JOIN_ROOM", roomCode: code },
-          "*"
-        )
+        pendingRoomRef.current = code
+        const sendMsg = () => {
+          iframeRef.current?.contentWindow?.postMessage(
+            { type: "JOIN_ROOM", roomCode: code },
+            "*"
+          )
+        }
+        sendMsg()
+        setTimeout(sendMsg, 600)
       }
     }
     window.addEventListener("join-doodle-room", handleJoinEvent)
@@ -256,7 +273,7 @@ export function DoodleApp() {
       {/* Doodle War Game Viewport */}
       <div className="relative flex-1 w-full h-full bg-[#f6f3e6] overflow-hidden">
         <iframe
-          key={`${key}-${iframeSrc}`}
+          key={key}
           ref={iframeRef}
           src={iframeSrc}
           className="w-full h-full border-0 block"
