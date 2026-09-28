@@ -5,12 +5,20 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.43"
+export const APP_VERSION = "v2.3.44"
 export const APP_BUILD = "2026.09.28"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.44",
+    date: "28 Sep 2026",
+    codename: "DOODLE.EXE - Fix TDZ ReferenceError in Multiplayer Join",
+    changes: [
+      "Fix ReferenceError Temporal Dead Zone (TDZ): Memperbaiki bug inisialisasi variabel internal di fungsi join multiplayer yang sebelumnya menyebabkan error Cannot access 'i' before initialization saat menekan tombol GABUNG.",
+    ],
+  },
   {
     version: "v2.3.43",
     date: "28 Sep 2026",
