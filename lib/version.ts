@@ -5,12 +5,22 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.48"
+export const APP_VERSION = "v2.3.49"
 export const APP_BUILD = "2026.09.28"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.49",
+    date: "28 Sep 2026",
+    codename: "DOODLE.EXE - Reload & Bolt Action Indicators (Sniper Scope HUD)",
+    changes: [
+      "Indikator Reload Sniper Scope: Menambahkan bar progres pengisian peluru dan label persentase (RELOADING XX%) di bawah titik reticle saat membidik dengan sniper scope.",
+      "Indikator Bolt Action Cycling: Menampilkan progres kokang peluru sniper (BOLT ACTION…) di dalam scope setelah menembak agar pemain tahu kapan sniper siap ditembakkan lagi.",
+      "Indikator Reload Crosshair Umum: Menambahkan bar progres reload dinamis di bawah crosshair tengah untuk semua senjata api lainnya saat reload.",
+    ],
+  },
   {
     version: "v2.3.48",
     date: "28 Sep 2026",
