@@ -257,7 +257,7 @@ export async function toggleChatReactionAction(params: {
  * Otomatis mengirimkan pengumuman room game (Billiard atau Paint War) ke Chat Umum
  */
 export async function announceGameRoomAction(params: {
-  game: "billiard" | "paintwar"
+  game: "billiard" | "paintwar" | "doodle"
   roomCode?: string
   rounds?: number
   userName: string
@@ -270,6 +270,8 @@ export async function announceGameRoomAction(params: {
   const messageText =
     params.game === "billiard"
       ? `🎱 [BILLIARD 98] ${params.userName} membuat Room Billiard 8-Ball! Kode: [${params.roomCode}]. Ayo tanding 1v1 di Pool Lounge 98!`
+      : params.game === "doodle"
+      ? `🔫 [DOODLE WAR 98] ${params.userName} membuat Lobby Doodle War! Kode: [${params.roomCode}]. Ayo mabar bertahan hidup corat-coret bolpoin!`
       : `🎨 [PAINT WAR 98] ${params.userName} memulai pertandingan Paint War (${params.rounds || 5} Ronde)! Ayo masuk dan tebak gambarnya!`
 
   try {

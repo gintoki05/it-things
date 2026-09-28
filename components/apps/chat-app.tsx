@@ -41,7 +41,9 @@ import {
   ExternalLink,
   Copy,
   Play,
+  Gamepad2,
 } from "lucide-react"
+import { RetroIcon } from "@/components/ui/retro-icon"
 import { useNotification } from "@/lib/notification-store"
 import { usePresence } from "@/lib/presence-store"
 import { usePicStore } from "@/lib/pic-store"
@@ -728,6 +730,8 @@ export function ChatApp() {
   // Render highlighted text with @mentions badges and live URLs
   const renderMessageContent = (text: string, isOwn?: boolean) => {
     const isWinampShare = /📻\s*\[WINAMP\s*98\]\s*Lagi dengerin:/i.test(text)
+    const doodleMatch = text.match(/\[DOODLE WAR 98\].*?Kode(?: Room)?:\s*\[([A-Za-z0-9_-]+)\]/i)
+    const billiardMatch = text.match(/\[BILLIARD 98\].*?Kode:\s*\[([A-Za-z0-9_-]+)\]/i)
 
     // Ambil daftar nama yang valid, urutkan dari yang terpanjang agar nama lengkap diutamakan
     const knownNames = Array.from(
@@ -751,69 +755,128 @@ export function ChatApp() {
 
     const parts = text.split(mentionPattern)
 
-    return parts.map((part, idx) => {
-      if (part.startsWith("@")) {
-        const namePart = part.slice(1).trim()
-        const lower = namePart.toLowerCase()
-        const isAll = lower === "all" || lower === "semua"
-        const isTargetSelf =
-          user &&
-          (isAll || user.name.toLowerCase() === lower || user.name.toLowerCase().startsWith(lower))
+    return (
+      <>
+        {parts.map((part, idx) => {
+          if (part.startsWith("@")) {
+            const namePart = part.slice(1).trim()
+            const lower = namePart.toLowerCase()
+            const isAll = lower === "all" || lower === "semua"
+            const isTargetSelf =
+              user &&
+              (isAll || user.name.toLowerCase() === lower || user.name.toLowerCase().startsWith(lower))
 
-        return (
+            return (
+              <span
+                key={idx}
+                className={cn(
+                  "inline-flex items-center px-1.5 py-0.2 mx-0.5 rounded font-mono font-bold text-[11px] shadow-sm select-none",
+                  isTargetSelf
+                    ? "bg-[#FFE066] text-[#7A4B00] border border-[#D4A017]"
+                    : "bg-[#1E4E8C] text-white border border-[#102A45]"
+                )}
+              >
+                @{namePart}
+              </span>
+            )
+          }
+
+          // If not a mention, parse URLs
+          const urlPattern = /(https?:\/\/[^\s]+)/gi
+          const subParts = part.split(urlPattern)
+
+          return (
+            <React.Fragment key={idx}>
+              {subParts.map((subPart, subIdx) => {
+                if (/^https?:\/\/[^\s]+$/i.test(subPart)) {
+                  // Separate trailing punctuation if any (like .,:;!?)
+                  const trailingPunctMatch = subPart.match(/[.,;:!?)\]}>]+$/)
+                  const trailingPunct = trailingPunctMatch ? trailingPunctMatch[0] : ""
+                  const cleanUrl = trailingPunct
+                    ? subPart.slice(0, subPart.length - trailingPunct.length)
+                    : subPart
+
+                  return (
+                    <React.Fragment key={subIdx}>
+                      <ChatLiveLink
+                        url={cleanUrl}
+                        isOwn={isOwn}
+                        hideRawUrl={isWinampShare}
+                        onPlayInWinamp={(u, title) => {
+                          addTrack(u, title)
+                          openWindow("winamp")
+                        }}
+                      />
+                      {trailingPunct}
+                    </React.Fragment>
+                  )
+                }
+                let textToDisplay = subPart
+                if (isWinampShare) {
+                  textToDisplay = textToDisplay.replace(/\s*[—–-]\s*$/, "").trimEnd()
+                }
+                return <span key={subIdx}>{textToDisplay}</span>
+              })}
+            </React.Fragment>
+          )
+        })}
+
+        {/* Interactive Doodle War 98 Lobby Invitation Card */}
+        {doodleMatch && (
           <span
-            key={idx}
-            className={cn(
-              "inline-flex items-center px-1.5 py-0.2 mx-0.5 rounded font-mono font-bold text-[11px] shadow-sm select-none",
-              isTargetSelf
-                ? "bg-[#FFE066] text-[#7A4B00] border border-[#D4A017]"
-                : "bg-[#1E4E8C] text-white border border-[#102A45]"
-            )}
+            onClick={(e) => e.stopPropagation()}
+            className="mt-2 p-2 bg-[#FFFDE7] text-black border-2 border-[#1E4E8C] rounded-[2px] shadow-sm flex items-center justify-between gap-2 select-none flow-root"
           >
-            @{namePart}
+            <span className="flex items-center gap-2">
+              <RetroIcon name="doodle" iconSize={24} />
+              <span className="flex flex-col text-left">
+                <span className="font-bold text-[11px] text-[#1E4E8C]">Doodle War 98 Lobby</span>
+                <span className="text-[10px] font-mono font-bold text-[#D02030]">KODE: {doodleMatch[1]}</span>
+              </span>
+            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                window.dispatchEvent(new CustomEvent("join-doodle-room", { detail: { roomCode: doodleMatch[1] } }))
+                openWindow("doodle")
+              }}
+              className="px-2.5 py-1 bg-[#1E4E8C] hover:bg-[#153A6B] text-white font-mono text-[10px] font-bold border border-t-[#6BA3E8] border-l-[#6BA3E8] border-r-[#0D2440] border-b-[#0D2440] shadow active:translate-y-px cursor-pointer flex items-center gap-1"
+            >
+              <Gamepad2 className="w-3 h-3 text-yellow-300" />
+              <span>GABUNG</span>
+            </button>
           </span>
-        )
-      }
+        )}
 
-      // If not a mention, parse URLs
-      const urlPattern = /(https?:\/\/[^\s]+)/gi
-      const subParts = part.split(urlPattern)
-
-      return (
-        <React.Fragment key={idx}>
-          {subParts.map((subPart, subIdx) => {
-            if (/^https?:\/\/[^\s]+$/i.test(subPart)) {
-              // Separate trailing punctuation if any (like .,:;!?)
-              const trailingPunctMatch = subPart.match(/[.,;:!?)\]}>]+$/)
-              const trailingPunct = trailingPunctMatch ? trailingPunctMatch[0] : ""
-              const cleanUrl = trailingPunct
-                ? subPart.slice(0, subPart.length - trailingPunct.length)
-                : subPart
-
-              return (
-                <React.Fragment key={subIdx}>
-                  <ChatLiveLink
-                    url={cleanUrl}
-                    isOwn={isOwn}
-                    hideRawUrl={isWinampShare}
-                    onPlayInWinamp={(u, title) => {
-                      addTrack(u, title)
-                      openWindow("winamp")
-                    }}
-                  />
-                  {trailingPunct}
-                </React.Fragment>
-              )
-            }
-            let textToDisplay = subPart
-            if (isWinampShare) {
-              textToDisplay = textToDisplay.replace(/\s*[—–-]\s*$/, "").trimEnd()
-            }
-            return <span key={subIdx}>{textToDisplay}</span>
-          })}
-        </React.Fragment>
-      )
-    })
+        {/* Interactive Billiard 98 Invitation Card */}
+        {billiardMatch && (
+          <span
+            onClick={(e) => e.stopPropagation()}
+            className="mt-2 p-2 bg-[#F0FDF4] text-black border-2 border-[#15803D] rounded-[2px] shadow-sm flex items-center justify-between gap-2 select-none flow-root"
+          >
+            <span className="flex items-center gap-2">
+              <RetroIcon name="billiard" iconSize={24} />
+              <span className="flex flex-col text-left">
+                <span className="font-bold text-[11px] text-[#15803D]">Billiard 98 Match</span>
+                <span className="text-[10px] font-mono font-bold text-[#15803D]">KODE: {billiardMatch[1]}</span>
+              </span>
+            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                openWindow("billiard")
+              }}
+              className="px-2.5 py-1 bg-[#15803D] hover:bg-[#166534] text-white font-mono text-[10px] font-bold border border-t-[#86EFAC] border-l-[#86EFAC] border-r-[#14532D] border-b-[#14532D] shadow active:translate-y-px cursor-pointer flex items-center gap-1"
+            >
+              <Gamepad2 className="w-3 h-3 text-yellow-300" />
+              <span>MAIN</span>
+            </button>
+          </span>
+        )}
+      </>
+    )
   }
 
   // ─── AUTH INITIALIZING STATE ─────────────────────────────────
