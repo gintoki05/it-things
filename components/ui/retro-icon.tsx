@@ -38,6 +38,7 @@ export const RETRO_ICON_NAMES = [
   "bug",
   "folder",
   "billiard",
+  "doodle",
 ] as const
 
 export type RetroIconName = typeof RETRO_ICON_NAMES[number]
@@ -145,6 +146,9 @@ export function getRetroIconSrc(
   }
   if (iconName === "folder") {
     return "/icons/folder.svg"
+  }
+  if (iconName === "doodle") {
+    return "/icons/doodle.svg"
   }
 
   const normalizedSize = getClosestIconSize(size)

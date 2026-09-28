@@ -14,7 +14,7 @@ interface GameItem {
   filename: string
   category: string
   description: string
-  iconName: "game" | "task" | "idea" | "edit" | "tower" | "paint" | "billiard"
+  iconName: "game" | "task" | "idea" | "edit" | "tower" | "paint" | "billiard" | "doodle"
   isLive?: boolean
   isComingSoon?: boolean
 }
@@ -67,12 +67,12 @@ export function GameApp() {
     {
       id: "doodle",
       appId: "doodle",
-      title: "Doodle District",
+      title: "Doodle War 98",
       filename: "DOODLE.EXE",
-      category: "3D Scribbled Survival Shooter",
+      category: "Multiplayer 3D Scribbled Survival Shooter",
       description:
-        "Game survival FPS 3D unik bertema corat-coret bolpoin di atas kertas buku bergaris. Grapple hook, shotgun, sniper scope, katana, dan mode solo/online!",
-      iconName: "game",
+        "Game survival FPS 3D corat-coret bolpoin di atas kertas buku bergaris. Grappling hook, solo wave survival, dan mabar online hingga 10 pemain!",
+      iconName: "doodle",
       isLive: true,
     },
   ]

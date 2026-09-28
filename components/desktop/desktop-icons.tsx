@@ -16,7 +16,6 @@ const DESKTOP_ICON_ORDER: AppId[] = [
   "chat",
   "game",
   "tools",
-  "doodle",
 ]
 
 export function DesktopIcons() {

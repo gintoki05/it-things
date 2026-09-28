@@ -287,8 +287,8 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
   },
   doodle: {
     id: "doodle",
-    title: "DOODLE.EXE - Doodle District: A Scribbled Survival Shooter",
-    icon: "game",
+    title: "DOODLE.EXE - Doodle War 98",
+    icon: "doodle",
     filename: "doodle.exe",
     isOpen: false,
     isMinimized: false,
@@ -298,6 +298,7 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     size: { width: 960, height: 640 },
     defaultSize: { width: 960, height: 640 },
     defaultPos: { x: 100, y: 25 },
+    hideFromDesktop: true,
   },
   winamp: {
     id: "winamp",
