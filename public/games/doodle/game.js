@@ -283,7 +283,7 @@ void main() {
     <div class="online" id="online">
       <div class="row"><span>code</span><span class="code">${c}</span></div>
       ${vn(F.map||Yt,t)}
-      <div class="hint">${F.isPublic?"this lobby is public: anyone can quick play in, or type the code":"private lobby: friends type this code under PLAY ONLINE \u2192 JOIN"}</div>
+      <div class="hint">${F.isPublic?"this lobby is public: anyone can quick play in, or type the code":"teman langsung GABUNG dari panel Room Aktif di toolbar DOODLE.EXE \u2191"}</div>
       <div class="plist">${n.map(s=>`<div class="${s.id===F.hostId?"host":""}${s.id===u.id?" me":""}"><span>${le(s.name)}</span><span>${s.id===u.id?"you":""}</span></div>`).join("")}</div>
       <div class="row"><button type="button" class="big" id="startBtn">START MATCH</button><button type="button" class="alt" id="shareChatBtn" style="color:#d02030;border-color:#d02030;font-weight:bold;">\uD83D\uDCE2 AJAK MABAR</button><button type="button" class="alt" id="leaveBtn">LEAVE</button></div>
       <div class="status" id="status">${le(F.status||"")}</div><div class="hint">anyone can start \xB7 ${e<2?"people can still join once it is running":e+" players in"}</div>
