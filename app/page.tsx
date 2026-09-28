@@ -69,6 +69,10 @@ const TowerApp = dynamic(() => import("@/components/apps/tower-app").then(module
   ssr: false,
   loading: () => <p role="status" className="p-4 font-mono text-xs">Memuat Tower 98...</p>,
 })
+const DoodleApp = dynamic(() => import("@/components/apps/doodle-app").then(module => module.DoodleApp), {
+  ssr: false,
+  loading: () => <p role="status" className="p-4 font-mono text-xs">Memuat Doodle District...</p>,
+})
 const MemoizedWinampApp = React.memo(WinampApp)
 const MemoizedSwissToolsApp = React.memo(SwissToolsApp)
 const MemoizedPomodoroApp = React.memo(PomodoroApp)
@@ -298,6 +302,11 @@ function DesktopWorkspace() {
 
       <DesktopWindow id="tower" keepMountedOnMinimize bodyClassName="p-0 overflow-hidden flex flex-col">
         <TowerApp />
+      </DesktopWindow>
+
+      {/* Retro Window: doodle.exe (Doodle District - 3D Scribbled Survival Shooter) */}
+      <DesktopWindow id="doodle" keepMountedOnMinimize bodyClassName="p-0 overflow-hidden flex flex-col">
+        <DoodleApp />
       </DesktopWindow>
 
       {/* Retro Window: winamp.exe (Winamp 2.91 Media Player) */}

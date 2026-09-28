@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.39"
-export const APP_BUILD = "2026.09.23"
+export const APP_VERSION = "v2.3.40"
+export const APP_BUILD = "2026.09.28"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.40",
+    date: "28 Sep 2026",
+    codename: "DOODLE.EXE - Doodle District 3D Survival Shooter & P2P Multiplayer",
+    changes: [
+      "Peluncuran DOODLE.EXE: Game 3D survival shooter bergaya corat-coret bolpoin di atas kertas bergaris (Doodle District) bawaan desktop Windows 98.",
+      "Mode Solo Wave Survival & P2P Online: Bertahan hidup dari gelombang musuh corat-coret atau mabar online hingga 10 pemain via WebRTC P2P mesh.",
+      "Dua Peta Doodle: Doodle District (gedung konstruksi, tangga, crane dengan tali gantung, atap gedung) dan Doodle Jungle (kuil kuno & kanopi pohon).",
+      "Sistem Mobilitas & Senjata Lengkap: Grappling hook (Q/E), wall jump, slide, rifle otomatis (ADS red dot), shotgun, sniper scope kertas, katana (focus meter), dan granat tinta.",
+      "Toolbar Retro & Integrasi Win98: Dilengkapi tombol restart cepat dengan ConfirmDialog, toggle mode fullscreen, ikon desktop, dan kartu game di Game Center 98.",
+    ],
+  },
   {
     version: "v2.3.39",
     date: "23 Sep 2026",

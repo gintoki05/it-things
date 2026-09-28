@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
 
-export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "wordle" | "winamp" | "tower" | "swisstools" | "pomodoro" | "feedback" | "snipper" | "tools" | "arcade" | "billiard"
+export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "wordle" | "winamp" | "tower" | "swisstools" | "pomodoro" | "feedback" | "snipper" | "tools" | "arcade" | "billiard" | "doodle"
 
 export interface WindowState {
   id: AppId
@@ -285,6 +285,20 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     defaultPos: { x: 120, y: 30 },
     hideFromDesktop: true,
   },
+  doodle: {
+    id: "doodle",
+    title: "DOODLE.EXE - Doodle District: A Scribbled Survival Shooter",
+    icon: "game",
+    filename: "doodle.exe",
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    zIndex: 14,
+    position: { x: 100, y: 25 },
+    size: { width: 960, height: 640 },
+    defaultSize: { width: 960, height: 640 },
+    defaultPos: { x: 100, y: 25 },
+  },
   winamp: {
     id: "winamp",
     title: "WINAMP.EXE - Winamp 2.91 Media Player",
@@ -422,6 +436,7 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
       "tools",
       "billiard",
       "arcade",
+      "doodle",
     ]
     const targetApp = requestedApp && validApps.includes(requestedApp) ? requestedApp : null
     const wasPomodoroOpen = typeof window !== "undefined" && localStorage.getItem("it-things_pomodoro_window_open") === "true"

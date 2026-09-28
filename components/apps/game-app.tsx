@@ -9,7 +9,7 @@ import { Play, Sparkles, Users, Gamepad2, Award } from "lucide-react"
 
 interface GameItem {
   id: string
-  appId?: "paintwar" | "wordle" | "tower" | "billiard" | "arcade"
+  appId?: "paintwar" | "wordle" | "tower" | "billiard" | "arcade" | "doodle"
   title: string
   filename: string
   category: string
@@ -64,9 +64,20 @@ export function GameApp() {
       iconName: "paint",
       isLive: activePaintWarCount > 0,
     },
+    {
+      id: "doodle",
+      appId: "doodle",
+      title: "Doodle District",
+      filename: "DOODLE.EXE",
+      category: "3D Scribbled Survival Shooter",
+      description:
+        "Game survival FPS 3D unik bertema corat-coret bolpoin di atas kertas buku bergaris. Grapple hook, shotgun, sniper scope, katana, dan mode solo/online!",
+      iconName: "game",
+      isLive: true,
+    },
   ]
 
-  const handleLaunchGame = (appId?: "paintwar" | "wordle" | "tower" | "billiard" | "arcade") => {
+  const handleLaunchGame = (appId?: "paintwar" | "wordle" | "tower" | "billiard" | "arcade" | "doodle") => {
     if (appId) {
       openWindow(appId)
     }
