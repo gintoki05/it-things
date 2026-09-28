@@ -5,12 +5,20 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.46"
+export const APP_VERSION = "v2.3.47"
 export const APP_BUILD = "2026.09.28"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.47",
+    date: "28 Sep 2026",
+    codename: "DOODLE.EXE - Cleanup Dev Cheat Box",
+    changes: [
+      "Hapus Input Dev Cheat Box: Menghilangkan input box 'enter code here' di pojok kanan bawah menu utama agar tampilan layar game bersih dan rapi.",
+    ],
+  },
   {
     version: "v2.3.46",
     date: "28 Sep 2026",

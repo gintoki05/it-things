@@ -215,12 +215,8 @@ canvas#c { position: fixed; inset: 0; width: 100vw; height: 100vh; display: bloc
 .lobbyrow .full { color: var(--red); font-size: 18px; letter-spacing: 1px; border: 2px dashed var(--red); border-radius: 6px; padding: 0 8px; }
 
 /* the code box on the main menu */
-.codebox { position: fixed; right: 10px; bottom: 8px; display: flex; gap: 8px; align-items: center; font-size: 13px; opacity: .45; cursor: default; }
-.codebox:hover, .codebox:focus-within { opacity: .9; }
-.codebox input { font: inherit; font-size: 13px; width: 112px; text-align: center; color: var(--ink); border: 2px dashed rgba(26,48,192,.5); border-radius: 6px 8px 5px 7px; background: transparent; padding: 3px 8px; outline: none; }
-.codebox input:focus { border-style: solid; }
-.codebox input.nope { border-color: var(--red); }
-.codebox button { font: inherit; font-size: 12px; color: var(--ink); background: transparent; border: 2px solid var(--ink); border-radius: 6px 8px 5px 7px; padding: 1px 10px; cursor: pointer; }
+.codebox { display: none !important; }
+
 
 /* Custom Ink / Pen & Highlighter Colors */
 .ink-selector-row { display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 21px; margin-top: 6px; }
