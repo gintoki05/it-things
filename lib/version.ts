@@ -5,12 +5,23 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.40"
+export const APP_VERSION = "v2.3.41"
 export const APP_BUILD = "2026.09.28"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.41",
+    date: "28 Sep 2026",
+    codename: "DOODLE.EXE - Custom Pen & Highlighter Ink Colors",
+    changes: [
+      "Pilihan Warna Tinta Bolpoin & Stabilo: Menambahkan pemilih warna tinta tembakan di toolbar Win98 DOODLE.EXE, menu Settings, dan Online Lobby.",
+      "6 Pilihan Tinta Corat-Coret: Pulpen Biru Klasik, Pulpen Merah, Spidol Hitam Snowman, Stabilo Oranye, Stabilo Hijau Neon, dan Stabilo Pink.",
+      "Visual FX & Tracers Menyeluruh: Jejak peluru tembakan (tracer), noda benturan peluru (bullet impact), tebasan dash katana, tali grapple hook, dan spawn burst otomatis menyesuaikan warna tinta yang dipilih.",
+      "Sinkronisasi Multiplayer P2P: Jejak peluru pemain lain di pertempuran online multiplayer tersinkronisasi menampilkan warna tinta masing-masing pemain secara akurat.",
+    ],
+  },
   {
     version: "v2.3.40",
     date: "28 Sep 2026",

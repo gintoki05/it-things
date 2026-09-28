@@ -7,7 +7,16 @@ import { useAuth } from "@/lib/auth"
 import { supabase } from "@/lib/supabase"
 import { announceGameRoomAction } from "@/app/actions/chat"
 import { playRetroNotificationSound } from "@/lib/sound-effects"
-import { Maximize2, Minimize2, RotateCw, Share2, Copy, Check, Gamepad2 } from "lucide-react"
+import { Maximize2, Minimize2, RotateCw, Share2, Copy, Check, Gamepad2, Palette } from "lucide-react"
+
+const INK_OPTIONS = [
+  { id: 0, name: "Pulpen Biru", hex: "#1a31c2" },
+  { id: 1, name: "Pulpen Merah", hex: "#dc1f33" },
+  { id: 2, name: "Spidol Hitam", hex: "#2e3342" },
+  { id: 3, name: "Stabilo Oranye", hex: "#eb8c14" },
+  { id: 4, name: "Stabilo Hijau", hex: "#1f994d" },
+  { id: 5, name: "Stabilo Pink", hex: "#e666a8" },
+]
 
 export function DoodleApp() {
   const { user } = useAuth()
@@ -17,6 +26,15 @@ export function DoodleApp() {
   const [isFullscreen, setIsFullscreen] = React.useState<boolean>(false)
   const [showRestartConfirm, setShowRestartConfirm] = React.useState<boolean>(false)
   const [key, setKey] = React.useState<number>(0)
+  const [selectedInk, setSelectedInk] = React.useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("doodle_ink")
+      if (saved != null && !isNaN(Number(saved))) {
+        return Math.max(0, Math.min(5, Number(saved)))
+      }
+    }
+    return 0
+  })
 
   // Multiplayer room state
   const [currentLobbyCode, setCurrentLobbyCode] = React.useState<string | null>(null)
@@ -37,9 +55,18 @@ export function DoodleApp() {
     if (joinRoomCode) {
       params.set("room", joinRoomCode)
     }
+    params.set("ink", String(selectedInk))
     const q = params.toString()
     return `/games/doodle/index.html${q ? `?${q}` : ""}`
-  }, [nickname, joinRoomCode])
+  }, [nickname, joinRoomCode, selectedInk])
+
+  const handleSelectInk = React.useCallback((inkId: number) => {
+    setSelectedInk(inkId)
+    if (typeof window !== "undefined") {
+      localStorage.setItem("doodle_ink", String(inkId))
+    }
+    iframeRef.current?.contentWindow?.postMessage({ type: "SET_INK", ink: inkId }, "*")
+  }, [])
 
   const handleRestart = React.useCallback(() => {
     setShowRestartConfirm(false)
@@ -137,6 +164,27 @@ export function DoodleApp() {
         </div>
 
         <div className="flex items-center gap-1.5">
+          {/* Quick Ink Selector */}
+          <div className="flex items-center gap-1 px-1.5 py-0.5 bg-[#f0f0f0] border border-[#a0a0a0] rounded-[2px]" title="Pilihan Warna Tinta Bolpoin & Stabilo">
+            <Palette className="w-3 h-3 text-[#505050]" />
+            <div className="flex items-center gap-1">
+              {INK_OPTIONS.map((ink) => (
+                <button
+                  key={ink.id}
+                  type="button"
+                  onClick={() => handleSelectInk(ink.id)}
+                  className={`w-3.5 h-3.5 rounded-full border cursor-pointer transition-transform ${
+                    selectedInk === ink.id
+                      ? "scale-125 border-black ring-1 ring-white shadow"
+                      : "border-black/30 hover:scale-110 opacity-70 hover:opacity-100"
+                  }`}
+                  style={{ backgroundColor: ink.hex }}
+                  title={ink.name}
+                />
+              ))}
+            </div>
+          </div>
+
           {/* Lobby info & Quick Share Button */}
           {currentLobbyCode && (
             <div className="flex items-center gap-1 bg-[#fff8e7] px-1.5 py-0.5 border border-[#c49000] rounded-[2px]">
