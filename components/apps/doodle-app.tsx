@@ -242,11 +242,55 @@ export function DoodleApp() {
   const handleToggleFullscreen = React.useCallback(() => {
     if (!containerRef.current) return
     if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {})
+      containerRef.current
+        .requestFullscreen()
+        .then(() => {
+          setIsFullscreen(true)
+          if (typeof window !== "undefined" && "keyboard" in navigator && typeof (navigator as any).keyboard?.lock === "function") {
+            ;(navigator as any).keyboard.lock(["Tab", "KeyW", "KeyA", "KeyS", "KeyD", "Escape"]).catch(() => {})
+          }
+        })
+        .catch(() => {})
     } else {
+      if (typeof window !== "undefined" && "keyboard" in navigator && typeof (navigator as any).keyboard?.unlock === "function") {
+        ;(navigator as any).keyboard.unlock()
+      }
       document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {})
     }
   }, [])
+
+  // Prevent accidental browser tab close when in active room
+  React.useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (currentLobbyCode) {
+        e.preventDefault()
+        e.returnValue = ""
+      }
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [currentLobbyCode])
+
+  // Intercept Tab and Ctrl+W to protect game focus and prevent browser shortcuts
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isTarget =
+        document.activeElement === iframeRef.current ||
+        (containerRef.current ? containerRef.current.contains(document.activeElement) : false)
+      if (isTarget) {
+        if (
+          e.key === "Tab" ||
+          e.code === "Tab" ||
+          (e.ctrlKey && ["KeyW", "KeyA", "KeyS", "KeyD", "Tab"].includes(e.code))
+        ) {
+          e.preventDefault()
+        }
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown, { capture: true, passive: false })
+    return () => window.removeEventListener("keydown", handleKeyDown, { capture: true } as any)
+  }, [])
+
 
   const handleShareToChat = React.useCallback(
     async (codeToShare: string) => {

@@ -13,6 +13,19 @@
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
 } }
 </script>
+<script>
+// Prevent Tab navigation and Ctrl+W/A/S/D shortcuts from breaking browser session
+window.addEventListener("keydown", function(e) {
+  if (e.key === "Tab" || e.code === "Tab" || (e.ctrlKey && ["KeyW", "KeyA", "KeyS", "KeyD", "Tab"].includes(e.code))) {
+    e.preventDefault();
+  }
+}, { capture: true, passive: false });
+window.addEventListener("keyup", function(e) {
+  if (e.key === "Tab" || e.code === "Tab" || (e.ctrlKey && ["KeyW", "KeyA", "KeyS", "KeyD", "Tab"].includes(e.code))) {
+    e.preventDefault();
+  }
+}, { capture: true, passive: false });
+</script>
 </head>
 <body>
 <canvas id="c"></canvas>

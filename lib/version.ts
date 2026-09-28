@@ -5,12 +5,23 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.47"
+export const APP_VERSION = "v2.3.48"
 export const APP_BUILD = "2026.09.28"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.48",
+    date: "28 Sep 2026",
+    codename: "DOODLE.EXE - Keyboard Protection (Tab Repeat & Ctrl+W Prevention)",
+    changes: [
+      "Fix Tab Repeat Focus: Memindahkan pemblokiran preventDefault() tombol Tab sebelum evaluasi key repeat, sehingga menahan tombol Tab untuk melihat scoreboard tidak lagi membuat kursor melompat keluar game.",
+      "Pencegahan Bentrok Ctrl+W (Menunduk & Maju): Menambahkan pencegahan event capture untuk kombinasi Ctrl + W/A/S/D baik di level iframe maupun parent window.",
+      "Keyboard Lock API pada Fullscreen: Mengaktifkan navigator.keyboard.lock saat fullscreen sehingga shortcut browser (termasuk Tab dan Ctrl+W) terkunci penuh ke dalam game.",
+      "Pelindung BeforeUnload: Menambahkan konfirmasi sebelum tab browser tertutup jika sedang berada di room aktif agar sesi bermain tidak terputus secara tidak sengaja.",
+    ],
+  },
   {
     version: "v2.3.47",
     date: "28 Sep 2026",
