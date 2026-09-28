@@ -5,12 +5,22 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.42"
+export const APP_VERSION = "v2.3.43"
 export const APP_BUILD = "2026.09.28"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.43",
+    date: "28 Sep 2026",
+    codename: "DOODLE.EXE - Supabase Realtime Hybrid Signaling & Zero-Stall Rooms",
+    changes: [
+      "Supabase Realtime Hybrid Signaling: Mengintegrasikan Supabase Realtime Broadcast channel (doodle-room-[KODE]) sebagai signaling broker utama untuk handshake lobby dan room discovery instan.",
+      "Anti-Gagal Mabar & Anti-Stall: Menghilangkan ketergantungan pada server PeerJS publik dan bypass kendala Symmetric NAT/firewall kantor sehingga status room terdeteksi instan dalam < 200ms.",
+      "Dual Transport Relay: Paket game otomatis menggunakan fast WebRTC jika tersedia, dengan fallback seamless ke Supabase Broadcast jika koneksi P2P direct terhalang.",
+    ],
+  },
   {
     version: "v2.3.42",
     date: "28 Sep 2026",

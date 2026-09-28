@@ -5,6 +5,7 @@ import { RetroActionButton } from "@/components/ui/retro-action-button"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useAuth } from "@/lib/auth"
 import { supabase } from "@/lib/supabase"
+import type { RealtimeChannel } from "@supabase/supabase-js"
 import { announceGameRoomAction } from "@/app/actions/chat"
 import { playRetroNotificationSound } from "@/lib/sound-effects"
 import { Maximize2, Minimize2, RotateCw, Share2, Copy, Check, Gamepad2, Palette } from "lucide-react"
@@ -38,6 +39,8 @@ export function DoodleApp() {
 
   // Multiplayer room state
   const [currentLobbyCode, setCurrentLobbyCode] = React.useState<string | null>(null)
+  const [subscribedRoom, setSubscribedRoom] = React.useState<string | null>(null)
+  const roomChannelRef = React.useRef<RealtimeChannel | null>(null)
   const [isSharing, setIsSharing] = React.useState<boolean>(false)
   const [notificationMsg, setNotificationMsg] = React.useState<string | null>(null)
   const [isCopied, setIsCopied] = React.useState<boolean>(false)
@@ -57,6 +60,58 @@ export function DoodleApp() {
     const q = params.toString()
     return `/games/doodle/index.html${q ? `?${q}` : ""}`
   })
+
+  // Supabase Realtime Signaling Channel for Doodle War Room
+  React.useEffect(() => {
+    if (!subscribedRoom || !supabase) {
+      if (roomChannelRef.current && supabase) {
+        supabase.removeChannel(roomChannelRef.current)
+        roomChannelRef.current = null
+      }
+      return
+    }
+
+    const channelName = `doodle-room-${subscribedRoom.toUpperCase()}`
+    const channel = supabase.channel(channelName, {
+      config: {
+        broadcast: { self: false },
+        presence: { key: nickname },
+      },
+    })
+    roomChannelRef.current = channel
+
+    channel
+      .on("broadcast", { event: "doodle_signal" }, ({ payload }) => {
+        if (payload) {
+          iframeRef.current?.contentWindow?.postMessage(
+            { type: "SUPABASE_SIGNAL", payload },
+            "*"
+          )
+        }
+      })
+      .on("presence", { event: "sync" }, () => {
+        const state = channel.presenceState()
+        iframeRef.current?.contentWindow?.postMessage(
+          { type: "SUPABASE_PRESENCE", state },
+          "*"
+        )
+      })
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          iframeRef.current?.contentWindow?.postMessage(
+            { type: "SUPABASE_CHANNEL_READY", roomCode: subscribedRoom },
+            "*"
+          )
+        }
+      })
+
+    return () => {
+      if (roomChannelRef.current && supabase) {
+        supabase.removeChannel(roomChannelRef.current)
+        roomChannelRef.current = null
+      }
+    }
+  }, [subscribedRoom, nickname])
 
   const handleSelectInk = React.useCallback((inkId: number) => {
     setSelectedInk(inkId)
@@ -125,7 +180,23 @@ export function DoodleApp() {
   React.useEffect(() => {
     const handleMessage = (e: MessageEvent) => {
       if (e.data?.type === "DOODLE_LOBBY_STATE") {
-        setCurrentLobbyCode(e.data.roomCode || null)
+        const code = e.data.roomCode || null
+        setCurrentLobbyCode(code)
+        if (code) {
+          setSubscribedRoom(code)
+        }
+      } else if (e.data?.type === "SUBSCRIBE_ROOM" && e.data.roomCode) {
+        setSubscribedRoom(String(e.data.roomCode).trim().toUpperCase())
+      } else if (e.data?.type === "UNSUBSCRIBE_ROOM") {
+        setSubscribedRoom(null)
+      } else if (e.data?.type === "DOODLE_BROADCAST" && e.data.payload) {
+        if (roomChannelRef.current) {
+          roomChannelRef.current.send({
+            type: "broadcast",
+            event: "doodle_signal",
+            payload: e.data.payload,
+          })
+        }
       } else if (e.data?.type === "DOODLE_SHARE_ROOM") {
         if (e.data.roomCode) {
           void handleShareToChat(e.data.roomCode)
@@ -152,6 +223,7 @@ export function DoodleApp() {
       const code = custom.detail?.roomCode?.trim().toUpperCase()
       if (code) {
         pendingRoomRef.current = code
+        setSubscribedRoom(code)
         const sendMsg = () => {
           iframeRef.current?.contentWindow?.postMessage(
             { type: "JOIN_ROOM", roomCode: code },
