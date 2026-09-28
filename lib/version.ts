@@ -5,12 +5,25 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.44"
+export const APP_VERSION = "v2.3.45"
 export const APP_BUILD = "2026.09.28"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.45",
+    date: "28 Sep 2026",
+    codename: "DOODLE.EXE - Live Room List: Gabung Tanpa Kode",
+    changes: [
+      "Live Room Discovery: Daftar room multiplayer aktif kini langsung muncul di panel DOODLE_ROOMS.EXE tanpa perlu ketik/copas kode — semua room anggota tim terdeteksi otomatis via Supabase Presence.",
+      "Tombol GABUNG 1-klik: Klik tombol GABUNG di samping nama host untuk langsung masuk ke room tanpa input kode manual.",
+      "Tombol ROOM AKTIF di toolbar: Badge dengan counter jumlah room aktif, muncul real-time saat ada yang buka lobby.",
+      "Host auto-announce ke lobby: Saat membuat lobby, room otomatis terdaftar di channel doodle-lobby-channel dan hilang otomatis saat host keluar.",
+      "Hapus input kode GABUNG dari in-game menu: Menu Play Online game kini bersih — join dilakukan dari panel React layer di atas.",
+      "Player count & map info di room card: Setiap room aktif menampilkan jumlah pemain dan nama map yang sedang dipilih host.",
+    ],
+  },
   {
     version: "v2.3.44",
     date: "28 Sep 2026",
@@ -19,6 +32,7 @@ export const APP_CHANGELOG: VersionRelease[] = [
       "Fix ReferenceError Temporal Dead Zone (TDZ): Memperbaiki bug inisialisasi variabel internal di fungsi join multiplayer yang sebelumnya menyebabkan error Cannot access 'i' before initialization saat menekan tombol GABUNG.",
     ],
   },
+
   {
     version: "v2.3.43",
     date: "28 Sep 2026",

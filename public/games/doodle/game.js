@@ -275,12 +275,11 @@ void main() {
       ${inkSelectorHtml()}
       <div class="row" style="margin-top:6px"><button type="button" class="big" id="createBtn">BUAT LOBBY</button></div>
       ${vn(gn,!0)}
-      <div class="row split"><span>atau gabung lobby</span></div>
-      <div class="row"><span>punya kode?</span><input type="text" id="codeBox" placeholder="KODE" maxlength="6" autocomplete="off"><button type="button" id="joinBtn">GABUNG</button></div>
+      <div class="row split"><span style="font-size:10px;opacity:0.7">atau pilih room aktif di panel atas ↑</span></div>
       <div class="status" id="status">${le(F.status||"")}</div>
       ${F.rejoinCode?`<div class="row"><button type="button" class="big" id="rejoinBtn">GABUNG KEMBALI ${le(F.rejoinCode)}</button></div>`:""}
       <div class="row"><button type="button" class="alt" id="backBtn">BACK</button></div>
-    </div>`}function tl(){let n=La(),t=u.isHost,e=n.length,c=String(u.isHost?u.aliasCode||u.code:F.shown||u.code||"").replace(/-\d+$/,"");try{window.parent.postMessage({type:"DOODLE_LOBBY_STATE",roomCode:c,isHost:t},"*")}catch(i){}return`<h1>LOBBY</h1><h2>free for all \xB7 first to ${ms} \xB7 ${e}/${u.maxPlayers} players</h2>
+    </div>`}function tl(){let n=La(),t=u.isHost,e=n.length,c=String(u.isHost?u.aliasCode||u.code:F.shown||u.code||"").replace(/-\d+$/,"");try{window.parent.postMessage({type:"DOODLE_LOBBY_STATE",roomCode:c,isHost:t,playerCount:e,maxPlayers:u.maxPlayers,map:F.map||Yt},"*")}catch(i){}return`<h1>LOBBY</h1><h2>free for all \xB7 first to ${ms} \xB7 ${e}/${u.maxPlayers} players</h2>
     <div class="online" id="online">
       <div class="row"><span>code</span><span class="code">${c}</span></div>
       ${vn(F.map||Yt,t)}

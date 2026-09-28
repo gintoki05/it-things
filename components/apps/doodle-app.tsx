@@ -8,7 +8,16 @@ import { supabase } from "@/lib/supabase"
 import type { RealtimeChannel } from "@supabase/supabase-js"
 import { announceGameRoomAction } from "@/app/actions/chat"
 import { playRetroNotificationSound } from "@/lib/sound-effects"
-import { Maximize2, Minimize2, RotateCw, Share2, Copy, Check, Gamepad2, Palette } from "lucide-react"
+import { Maximize2, Minimize2, RotateCw, Share2, Copy, Check, Gamepad2, Palette, Users, Wifi } from "lucide-react"
+
+interface ActiveDoodleRoom {
+  roomCode: string
+  hostName: string
+  playerCount: number
+  maxPlayers: number
+  map: string
+  createdAt: string
+}
 
 const INK_OPTIONS = [
   { id: 0, name: "Pulpen Biru", hex: "#1a31c2" },
@@ -46,6 +55,14 @@ export function DoodleApp() {
   const [isCopied, setIsCopied] = React.useState<boolean>(false)
   const pendingRoomRef = React.useRef<string | null>(null)
 
+  // Live lobby discovery via Supabase Presence
+  const [activeRooms, setActiveRooms] = React.useState<ActiveDoodleRoom[]>([])
+  const lobbyChannelRef = React.useRef<RealtimeChannel | null>(null)
+  const [isHosting, setIsHosting] = React.useState<boolean>(false)
+  const isHostingRef = React.useRef<boolean>(false)
+  const [showRoomList, setShowRoomList] = React.useState<boolean>(false)
+
+
   const nickname = React.useMemo(() => {
     return (user?.name || "Player").trim().slice(0, 14)
   }, [user?.name])
@@ -61,7 +78,47 @@ export function DoodleApp() {
     return `/games/doodle/index.html${q ? `?${q}` : ""}`
   })
 
+  // Supabase Presence — global lobby discovery (always active)
+  React.useEffect(() => {
+    if (!supabase) return
+
+    const channel = supabase.channel("doodle-lobby-channel", {
+      config: { presence: { key: nickname } },
+    })
+    lobbyChannelRef.current = channel
+
+    channel
+      .on("presence", { event: "sync" }, () => {
+        const state = channel.presenceState()
+        const rooms: ActiveDoodleRoom[] = []
+        Object.values(state).forEach((presences) => {
+          ;(presences as any[]).forEach((p) => {
+            if (p.roomCode && p.hostName) {
+              rooms.push({
+                roomCode: p.roomCode,
+                hostName: p.hostName,
+                playerCount: p.playerCount ?? 1,
+                maxPlayers: p.maxPlayers ?? 10,
+                map: p.map ?? "district",
+                createdAt: p.createdAt ?? new Date().toISOString(),
+              })
+            }
+          })
+        })
+        setActiveRooms(rooms)
+      })
+      .subscribe()
+
+    return () => {
+      if (lobbyChannelRef.current && supabase) {
+        supabase.removeChannel(lobbyChannelRef.current)
+        lobbyChannelRef.current = null
+      }
+    }
+  }, [nickname])
+
   // Supabase Realtime Signaling Channel for Doodle War Room
+
   React.useEffect(() => {
     if (!subscribedRoom || !supabase) {
       if (roomChannelRef.current && supabase) {
@@ -181,14 +238,51 @@ export function DoodleApp() {
     const handleMessage = (e: MessageEvent) => {
       if (e.data?.type === "DOODLE_LOBBY_STATE") {
         const code = e.data.roomCode || null
+        const hosting = e.data.isHost === true
         setCurrentLobbyCode(code)
+        setIsHosting(hosting)
+        isHostingRef.current = hosting
         if (code) {
           setSubscribedRoom(code)
+          // Announce to global lobby if host
+          if (hosting && lobbyChannelRef.current) {
+            lobbyChannelRef.current.track({
+              roomCode: code,
+              hostName: nickname,
+              playerCount: e.data.playerCount ?? 1,
+              maxPlayers: e.data.maxPlayers ?? 10,
+              map: e.data.map ?? "district",
+              createdAt: new Date().toISOString(),
+            })
+          }
+        } else {
+          // Untrack from global lobby when leaving host
+          if (lobbyChannelRef.current) {
+            lobbyChannelRef.current.untrack()
+          }
+        }
+      } else if (e.data?.type === "DOODLE_LOBBY_UPDATE" && e.data.roomCode) {
+        // Update player count / map in lobby while still hosting
+        if (isHostingRef.current && lobbyChannelRef.current) {
+
+          lobbyChannelRef.current.track({
+            roomCode: e.data.roomCode,
+            hostName: nickname,
+            playerCount: e.data.playerCount ?? 1,
+            maxPlayers: e.data.maxPlayers ?? 10,
+            map: e.data.map ?? "district",
+            createdAt: new Date().toISOString(),
+          })
         }
       } else if (e.data?.type === "SUBSCRIBE_ROOM" && e.data.roomCode) {
         setSubscribedRoom(String(e.data.roomCode).trim().toUpperCase())
       } else if (e.data?.type === "UNSUBSCRIBE_ROOM") {
         setSubscribedRoom(null)
+        // Also untrack from lobby
+        if (lobbyChannelRef.current) {
+          lobbyChannelRef.current.untrack()
+        }
+        setIsHosting(false)
       } else if (e.data?.type === "DOODLE_BROADCAST" && e.data.payload) {
         if (roomChannelRef.current) {
           roomChannelRef.current.send({
@@ -212,6 +306,7 @@ export function DoodleApp() {
         }
       }
     }
+
     window.addEventListener("message", handleMessage)
     return () => window.removeEventListener("message", handleMessage)
   }, [handleShareToChat])
@@ -301,7 +396,30 @@ export function DoodleApp() {
             </div>
           )}
 
+          {/* Room List Toggle Button */}
+          {!currentLobbyCode && (
+            <button
+              type="button"
+              onClick={() => setShowRoomList((v) => !v)}
+              className={`flex items-center gap-1 px-1.5 py-0.5 font-mono text-[10px] font-bold border rounded-[2px] cursor-pointer transition-colors ${
+                showRoomList
+                  ? "bg-[#1E4E8C] text-white border-[#1a3a6e]"
+                  : "bg-[#f0f0f0] text-[#1a30c0] border-[#a0a0a0] hover:bg-[#e0e8ff]"
+              }`}
+              title="Lihat daftar room aktif dari anggota tim"
+            >
+              <Wifi className="w-3 h-3" />
+              <span>ROOM AKTIF</span>
+              {activeRooms.length > 0 && (
+                <span className="bg-[#d02030] text-white text-[9px] font-bold rounded-full px-1 min-w-[14px] text-center leading-tight">
+                  {activeRooms.length}
+                </span>
+              )}
+            </button>
+          )}
+
           {/* Restart */}
+
           <RetroActionButton
             action="refresh"
             visual="icon"
@@ -352,6 +470,94 @@ export function DoodleApp() {
           allow="autoplay; fullscreen; pointer-lock"
           title="Doodle War 98"
         />
+
+        {/* Active Room List Overlay */}
+        {showRoomList && !currentLobbyCode && (
+          <div className="absolute inset-0 z-10 flex items-start justify-center pt-8 px-4 pointer-events-none">
+            <div
+              className="pointer-events-auto w-full max-w-sm bg-[#c0c0c0] border-2 border-t-white border-l-white border-b-[#808080] border-r-[#808080] shadow-[2px_2px_0px_#000] font-mono text-xs"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Win98 Title Bar */}
+              <div className="flex items-center justify-between px-2 py-0.5 bg-gradient-to-r from-[#1E4E8C] to-[#3a7bd5] text-white font-bold text-[11px] select-none">
+                <div className="flex items-center gap-1.5">
+                  <Gamepad2 className="w-3 h-3" />
+                  <span>DOODLE_ROOMS.EXE</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowRoomList(false)}
+                  className="w-4 h-4 flex items-center justify-center bg-[#c0c0c0] border border-t-white border-l-white border-b-[#808080] border-r-[#808080] text-black text-[10px] font-bold leading-none hover:bg-[#d0d0d0] cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-2">
+                <div className="flex items-center gap-1.5 mb-2 text-[10px] text-[#404040]">
+                  <Wifi className="w-3 h-3 text-green-700" />
+                  <span>
+                    {activeRooms.length === 0
+                      ? "Tidak ada room aktif saat ini"
+                      : `${activeRooms.length} room aktif dari anggota tim`}
+                  </span>
+                </div>
+
+                {activeRooms.length === 0 ? (
+                  <div className="text-center py-4 text-[#808080] text-[10px] border border-[#a0a0a0] bg-white/50">
+                    <Users className="w-6 h-6 mx-auto mb-1 opacity-30" />
+                    <div>Belum ada yang buka lobby.</div>
+                    <div className="mt-0.5">Klik PLAY ONLINE → BUAT LOBBY dulu!</div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
+                    {activeRooms.map((room) => (
+                      <div
+                        key={room.roomCode}
+                        className="flex items-center justify-between bg-white border border-[#a0a0a0] px-2 py-1.5 gap-2"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-[#1a30c0] truncate">{room.hostName}</div>
+                          <div className="text-[10px] text-[#606060] flex items-center gap-2">
+                            <span className="flex items-center gap-0.5">
+                              <Users className="w-2.5 h-2.5" />
+                              {room.playerCount}/{room.maxPlayers}
+                            </span>
+                            <span className="uppercase">{room.map}</span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowRoomList(false)
+                            const code = room.roomCode
+                            pendingRoomRef.current = code
+                            setSubscribedRoom(code)
+                            const send = () =>
+                              iframeRef.current?.contentWindow?.postMessage(
+                                { type: "JOIN_ROOM", roomCode: code },
+                                "*"
+                              )
+                            send()
+                            setTimeout(send, 600)
+                          }}
+                          className="flex-shrink-0 px-2 py-1 bg-[#1E4E8C] hover:bg-[#163a6a] text-white text-[10px] font-bold border border-t-[#4a8fd0] border-l-[#4a8fd0] border-b-[#0a2040] border-r-[#0a2040] active:border-t-[#0a2040] active:border-l-[#0a2040] cursor-pointer"
+                        >
+                          GABUNG
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="mt-2 text-[9px] text-[#808080] text-center">
+                  room akan muncul otomatis saat teman membuka lobby
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Restart Confirm Dialog (Win98 Standard) */}
