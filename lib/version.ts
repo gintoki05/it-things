@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.45"
+export const APP_VERSION = "v2.3.46"
 export const APP_BUILD = "2026.09.28"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.46",
+    date: "28 Sep 2026",
+    codename: "DOODLE.EXE - In-Game Live Lobby Discovery & Instant Join",
+    changes: [
+      "In-Game Live Lobby List: Daftar room aktif tim TI kini langsung tampil di tengah layar PLAY ONLINE (notebook paper) tanpa perlu mencari atau klik tombol toolbar.",
+      "Real-Time Room Sync: Room baru yang dibuat host langsung muncul seketika di layar PLAY ONLINE pemain lain via event DOODLE_ACTIVE_ROOMS.",
+      "Tombol GABUNG In-Game: Setiap card room menampilkan kode IT, nama host, jumlah pemain, map, dan tombol GABUNG 1-klik.",
+      "Safe Presence Queue: Mencegah silent-fail saat host membuat lobby sebelum channel presence siap dengan antrean track otomatis.",
+      "Dual Room Discovery: Room list aktif dapat diakses langsung dari dalam canvas game maupun lewat toolbar DOODLE_ROOMS.EXE.",
+    ],
+  },
   {
     version: "v2.3.45",
     date: "28 Sep 2026",
