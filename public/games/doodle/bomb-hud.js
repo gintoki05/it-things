@@ -193,8 +193,19 @@ export class BombHud {
     if (bombMode.spectator.active) {
       this.el.spectator.classList.add("show");
       const targetId = bombMode.spectator.targetId;
-      const targetPlayer = targetId ? bombMode.game?.remotePlayers?.get(targetId) : null;
-      this.el.specName.textContent = targetPlayer?.name || targetId || "Mencari rekan...";
+      let name = "";
+      if (targetId) {
+        name = bombMode.getPlayerName ? bombMode.getPlayerName(targetId) : null;
+        if (!name || name === targetId) {
+          const targetPlayer = bombMode.game?.remotePlayers?.get(targetId);
+          name = targetPlayer?.name || "Rekan Tim";
+        }
+      } else if (bombMode.phase === "planted") {
+        name = `Bom C4 (Site ${bombMode.bomb.siteId || "A"})`;
+      } else {
+        name = "Mencari rekan...";
+      }
+      this.el.specName.textContent = name;
     } else {
       this.el.spectator.classList.remove("show");
     }

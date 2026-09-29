@@ -1055,6 +1055,46 @@ export class BombMode {
     }
   }
 
+  // Helper to reliably resolve player nicknames across game stores
+  getPlayerName(id) {
+    if (!id) return "Rekan Tim";
+    if (this.game?.player && this.game?.peer?.id === id) {
+      return this.game.player.name || "Kamu";
+    }
+
+    // 1. Remote player instance
+    const remote = this.game?.remotePlayers?.get(id);
+    if (remote?.name && remote.name !== id) return remote.name;
+
+    // 2. Lobby players roster
+    const lobbyPlayer = this.game?.lobby?.players?.get(id);
+    if (lobbyPlayer?.name && lobbyPlayer.name !== id) return lobbyPlayer.name;
+
+    // 3. Scoreboard map
+    const scoreEntry = this.game?.scores?.get(id);
+    if (scoreEntry?.name && scoreEntry.name !== id) return scoreEntry.name;
+
+    // 4. Host name
+    if (this.game?.peer && this.game.peer.hostId === id && this.game.peer.hostName) {
+      return this.game.peer.hostName;
+    }
+
+    // 5. Global window fallback
+    if (typeof window !== "undefined") {
+      const gLobby = window.__game?.lobby?.players?.get(id);
+      if (gLobby?.name && gLobby.name !== id) return gLobby.name;
+      const gScore = window.__game?.scores?.get(id);
+      if (gScore?.name && gScore.name !== id) return gScore.name;
+    }
+
+    // If ID is a long UUID/peerId, clean it up or return friendly role name
+    if (typeof id === "string" && (id.length > 15 || id.includes("-"))) {
+      const isRed = this.teams.red.includes(id);
+      return isRed ? "Rekan TERO" : "Rekan CT";
+    }
+    return id;
+  }
+
   // --- SPECTATOR SYSTEM ---
 
   enableSpectatorClient() {
@@ -1062,10 +1102,15 @@ export class BombMode {
     const myId = this.game?.peer?.id;
     const myTeam = this.teams.red.includes(myId) ? "red" : "blue";
 
-    // Alive teammates
+    // 1. Prioritize alive teammates
     this.spectator.candidates = (this.teams[myTeam] || []).filter(
       (id) => id !== myId && this.alivePlayerIds.has(id)
     );
+
+    // 2. Fallback to any alive player if no teammates left (e.g. 1v1)
+    if (this.spectator.candidates.length === 0) {
+      this.spectator.candidates = Array.from(this.alivePlayerIds).filter((id) => id !== myId);
+    }
 
     if (this.spectator.candidates.length > 0) {
       this.spectator.candidateIndex = 0;
@@ -1096,6 +1141,11 @@ export class BombMode {
     const camera = this.game?.camera;
     const input = this.game?.input;
     if (!camera) return;
+
+    // Auto switch if currently watched player died
+    if (this.spectator.targetId && !this.alivePlayerIds.has(this.spectator.targetId)) {
+      this.enableSpectatorClient();
+    }
 
     // Cycle teammates on click or Space
     if (input?.pressed?.("confirm") || input?.pressed?.("jump") || input?.mouseBtns?.fire) {

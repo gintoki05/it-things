@@ -5,12 +5,21 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.64"
+export const APP_VERSION = "v2.3.65"
 export const APP_BUILD = "2026.09.29"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.65",
+    date: "29 Sep 2026",
+    codename: "DOODLE.EXE - Fix Spectator Username Display",
+    changes: [
+      "Fix Username Mode Menonton: Menyelesaikan resolusi nama pemain (nickname) saat mode spectator aktif via multi-source store (remote players, lobby roster, scoreboard, host metadata).",
+      "Anti-UUID Display: Menghilangkan tampilan UUID/peerId mentah di banner spectator dan memberikan fallback nama tim/peran yang rapi jika teammate belum mengirimkan metadata.",
+    ],
+  },
   {
     version: "v2.3.64",
     date: "29 Sep 2026",
