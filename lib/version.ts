@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.54"
+export const APP_VERSION = "v2.3.55"
 export const APP_BUILD = "2026.09.29"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.55",
+    date: "29 Sep 2026",
+    codename: "DOODLE.EXE - TDM Team Selection & Robust Room Join Fix",
+    changes: [
+      "Fix TDM Team Selection: Whitelist sinyal 'teamreq' di validator lobby host sehingga request pindah kubu (JOIN RED / JOIN BLUE) diproses dan tidak ter-drop secara diam-diam.",
+      "Optimistic Team Switch UI: Tampilan tim langsung berpindah seketika saat tombol diklik dengan sinkronisasi instan ke seluruh pemain di dalam lobby.",
+      "Auto-Balance on Join: Pemain baru yang bergabung ke lobby TDM otomatis dibagi seimbang ke tim dengan anggota lebih sedikit (RED vs BLUE).",
+      "State Clean-Up on Disconnect / Leave: Menghapus player dari daftar tim saat keluar atau disconnect, dan mereset status TDM saat membuat atau keluar dari lobby.",
+      "Bulletproof Late-Join & Welcome Sync: Menyertakan mode permainan dan susunan tim pada sinyal handshake join_welcome dan start packet pemain late-join.",
+    ],
+  },
   {
     version: "v2.3.54",
     date: "29 Sep 2026",
