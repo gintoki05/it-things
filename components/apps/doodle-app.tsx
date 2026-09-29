@@ -86,6 +86,8 @@ export function DoodleApp() {
   const nickname = React.useMemo(() => {
     return (user?.name || "Player").trim().slice(0, 14)
   }, [user?.name])
+  const nicknameRef = React.useRef(nickname)
+  nicknameRef.current = nickname
 
   // Helper to merge and clean active rooms list without duplicates
   const mergeRooms = React.useCallback((incoming: ActiveDoodleRoom[]) => {
@@ -339,7 +341,7 @@ export function DoodleApp() {
     const channel = supabase.channel(channelName, {
       config: {
         broadcast: { self: false },
-        presence: { key: nickname },
+        presence: { key: nicknameRef.current || clientId },
       },
     })
     roomChannelRef.current = channel
@@ -363,8 +365,8 @@ export function DoodleApp() {
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
           roomChannelReadyRef.current = true
-          // Drain max 3 essential handshake packets with spacing to prevent REST fallback flood
-          const queued = pendingRoomBroadcastsRef.current.splice(0, 3)
+          // Drain buffered packets immediately over the active websocket
+          const queued = [...pendingRoomBroadcastsRef.current]
           pendingRoomBroadcastsRef.current = []
           queued.forEach((p, idx) => {
             setTimeout(() => {
@@ -377,7 +379,7 @@ export function DoodleApp() {
                   })
                 } catch {}
               }
-            }, (idx + 1) * 80)
+            }, (idx + 1) * 30)
           })
           iframeRef.current?.contentWindow?.postMessage(
             { type: "SUPABASE_CHANNEL_READY", roomCode: subscribedRoom },
@@ -396,7 +398,7 @@ export function DoodleApp() {
         roomChannelRef.current = null
       }
     }
-  }, [subscribedRoom, nickname])
+  }, [subscribedRoom, clientId])
 
   const handleSelectInk = React.useCallback((inkId: number) => {
     setSelectedInk(inkId)
@@ -604,7 +606,6 @@ export function DoodleApp() {
         const nextRoom = String(e.data.roomCode).trim().toUpperCase().replace(/-\d+$/, "")
         setSubscribedRoom((prev) => {
           if (prev !== nextRoom) {
-            pendingRoomBroadcastsRef.current = []
             return nextRoom
           }
           return prev
@@ -647,7 +648,7 @@ export function DoodleApp() {
             })
           } catch {}
         } else if (!isPosPacket) {
-          if (pendingRoomBroadcastsRef.current.length < 3) {
+          if (pendingRoomBroadcastsRef.current.length < 20) {
             pendingRoomBroadcastsRef.current.push(payload)
           }
         }
