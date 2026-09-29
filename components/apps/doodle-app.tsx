@@ -244,6 +244,7 @@ export function DoodleApp() {
                 playerCount: p.playerCount ?? 1,
                 maxPlayers: p.maxPlayers ?? 10,
                 map: p.map ?? "district",
+                gameMode: p.gameMode ?? "ffa",
                 createdAt: p.createdAt ?? new Date().toISOString(),
                 updatedAt: Date.now(),
               })
@@ -544,6 +545,7 @@ export function DoodleApp() {
               playerCount: e.data.playerCount ?? 1,
               maxPlayers: e.data.maxPlayers ?? 10,
               map: e.data.map ?? "district",
+              gameMode: e.data.gameMode ?? "ffa",
               createdAt: new Date().toISOString(),
               updatedAt: Date.now(),
             }
@@ -583,6 +585,7 @@ export function DoodleApp() {
             playerCount: e.data.playerCount ?? 1,
             maxPlayers: e.data.maxPlayers ?? 10,
             map: e.data.map ?? "district",
+            gameMode: e.data.gameMode ?? "ffa",
             createdAt: hostRoomDataRef.current?.createdAt || new Date().toISOString(),
             updatedAt: Date.now(),
           }
@@ -914,6 +917,16 @@ export function DoodleApp() {
                               {room.playerCount}/{room.maxPlayers}
                             </span>
                             <span className="uppercase">{room.map}</span>
+                            {room.gameMode === "bomb" && (
+                              <span className="px-1 py-0.2 bg-[#ff5555]/20 text-[#cc0000] font-bold text-[9px] border border-[#ff5555]/50 rounded-[2px]">
+                                BOMB
+                              </span>
+                            )}
+                            {room.gameMode === "tdm" && (
+                              <span className="px-1 py-0.2 bg-[#3a7bd5]/20 text-[#1E4E8C] font-bold text-[9px] border border-[#3a7bd5]/50 rounded-[2px]">
+                                TDM
+                              </span>
+                            )}
                           </div>
                         </div>
                         <button

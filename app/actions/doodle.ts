@@ -8,6 +8,7 @@ export interface ActiveDoodleRoom {
   playerCount: number
   maxPlayers: number
   map: string
+  gameMode?: string
   createdAt: string
   updatedAt?: number
 }

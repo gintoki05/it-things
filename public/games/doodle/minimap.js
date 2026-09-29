@@ -57,7 +57,7 @@ export class LuxvilleMinimap {
     ctx.fillText("▲ KAMU", 120, 233);
   }
 
-  update(level, world, position, camera, visible, now) {
+  update(level, world, position, camera, visible, now, bombData = null) {
     this.canvas.hidden = !visible || level.key !== "luxville";
     if (this.canvas.hidden || !this.ctx) return;
     if (level !== this.level) {
@@ -78,6 +78,33 @@ export class LuxvilleMinimap {
       ctx.fillStyle = "#98794b";
       ctx.fillRect(x, z, (max.x-min.x)*this.scale, (max.z-min.z)*this.scale);
     }
+
+    // Bomb Mission: Site or Bomb Radar Markers
+    if (bombData && bombData.bomb) {
+      const b = bombData.bomb;
+      const [bx, bz] = this.project(b.x, b.z);
+      const isPlanted = b.state === "planted";
+      const pulse = (Math.sin(now * 0.008) + 1) * 0.5;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(bx, bz, isPlanted ? 8 + pulse * 5 : 6, 0, Math.PI * 2);
+      ctx.fillStyle = isPlanted
+        ? `rgba(208, 32, 48, ${0.4 + pulse * 0.4})`
+        : "rgba(235, 140, 20, 0.6)";
+      ctx.fill();
+      ctx.strokeStyle = isPlanted ? "#d02030" : "#2e3342";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.font = "bold 9px monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText("💣", bx, bz - 0.5);
+      ctx.restore();
+    }
+
     const [x, z] = this.project(position.x, position.z);
     // Camera forward is -Z; its world matrix also handles pitch correctly.
     const matrix = camera.matrixWorld.elements;
