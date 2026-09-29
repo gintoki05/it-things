@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.56"
+export const APP_VERSION = "v2.3.57"
 export const APP_BUILD = "2026.09.29"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.57",
+    date: "29 Sep 2026",
+    codename: "DOODLE.EXE - Distinct Red vs Blue Team Visuals & Friendly Fire Block",
+    changes: [
+      "Red vs Blue Model Visuals: Karakter lawan dan kawan kini langsung memiliki warna sketsa tinta bolpoin tim yang kontras (Tinta Merah untuk RED vs Tinta Biru untuk BLUE).",
+      "Dynamic Overhead Tag: Floating badge di atas kepala player otomatis menampilkan warna tim RED / BLUE dan terus ter-sinkronisasi.",
+      "Local Weapon & Tracer Match: Tinta senjata, tebasan katana, peluru, dan tracer pemain lokal otomatis mengikuti kubu tim (Merah / Biru).",
+      "Friendly Fire Block: Peluru dan tebasan katana tidak lagi melukai rekan satu tim (tembus ke musuh).",
+      "TDM Team Scoreboard: Papan skor (TAB) memisahkan anggota tim kubu RED dan BLUE secara rapi lengkap dengan live skor kedua kubu.",
+    ],
+  },
   {
     version: "v2.3.56",
     date: "29 Sep 2026",
