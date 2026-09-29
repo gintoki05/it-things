@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.50"
+export const APP_VERSION = "v2.3.51"
 export const APP_BUILD = "2026.09.29"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.51",
+    date: "29 Sep 2026",
+    codename: "DOODLE.EXE - Bulletproof Live Room Discovery & Instant Lobby Sync",
+    changes: [
+      "Triple-Proof Live Room Discovery: Menggabungkan Supabase Realtime Broadcast Beacon, Next.js Server Action in-memory room cache, dan chat invite fallback agar room aktif langsung terdeteksi otomatis di menu PLAY ONLINE tanpa harus lewat chat.",
+      "Broadcast Beacon & Query Ping-Pong: Host menyiarkan beacon berkala setiap 3.5 detik dan seketika membalas sinyal pencarian room dari pemain baru (< 100ms), kebal dari latency atau stall Presence channel di jaringan kantor.",
+      "Collision-Proof Session IDs: Menggunakan unique client session ID untuk Supabase Realtime sehingga profil pemain dan room tidak lagi saling menimpa saat nama sama atau default.",
+      "In-Game Live Refresh & Auto-Sync: Menambahkan tombol '↻ CARI ROOM / REFRESH' dan auto-polling 3.5s langsung di dalam viewport permainan Doodle War untuk pembaruan daftar room seketika.",
+      "DOODLE_ROOMS.EXE Toolbar Refresh: Tombol segarkan manual di dialog toolbar Windows 98 untuk mengecek ketersediaan room aktif dari anggota tim kapan saja.",
+    ],
+  },
   {
     version: "v2.3.50",
     date: "29 Sep 2026",

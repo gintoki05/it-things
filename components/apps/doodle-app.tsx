@@ -7,17 +7,15 @@ import { useAuth } from "@/lib/auth"
 import { supabase } from "@/lib/supabase"
 import type { RealtimeChannel } from "@supabase/supabase-js"
 import { announceGameRoomAction } from "@/app/actions/chat"
+import {
+  registerDoodleRoomAction,
+  unregisterDoodleRoomAction,
+  heartbeatDoodleRoomAction,
+  fetchActiveDoodleRoomsAction,
+  type ActiveDoodleRoom,
+} from "@/app/actions/doodle"
 import { playRetroNotificationSound } from "@/lib/sound-effects"
 import { Maximize2, Minimize2, RotateCw, Share2, Copy, Check, Gamepad2, Palette, Users, Wifi } from "lucide-react"
-
-interface ActiveDoodleRoom {
-  roomCode: string
-  hostName: string
-  playerCount: number
-  maxPlayers: number
-  map: string
-  createdAt: string
-}
 
 const INK_OPTIONS = [
   { id: 0, name: "Pulpen Biru", hex: "#1a31c2" },
@@ -57,7 +55,20 @@ export function DoodleApp() {
   const [isCopied, setIsCopied] = React.useState<boolean>(false)
   const pendingRoomRef = React.useRef<string | null>(null)
 
-  // Live lobby discovery via Supabase Presence
+  // Unique client session ID to prevent Supabase Presence key collisions
+  const clientId = React.useMemo(() => {
+    if (typeof window !== "undefined") {
+      let id = sessionStorage.getItem("doodle_client_id")
+      if (!id) {
+        id = "c_" + Math.random().toString(36).substring(2, 10)
+        sessionStorage.setItem("doodle_client_id", id)
+      }
+      return id
+    }
+    return "c_" + Math.random().toString(36).substring(2, 10)
+  }, [])
+
+  // Live lobby discovery via Supabase Realtime & Server Action
   const [activeRooms, setActiveRooms] = React.useState<ActiveDoodleRoom[]>([])
   const activeRoomsRef = React.useRef<ActiveDoodleRoom[]>([])
   activeRoomsRef.current = activeRooms
@@ -66,13 +77,65 @@ export function DoodleApp() {
   const pendingLobbyTrackRef = React.useRef<Record<string, unknown> | null>(null)
   const [isHosting, setIsHosting] = React.useState<boolean>(false)
   const isHostingRef = React.useRef<boolean>(false)
+  const currentLobbyCodeRef = React.useRef<string | null>(null)
+  currentLobbyCodeRef.current = currentLobbyCode
+  const hostRoomDataRef = React.useRef<ActiveDoodleRoom | null>(null)
   const [showRoomList, setShowRoomList] = React.useState<boolean>(false)
-
-
 
   const nickname = React.useMemo(() => {
     return (user?.name || "Player").trim().slice(0, 14)
   }, [user?.name])
+
+  // Helper to merge and clean active rooms list without duplicates
+  const mergeRooms = React.useCallback((incoming: ActiveDoodleRoom[]) => {
+    setActiveRooms((prev) => {
+      const map = new Map<string, ActiveDoodleRoom>()
+      // Existing
+      prev.forEach((r) => map.set(r.roomCode.toUpperCase(), r))
+      // Incoming
+      incoming.forEach((r) => {
+        const code = r.roomCode.toUpperCase()
+        map.set(code, {
+          ...r,
+          roomCode: code,
+          updatedAt: r.updatedAt || Date.now(),
+        })
+      })
+      // Drop stale rooms (> 30s without update)
+      const now = Date.now()
+      const clean = Array.from(map.values()).filter(
+        (r) => !r.updatedAt || now - r.updatedAt < 30000
+      )
+      activeRoomsRef.current = clean
+      iframeRef.current?.contentWindow?.postMessage(
+        { type: "DOODLE_ACTIVE_ROOMS", rooms: clean },
+        "*"
+      )
+      return clean
+    })
+  }, [])
+
+  // Query active rooms from all available sources (Realtime Broadcast Ping + Server Action Cache)
+  const queryActiveRooms = React.useCallback(async () => {
+    // 1. Send broadcast query to all live hosts
+    if (lobbyChannelReadyRef.current && lobbyChannelRef.current) {
+      lobbyChannelRef.current.send({
+        type: "broadcast",
+        event: "doodle_query_rooms",
+        payload: { from: clientId },
+      })
+    }
+
+    // 2. Fetch from Next.js server actions (in-memory + recent chat fallback)
+    try {
+      const res = await fetchActiveDoodleRoomsAction()
+      if (res?.rooms && res.rooms.length > 0) {
+        mergeRooms(res.rooms)
+      }
+    } catch {
+      // Non-fatal fallback
+    }
+  }, [clientId, mergeRooms])
 
   // Initial iframeSrc that only regenerates when explicitly restarted via key
   const [iframeSrc, setIframeSrc] = React.useState<string>(() => {
@@ -85,18 +148,60 @@ export function DoodleApp() {
     return `/games/doodle/index.html${q ? `?${q}` : ""}`
   })
 
-  // Supabase Presence — global lobby discovery (always active)
+  // Supabase Realtime — global lobby discovery (Broadcast Beacon + Presence)
   React.useEffect(() => {
     if (!supabase) return
 
     lobbyChannelReadyRef.current = false
 
     const channel = supabase.channel("doodle-lobby-channel", {
-      config: { presence: { key: nickname } },
+      config: {
+        broadcast: { self: false },
+        presence: { key: clientId },
+      },
     })
     lobbyChannelRef.current = channel
 
     channel
+      .on("broadcast", { event: "doodle_room_beacon" }, ({ payload }) => {
+        if (payload?.roomCode && payload?.hostName) {
+          mergeRooms([
+            {
+              roomCode: payload.roomCode,
+              hostName: payload.hostName,
+              playerCount: payload.playerCount ?? 1,
+              maxPlayers: payload.maxPlayers ?? 10,
+              map: payload.map ?? "district",
+              createdAt: payload.createdAt ?? new Date().toISOString(),
+              updatedAt: Date.now(),
+            },
+          ])
+        }
+      })
+      .on("broadcast", { event: "doodle_query_rooms" }, () => {
+        // If I am hosting an active room, immediately respond with my beacon
+        if (isHostingRef.current && currentLobbyCodeRef.current && hostRoomDataRef.current) {
+          channel.send({
+            type: "broadcast",
+            event: "doodle_room_beacon",
+            payload: hostRoomDataRef.current,
+          })
+        }
+      })
+      .on("broadcast", { event: "doodle_room_closed" }, ({ payload }) => {
+        if (payload?.roomCode) {
+          const codeToRemove = String(payload.roomCode).toUpperCase()
+          setActiveRooms((prev) => {
+            const filtered = prev.filter((r) => r.roomCode.toUpperCase() !== codeToRemove)
+            activeRoomsRef.current = filtered
+            iframeRef.current?.contentWindow?.postMessage(
+              { type: "DOODLE_ACTIVE_ROOMS", rooms: filtered },
+              "*"
+            )
+            return filtered
+          })
+        }
+      })
       .on("presence", { event: "sync" }, () => {
         const state = channel.presenceState()
         const rooms: ActiveDoodleRoom[] = []
@@ -110,16 +215,14 @@ export function DoodleApp() {
                 maxPlayers: p.maxPlayers ?? 10,
                 map: p.map ?? "district",
                 createdAt: p.createdAt ?? new Date().toISOString(),
+                updatedAt: Date.now(),
               })
             }
           })
         })
-        setActiveRooms(rooms)
-        activeRoomsRef.current = rooms
-        iframeRef.current?.contentWindow?.postMessage(
-          { type: "DOODLE_ACTIVE_ROOMS", rooms },
-          "*"
-        )
+        if (rooms.length > 0) {
+          mergeRooms(rooms)
+        }
       })
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
@@ -129,6 +232,8 @@ export function DoodleApp() {
             channel.track(pendingLobbyTrackRef.current)
             pendingLobbyTrackRef.current = null
           }
+          // Immediately discover any live rooms
+          void queryActiveRooms()
         }
       })
 
@@ -140,7 +245,41 @@ export function DoodleApp() {
         lobbyChannelRef.current = null
       }
     }
-  }, [nickname])
+  }, [clientId, mergeRooms, queryActiveRooms])
+
+  // Host heartbeat effect: periodic beacon push and server action refresh every 3.5s
+  React.useEffect(() => {
+    if (!isHosting || !currentLobbyCode) return
+
+    const sendBeacon = () => {
+      if (hostRoomDataRef.current) {
+        if (lobbyChannelReadyRef.current && lobbyChannelRef.current) {
+          lobbyChannelRef.current.send({
+            type: "broadcast",
+            event: "doodle_room_beacon",
+            payload: hostRoomDataRef.current,
+          })
+        }
+        void heartbeatDoodleRoomAction(currentLobbyCode, hostRoomDataRef.current.playerCount)
+      }
+    }
+
+    sendBeacon()
+    const timer = setInterval(sendBeacon, 3500)
+    return () => clearInterval(timer)
+  }, [isHosting, currentLobbyCode])
+
+  // Client background sync: query active rooms every 4s when not hosting
+  React.useEffect(() => {
+    if (currentLobbyCode) return
+
+    void queryActiveRooms()
+    const timer = setInterval(() => {
+      void queryActiveRooms()
+    }, 4000)
+
+    return () => clearInterval(timer)
+  }, [currentLobbyCode, queryActiveRooms])
 
   // Sync active rooms to game iframe whenever activeRooms updates
   React.useEffect(() => {
@@ -228,12 +367,12 @@ export function DoodleApp() {
   }, [])
 
   // Safe track helper: queues if channel not ready yet, otherwise tracks immediately
-  const trackLobby = React.useCallback((data: Record<string, unknown>) => {
+  const trackLobby = React.useCallback((data: Record<string, unknown> | ActiveDoodleRoom) => {
     if (lobbyChannelReadyRef.current && lobbyChannelRef.current) {
-      lobbyChannelRef.current.track(data)
+      lobbyChannelRef.current.track(data as Record<string, unknown>)
     } else {
       // Queue it — will be flushed when channel reaches SUBSCRIBED
-      pendingLobbyTrackRef.current = data
+      pendingLobbyTrackRef.current = data as Record<string, unknown>
     }
   }, [])
 
@@ -356,36 +495,81 @@ export function DoodleApp() {
           setSubscribedRoom(code)
           // Announce to global lobby if host
           if (hosting) {
-            trackLobby({
+            const roomData: ActiveDoodleRoom = {
               roomCode: code,
               hostName: nickname,
               playerCount: e.data.playerCount ?? 1,
               maxPlayers: e.data.maxPlayers ?? 10,
               map: e.data.map ?? "district",
               createdAt: new Date().toISOString(),
-            })
+              updatedAt: Date.now(),
+            }
+            hostRoomDataRef.current = roomData
+            trackLobby(roomData)
+            void registerDoodleRoomAction(roomData)
+            if (lobbyChannelReadyRef.current && lobbyChannelRef.current) {
+              lobbyChannelRef.current.send({
+                type: "broadcast",
+                event: "doodle_room_beacon",
+                payload: roomData,
+              })
+            }
           }
         } else {
           // Untrack from global lobby when leaving host
+          if (isHostingRef.current && currentLobbyCodeRef.current) {
+            const oldCode = currentLobbyCodeRef.current
+            void unregisterDoodleRoomAction(oldCode)
+            if (lobbyChannelReadyRef.current && lobbyChannelRef.current) {
+              lobbyChannelRef.current.send({
+                type: "broadcast",
+                event: "doodle_room_closed",
+                payload: { roomCode: oldCode },
+              })
+            }
+          }
+          hostRoomDataRef.current = null
           untrackLobby()
         }
       } else if (e.data?.type === "DOODLE_LOBBY_UPDATE" && e.data.roomCode) {
         // Update player count / map in lobby while still hosting
         if (isHostingRef.current) {
-          trackLobby({
+          const roomData: ActiveDoodleRoom = {
             roomCode: e.data.roomCode,
             hostName: nickname,
             playerCount: e.data.playerCount ?? 1,
             maxPlayers: e.data.maxPlayers ?? 10,
             map: e.data.map ?? "district",
-            createdAt: new Date().toISOString(),
-          })
+            createdAt: hostRoomDataRef.current?.createdAt || new Date().toISOString(),
+            updatedAt: Date.now(),
+          }
+          hostRoomDataRef.current = roomData
+          trackLobby(roomData)
+          void registerDoodleRoomAction(roomData)
+          if (lobbyChannelReadyRef.current && lobbyChannelRef.current) {
+            lobbyChannelRef.current.send({
+              type: "broadcast",
+              event: "doodle_room_beacon",
+              payload: roomData,
+            })
+          }
         }
       } else if (e.data?.type === "SUBSCRIBE_ROOM" && e.data.roomCode) {
         setSubscribedRoom(String(e.data.roomCode).trim().toUpperCase())
       } else if (e.data?.type === "UNSUBSCRIBE_ROOM") {
         setSubscribedRoom(null)
-        // Also untrack from lobby
+        if (isHostingRef.current && currentLobbyCodeRef.current) {
+          const oldCode = currentLobbyCodeRef.current
+          void unregisterDoodleRoomAction(oldCode)
+          if (lobbyChannelReadyRef.current && lobbyChannelRef.current) {
+            lobbyChannelRef.current.send({
+              type: "broadcast",
+              event: "doodle_room_closed",
+              payload: { roomCode: oldCode },
+            })
+          }
+        }
+        hostRoomDataRef.current = null
         untrackLobby()
         setIsHosting(false)
         isHostingRef.current = false
@@ -408,11 +592,13 @@ export function DoodleApp() {
           { type: "DOODLE_ACTIVE_ROOMS", rooms: activeRoomsRef.current },
           "*"
         )
+        void queryActiveRooms()
       } else if (e.data?.type === "DOODLE_READY") {
         iframeRef.current?.contentWindow?.postMessage(
           { type: "DOODLE_ACTIVE_ROOMS", rooms: activeRoomsRef.current },
           "*"
         )
+        void queryActiveRooms()
         if (pendingRoomRef.current) {
           const room = pendingRoomRef.current
           pendingRoomRef.current = null
@@ -426,7 +612,7 @@ export function DoodleApp() {
 
     window.addEventListener("message", handleMessage)
     return () => window.removeEventListener("message", handleMessage)
-  }, [handleShareToChat, nickname, trackLobby, untrackLobby])
+  }, [handleShareToChat, nickname, queryActiveRooms, trackLobby, untrackLobby])
 
   // Listen to custom global event: join doodle room from chat
   React.useEffect(() => {
@@ -612,13 +798,24 @@ export function DoodleApp() {
 
               {/* Content */}
               <div className="p-2">
-                <div className="flex items-center gap-1.5 mb-2 text-[10px] text-[#404040]">
-                  <Wifi className="w-3 h-3 text-green-700" />
-                  <span>
-                    {activeRooms.length === 0
-                      ? "Tidak ada room aktif saat ini"
-                      : `${activeRooms.length} room aktif dari anggota tim`}
-                  </span>
+                <div className="flex items-center justify-between mb-2 text-[10px] text-[#404040]">
+                  <div className="flex items-center gap-1.5">
+                    <Wifi className="w-3 h-3 text-green-700" />
+                    <span>
+                      {activeRooms.length === 0
+                        ? "Tidak ada room aktif saat ini"
+                        : `${activeRooms.length} room aktif dari anggota tim`}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void queryActiveRooms()}
+                    className="flex items-center gap-1 px-1.5 py-0.5 bg-[#dfdfdf] hover:bg-[#e8e8e8] border border-t-white border-l-white border-b-[#808080] border-r-[#808080] rounded-[2px] text-[9px] font-bold cursor-pointer active:translate-y-px"
+                    title="Segarkan daftar room sekarang"
+                  >
+                    <RotateCw className="w-2.5 h-2.5" />
+                    <span>Segarkan</span>
+                  </button>
                 </div>
 
                 {activeRooms.length === 0 ? (
