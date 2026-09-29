@@ -5,12 +5,26 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.51"
+export const APP_VERSION = "v2.3.52"
 export const APP_BUILD = "2026.09.29"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.52",
+    date: "29 Sep 2026",
+    codename: "DOODLE.EXE - Team Deathmatch Mode",
+    changes: [
+      "Mode TDM (Team Deathmatch): Tambah mode bermain baru Red vs Blue di lobby — pilih antara FFA atau TDM sebelum START MATCH.",
+      "Tim dibagi otomatis secara acak saat match dimulai. Target kill tim dihitung dinamis berdasarkan jumlah pemain.",
+      "Friendly Fire Prevention: Kill tidak terhitung jika korban dan killer satu tim.",
+      "HUD Scoreboard TDM: Tampilkan skor 🔴 RED vs 🔵 BLUE secara real-time di layar.",
+      "Win Condition TDM: Tim pertama yang mencapai target kill menang, layar hasil menampilkan nama tim pemenang.",
+      "Mode selector di lobby: Tombol FFA/TDM dengan highlight aktif, hanya host yang bisa mengubah mode.",
+      "Mode FFA tetap ada dan menjadi default — TDM bersifat opsional.",
+    ],
+  },
   {
     version: "v2.3.51",
     date: "29 Sep 2026",
