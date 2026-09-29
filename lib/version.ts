@@ -5,12 +5,23 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.52"
+export const APP_VERSION = "v2.3.53"
 export const APP_BUILD = "2026.09.29"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.53",
+    date: "29 Sep 2026",
+    codename: "DOODLE.EXE - Office Network Handshake & Cloud Relay Fix",
+    changes: [
+      "Office-Proof Realtime Cloud Relay: Bypass AP Isolation WiFi kantor dengan auto-fallback Supabase Broadcast WebSocket (port 443 HTTPS), mengatasi deadlock WebRTC P2P ICE checking.",
+      "Reliable Broadcast Packet Queue: Menghilangkan pembersihan antrean paket prematur di level React saat pergantian channel room agar sinyal join_knock selalu terkirim utuh ke host.",
+      "Instant Cloud Handshake: Client dan Host langsung bertukar data handshake dan daftar pemain seketika (< 200ms) tanpa bergantung koneksi direct UDP.",
+      "Fix Syntax Error: Memperbaiki syntax error pada script permainan agar kompilasi dan eksekusi berjalan mulus di semua browser.",
+    ],
+  },
   {
     version: "v2.3.52",
     date: "29 Sep 2026",

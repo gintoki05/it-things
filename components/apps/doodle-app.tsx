@@ -350,7 +350,6 @@ export function DoodleApp() {
 
     return () => {
       roomChannelReadyRef.current = false
-      pendingRoomBroadcastsRef.current = []
       if (roomChannelRef.current && supabase) {
         supabase.removeChannel(roomChannelRef.current)
         roomChannelRef.current = null
@@ -555,8 +554,16 @@ export function DoodleApp() {
           }
         }
       } else if (e.data?.type === "SUBSCRIBE_ROOM" && e.data.roomCode) {
-        setSubscribedRoom(String(e.data.roomCode).trim().toUpperCase())
+        const nextRoom = String(e.data.roomCode).trim().toUpperCase()
+        setSubscribedRoom((prev) => {
+          if (prev !== nextRoom) {
+            pendingRoomBroadcastsRef.current = []
+            return nextRoom
+          }
+          return prev
+        })
       } else if (e.data?.type === "UNSUBSCRIBE_ROOM") {
+        pendingRoomBroadcastsRef.current = []
         setSubscribedRoom(null)
         if (isHostingRef.current && currentLobbyCodeRef.current) {
           const oldCode = currentLobbyCodeRef.current
