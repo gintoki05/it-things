@@ -5,12 +5,23 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.57"
+export const APP_VERSION = "v2.3.58"
 export const APP_BUILD = "2026.09.29"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.58",
+    date: "29 Sep 2026",
+    codename: "DOODLE.EXE - Fix HTTP 429 Rate Limit & Cross-Network Disconnect",
+    changes: [
+      "Eliminate 429 Too Many Requests: Menghentikan flood 20Hz sinyal posisi (ps) ke REST API Supabase yang menyebabkan IP/client terkena rate limit 429 dan memutuskan koneksi host.",
+      "Broadcast Safe Throttling: Men-throttle transmisi sinyal posisi cadangan (fallback) ke maksimal 4.5Hz dan mencegah antrean paket basi meledak saat websocket baru tersambung.",
+      "Resilient WebRTC P2P Connection: Memperpanjang batas inisialisasi PeerJS ke 8 detik dan menambah STUN server handal (Google, Cloudflare, Twilio, Metered) agar koneksi P2P direct antar-jaringan berbeda berhasil terbentuk tanpa membebani cloud relay.",
+      "Sinyal Handshake Terkendali: Mengurangi frekuensi join_knock dari 350ms ke 1000ms untuk menjaga kestabilan channel Supabase.",
+    ],
+  },
   {
     version: "v2.3.57",
     date: "29 Sep 2026",
