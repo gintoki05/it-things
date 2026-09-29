@@ -29,7 +29,7 @@ if (!globalThis.__doodleActiveRoomsMemory) {
 const memoryRooms = globalThis.__doodleActiveRoomsMemory
 
 // TTL: 25 seconds without heartbeat before a room is automatically considered dead
-const ROOM_TTL_MS = 25 * 1000
+const ROOM_TTL_MS = 35 * 1000
 
 export async function registerDoodleRoomAction(
   room: ActiveDoodleRoom

@@ -94,7 +94,7 @@ export function DoodleApp() {
       const now = Date.now()
       // Existing (only if fresh < 20s)
       prev.forEach((r) => {
-        if (r.updatedAt && now - r.updatedAt < 20000) {
+        if (r.updatedAt && now - r.updatedAt < 35000) {
           map.set(r.roomCode.toUpperCase(), r)
         }
       })
@@ -109,7 +109,7 @@ export function DoodleApp() {
       })
       // Drop stale rooms (> 20s without update)
       const clean = Array.from(map.values()).filter(
-        (r) => r.updatedAt && now - r.updatedAt < 20000
+        (r) => r.updatedAt && now - r.updatedAt < 35000
       )
       activeRoomsRef.current = clean
       iframeRef.current?.contentWindow?.postMessage(
@@ -139,7 +139,7 @@ export function DoodleApp() {
         setActiveRooms((prev) => {
           const map = new Map<string, ActiveDoodleRoom>()
           prev.forEach((r) => {
-            if (r.updatedAt && now - r.updatedAt < 15000) {
+            if (r.updatedAt && now - r.updatedAt < 25000) {
               map.set(r.roomCode.toUpperCase(), r)
             }
           })
@@ -152,7 +152,7 @@ export function DoodleApp() {
             })
           })
           const clean = Array.from(map.values()).filter(
-            (r) => r.updatedAt && now - r.updatedAt < 20000
+            (r) => r.updatedAt && now - r.updatedAt < 35000
           )
           activeRoomsRef.current = clean
           iframeRef.current?.contentWindow?.postMessage(
