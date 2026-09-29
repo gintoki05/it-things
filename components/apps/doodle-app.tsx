@@ -50,6 +50,8 @@ export function DoodleApp() {
   const [currentLobbyCode, setCurrentLobbyCode] = React.useState<string | null>(null)
   const [subscribedRoom, setSubscribedRoom] = React.useState<string | null>(null)
   const roomChannelRef = React.useRef<RealtimeChannel | null>(null)
+  const roomChannelReadyRef = React.useRef<boolean>(false)
+  const pendingRoomBroadcastsRef = React.useRef<any[]>([])
   const [isSharing, setIsSharing] = React.useState<boolean>(false)
   const [notificationMsg, setNotificationMsg] = React.useState<string | null>(null)
   const [isCopied, setIsCopied] = React.useState<boolean>(false)
@@ -153,6 +155,8 @@ export function DoodleApp() {
 
   React.useEffect(() => {
     if (!subscribedRoom || !supabase) {
+      roomChannelReadyRef.current = false
+      pendingRoomBroadcastsRef.current = []
       if (roomChannelRef.current && supabase) {
         supabase.removeChannel(roomChannelRef.current)
         roomChannelRef.current = null
@@ -160,6 +164,7 @@ export function DoodleApp() {
       return
     }
 
+    roomChannelReadyRef.current = false
     const channelName = `doodle-room-${subscribedRoom.toUpperCase()}`
     const channel = supabase.channel(channelName, {
       config: {
@@ -187,6 +192,16 @@ export function DoodleApp() {
       })
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
+          roomChannelReadyRef.current = true
+          // Flush any broadcast packets queued while connecting
+          while (pendingRoomBroadcastsRef.current.length > 0) {
+            const p = pendingRoomBroadcastsRef.current.shift()
+            channel.send({
+              type: "broadcast",
+              event: "doodle_signal",
+              payload: p,
+            })
+          }
           iframeRef.current?.contentWindow?.postMessage(
             { type: "SUPABASE_CHANNEL_READY", roomCode: subscribedRoom },
             "*"
@@ -195,6 +210,8 @@ export function DoodleApp() {
       })
 
     return () => {
+      roomChannelReadyRef.current = false
+      pendingRoomBroadcastsRef.current = []
       if (roomChannelRef.current && supabase) {
         supabase.removeChannel(roomChannelRef.current)
         roomChannelRef.current = null
@@ -373,12 +390,14 @@ export function DoodleApp() {
         setIsHosting(false)
         isHostingRef.current = false
       } else if (e.data?.type === "DOODLE_BROADCAST" && e.data.payload) {
-        if (roomChannelRef.current) {
+        if (roomChannelReadyRef.current && roomChannelRef.current) {
           roomChannelRef.current.send({
             type: "broadcast",
             event: "doodle_signal",
             payload: e.data.payload,
           })
+        } else {
+          pendingRoomBroadcastsRef.current.push(e.data.payload)
         }
       } else if (e.data?.type === "DOODLE_SHARE_ROOM") {
         if (e.data.roomCode) {

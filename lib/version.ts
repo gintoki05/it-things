@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.49"
-export const APP_BUILD = "2026.09.28"
+export const APP_VERSION = "v2.3.50"
+export const APP_BUILD = "2026.09.29"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.50",
+    date: "29 Sep 2026",
+    codename: "DOODLE.EXE - Office-Proof Supabase Realtime Cloud Relay",
+    changes: [
+      "Bypass Client Isolation & No-Ping LAN: Mengintegrasikan Supabase Virtual Relay Connection sehingga pemain di jaringan kantor (WiFi dengan AP Isolation yang memblokir ping/UDP lokal) bisa terhubung instan < 200ms layaknya Paint War.",
+      "Instant Supabase Handshake: Client dan Host langsung menyelesaikan join handshake via cloud WebSocket port 443 tanpa harus menunggu atau stall pada WebRTC P2P direct knock.",
+      "Full Packet Cloud Relay: Meneruskan seluruh paket permainan (pergerakan pemain 20Hz, tembakan peluru, status skor, dan pickup amunisi) via Supabase Broadcast saat jalur WebRTC P2P terhalang.",
+      "Reliable Broadcast Queue: Menambahkan antrean paket sinyal di React layer agar tidak ada pesan handshake yang terbuang saat channel room baru proses connecting.",
+      "Signaling Fallback: Mencegah timeout/freeze saat membuat atau bergabung ke lobby jika server signalling PeerJS publik diblokir firewall kantor.",
+    ],
+  },
   {
     version: "v2.3.49",
     date: "28 Sep 2026",
