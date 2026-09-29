@@ -828,6 +828,16 @@ export function DoodleApp() {
         </div>
       )}
 
+      {/* Office Quiet Mode Warning Banner */}
+      <div className="bg-[#fff8e7] text-[#7a4b00] text-[11px] font-mono px-3 py-0.5 flex items-center justify-between border-b border-[#e2c880] select-none">
+        <span className="flex items-center gap-1.5">
+          <span>🤫</span>
+          <span className="font-bold">PERINGATAN:</span>
+          <span>Bermain dengan tenang, jangan berisik di kantor!</span>
+        </span>
+        <span className="text-[10px] text-[#9a6b10] hidden sm:inline">(Gunakan headset &amp; kecilkan volume)</span>
+      </div>
+
       {/* Doodle War Game Viewport */}
       <div className="relative flex-1 w-full h-full bg-[#f6f3e6] overflow-hidden">
         <iframe

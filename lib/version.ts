@@ -5,12 +5,21 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.61"
+export const APP_VERSION = "v2.3.62"
 export const APP_BUILD = "2026.09.29"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.62",
+    date: "29 Sep 2026",
+    codename: "DOODLE.EXE - Office Quiet Mode Warning Banner & In-Game Tip",
+    changes: [
+      "Office Quiet Warning Banner: Menambahkan banner pemberitahuan di atas viewport DOODLE.EXE agar pemain bermain dengan tenang dan tidak berisik di lingkungan kantor.",
+      "In-Game Tip & Menu Notice: Menampilkan pesan peringatan retro di menu utama serta tips toast otomatis saat masuk ke dalam match (Solo maupun Multiplayer).",
+    ],
+  },
   {
     version: "v2.3.61",
     date: "29 Sep 2026",
