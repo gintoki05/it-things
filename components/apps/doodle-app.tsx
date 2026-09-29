@@ -50,7 +50,7 @@ export function DoodleApp() {
   const roomChannelRef = React.useRef<RealtimeChannel | null>(null)
   const roomChannelReadyRef = React.useRef<boolean>(false)
   const pendingRoomBroadcastsRef = React.useRef<any[]>([])
-  const lastBroadcastTimeRef = React.useRef<number>(0)
+  const lastBroadcastTimeRef = React.useRef<Map<string, number>>(new Map())
   const [isSharing, setIsSharing] = React.useState<boolean>(false)
   const [notificationMsg, setNotificationMsg] = React.useState<string | null>(null)
   const [isCopied, setIsCopied] = React.useState<boolean>(false)
@@ -527,6 +527,7 @@ export function DoodleApp() {
   // Listen to messages from iframe game
   React.useEffect(() => {
     const handleMessage = (e: MessageEvent) => {
+      if (e.source !== iframeRef.current?.contentWindow || e.origin !== window.location.origin) return
       if (e.data?.type === "DOODLE_LOBBY_STATE") {
         const code = e.data.roomCode || null
         const hosting = e.data.isHost === true
@@ -534,7 +535,7 @@ export function DoodleApp() {
         setIsHosting(hosting)
         isHostingRef.current = hosting
         if (code) {
-          setSubscribedRoom(code)
+          setSubscribedRoom(String(code).toUpperCase().replace(/-\d+$/, ""))
           // Announce to global lobby if host
           if (hosting) {
             const roomData: ActiveDoodleRoom = {
@@ -597,7 +598,7 @@ export function DoodleApp() {
           }
         }
       } else if (e.data?.type === "SUBSCRIBE_ROOM" && e.data.roomCode) {
-        const nextRoom = String(e.data.roomCode).trim().toUpperCase()
+        const nextRoom = String(e.data.roomCode).trim().toUpperCase().replace(/-\d+$/, "")
         setSubscribedRoom((prev) => {
           if (prev !== nextRoom) {
             pendingRoomBroadcastsRef.current = []
@@ -607,6 +608,7 @@ export function DoodleApp() {
         })
       } else if (e.data?.type === "UNSUBSCRIBE_ROOM") {
         pendingRoomBroadcastsRef.current = []
+        lastBroadcastTimeRef.current.clear()
         setSubscribedRoom(null)
         if (isHostingRef.current && currentLobbyCodeRef.current) {
           const oldCode = currentLobbyCodeRef.current
@@ -629,8 +631,10 @@ export function DoodleApp() {
         const now = Date.now()
         if (roomChannelReadyRef.current && roomChannelRef.current) {
           if (isPosPacket) {
-            if (now - lastBroadcastTimeRef.current < 200) return
-            lastBroadcastTimeRef.current = now
+            const stream = `${payload.to || "*"}|${payload.msg?.from || payload.from}`
+            const last = lastBroadcastTimeRef.current.get(stream)
+            if (last !== undefined && now - last < 200) return
+            lastBroadcastTimeRef.current.set(stream, now)
           }
           try {
             void roomChannelRef.current.send({

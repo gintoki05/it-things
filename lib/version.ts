@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.60"
+export const APP_VERSION = "v2.3.61"
 export const APP_BUILD = "2026.09.29"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.61",
+    date: "29 Sep 2026",
+    codename: "DOODLE.EXE - Map LUXVILLE (Point Blank Classic) & Live Tactical Radar",
+    changes: [
+      "New Map LUXVILLE: Menghadirkan map legendaris Point Blank 'Luxville' dengan layout 3D lengkap (Tero Base, CT Base, Perpus 2 lantai bertingkat, SC tangga, Mid corridor, AB Kamar, B Site elevated platform, dan Rak BC).",
+      "Bomb Site A & B Groundwork: Penanda visual doodle grafis huruf 'A' dan 'B' serta penanaman metadata koordinat spasial siteA & siteB sebagai pondasi mode Bomb Mission (C4 Plant & Defuse).",
+      "Live North-Up Tactical Radar: Menambahkan minimap radar interaktif di pojok kiri atas untuk orientasi jalur pergerakan, posisi pemain, penanda arah hadap kamera, dan live breakable props.",
+      "Spawn Protection & Fall-Through Prevention: Memindahkan spawn playerStart ke area CT Base terbuka bebas tabrakan (0, 1, 44), mempertebal lantai dasar, dan mendaftarkan 16 titik spawn untuk musuh Solo Wave dan Multiplayer.",
+      "Stream-Isolated Position Broadcast: Mengoptimalkan per-stream throttle pada relay posisi antar pemain di doodle-app.tsx agar pergerakan P2P lebih responsif dan minim packet loss.",
+    ],
+  },
   {
     version: "v2.3.60",
     date: "29 Sep 2026",
