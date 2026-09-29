@@ -14,14 +14,28 @@
 } }
 </script>
 <script>
-// Prevent Tab navigation and Ctrl+W/A/S/D shortcuts from breaking browser session
+// Prevent Tab navigation, F5, and Ctrl+W/A/S/D/R shortcuts from breaking browser session
 window.addEventListener("keydown", function(e) {
-  if (e.key === "Tab" || e.code === "Tab" || (e.ctrlKey && ["KeyW", "KeyA", "KeyS", "KeyD", "Tab"].includes(e.code))) {
+  if (
+    e.key === "Tab" ||
+    e.code === "Tab" ||
+    e.key === "F5" ||
+    e.code === "F5" ||
+    ((e.ctrlKey || e.metaKey) && ["KeyW", "KeyA", "KeyS", "KeyD", "KeyR", "KeyF", "Tab"].includes(e.code)) ||
+    ((e.ctrlKey || e.metaKey) && (e.key === "r" || e.key === "R" || e.key === "w" || e.key === "W"))
+  ) {
     e.preventDefault();
   }
 }, { capture: true, passive: false });
 window.addEventListener("keyup", function(e) {
-  if (e.key === "Tab" || e.code === "Tab" || (e.ctrlKey && ["KeyW", "KeyA", "KeyS", "KeyD", "Tab"].includes(e.code))) {
+  if (
+    e.key === "Tab" ||
+    e.code === "Tab" ||
+    e.key === "F5" ||
+    e.code === "F5" ||
+    ((e.ctrlKey || e.metaKey) && ["KeyW", "KeyA", "KeyS", "KeyD", "KeyR", "KeyF", "Tab"].includes(e.code)) ||
+    ((e.ctrlKey || e.metaKey) && (e.key === "r" || e.key === "R" || e.key === "w" || e.key === "W"))
+  ) {
     e.preventDefault();
   }
 }, { capture: true, passive: false });

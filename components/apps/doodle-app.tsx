@@ -413,7 +413,7 @@ export function DoodleApp() {
         .then(() => {
           setIsFullscreen(true)
           if (typeof window !== "undefined" && "keyboard" in navigator && typeof (navigator as any).keyboard?.lock === "function") {
-            ;(navigator as any).keyboard.lock(["Tab", "KeyW", "KeyA", "KeyS", "KeyD", "Escape"]).catch(() => {})
+            ;(navigator as any).keyboard.lock(["Tab", "KeyW", "KeyA", "KeyS", "KeyD", "KeyR", "KeyF", "Escape"]).catch(() => {})
           }
         })
         .catch(() => {})
@@ -437,7 +437,7 @@ export function DoodleApp() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload)
   }, [currentLobbyCode])
 
-  // Intercept Tab and Ctrl+W to protect game focus and prevent browser shortcuts
+  // Intercept Tab, F5, and Ctrl+W/A/S/D/R to protect game focus and prevent browser refresh/shortcuts
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isTarget =
@@ -447,7 +447,10 @@ export function DoodleApp() {
         if (
           e.key === "Tab" ||
           e.code === "Tab" ||
-          (e.ctrlKey && ["KeyW", "KeyA", "KeyS", "KeyD", "Tab"].includes(e.code))
+          e.key === "F5" ||
+          e.code === "F5" ||
+          ((e.ctrlKey || e.metaKey) && ["KeyW", "KeyA", "KeyS", "KeyD", "KeyR", "KeyF", "Tab"].includes(e.code)) ||
+          ((e.ctrlKey || e.metaKey) && (e.key === "r" || e.key === "R" || e.key === "w" || e.key === "W"))
         ) {
           e.preventDefault()
         }
@@ -799,7 +802,7 @@ export function DoodleApp() {
           ref={iframeRef}
           src={iframeSrc}
           className="w-full h-full border-0 block"
-          allow="autoplay; fullscreen; pointer-lock"
+          allow="autoplay; fullscreen"
           title="Doodle War 98"
         />
 

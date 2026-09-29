@@ -286,7 +286,7 @@ ALTER TABLE public.module_pics ENABLE ROW LEVEL SECURITY;
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN
 LANGUAGE sql
-SECURITY DEFINER
+SECURITY INVOKER
 STABLE
 SET search_path = ''
 AS $$
@@ -299,12 +299,13 @@ AS $$
     );
 $$;
 
-GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated, anon;
+REVOKE EXECUTE ON FUNCTION public.is_admin() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated, service_role;
 
 CREATE OR REPLACE FUNCTION public.is_module_pic(p_module TEXT)
 RETURNS BOOLEAN
 LANGUAGE sql
-SECURITY DEFINER
+SECURITY INVOKER
 STABLE
 SET search_path = ''
 AS $$
@@ -320,7 +321,7 @@ $$;
 CREATE OR REPLACE FUNCTION public.is_kas_pic()
 RETURNS BOOLEAN
 LANGUAGE sql
-SECURITY DEFINER
+SECURITY INVOKER
 STABLE
 SET search_path = ''
 AS $$
@@ -330,7 +331,7 @@ $$;
 CREATE OR REPLACE FUNCTION public.is_pantry_pic()
 RETURNS BOOLEAN
 LANGUAGE sql
-SECURITY DEFINER
+SECURITY INVOKER
 STABLE
 SET search_path = ''
 AS $$
@@ -340,17 +341,24 @@ $$;
 CREATE OR REPLACE FUNCTION public.is_treasurer()
 RETURNS BOOLEAN
 LANGUAGE sql
-SECURITY DEFINER
+SECURITY INVOKER
 STABLE
 SET search_path = ''
 AS $$
   SELECT public.is_module_pic('kas');
 $$;
 
-GRANT EXECUTE ON FUNCTION public.is_module_pic(TEXT) TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION public.is_kas_pic() TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION public.is_pantry_pic() TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION public.is_treasurer() TO authenticated, anon;
+REVOKE EXECUTE ON FUNCTION public.is_module_pic(TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_module_pic(TEXT) TO authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.is_kas_pic() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_kas_pic() TO authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.is_pantry_pic() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_pantry_pic() TO authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.is_treasurer() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_treasurer() TO authenticated, service_role;
 
 -- ============================================================
 -- HELPER FUNCTION: cleanup_expired_split_bills
@@ -376,7 +384,8 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.cleanup_expired_split_bills() TO anon, authenticated, service_role;
+REVOKE EXECUTE ON FUNCTION public.cleanup_expired_split_bills() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.cleanup_expired_split_bills() TO service_role;
 
 -- Sinkronisasi nama dan avatar pengguna ke seluruh aktivitas/data terkait
 -- ============================================================
@@ -469,7 +478,8 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.sync_user_profile_name(TEXT, TEXT) TO authenticated, anon;
+REVOKE EXECUTE ON FUNCTION public.sync_user_profile_name(TEXT, TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.sync_user_profile_name(TEXT, TEXT) TO service_role;
 
 -- ============================================================
 -- 1. TEAM MEMBERS POLICIES
@@ -802,7 +812,11 @@ CREATE POLICY "chat_messages_update" ON public.chat_messages
 
 -- Auto-wipe teks pesan chat dan bersihkan reaksi ketika pesan di-soft delete (is_deleted = true)
 CREATE OR REPLACE FUNCTION public.handle_chat_message_soft_delete()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+LANGUAGE plpgsql 
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
   IF NEW.is_deleted = true THEN
     NEW.message := '[Pesan telah dihapus]';
@@ -811,7 +825,9 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.handle_chat_message_soft_delete() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS trg_chat_message_soft_delete ON public.chat_messages;
 
@@ -955,6 +971,8 @@ CREATE TRIGGER trg_pantry_log_stock
 AFTER INSERT OR UPDATE OR DELETE ON public.pantry_logs
 FOR EACH ROW EXECUTE FUNCTION public.handle_pantry_log_stock();
 
+REVOKE EXECUTE ON FUNCTION public.handle_pantry_log_stock() FROM PUBLIC, anon, authenticated;
+
 CREATE OR REPLACE FUNCTION public.handle_pantry_restock()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -974,6 +992,8 @@ DROP TRIGGER IF EXISTS trg_pantry_restock ON public.pantry_restocks;
 CREATE TRIGGER trg_pantry_restock
 AFTER INSERT ON public.pantry_restocks
 FOR EACH ROW EXECUTE FUNCTION public.handle_pantry_restock();
+
+REVOKE EXECUTE ON FUNCTION public.handle_pantry_restock() FROM PUBLIC, anon, authenticated;
 
 -- ============================================================
 -- INDEXES FOR SPEED
@@ -1420,13 +1440,9 @@ ON CONFLICT (id) DO UPDATE SET
 
 DO $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname = 'Public avatars are readable by everyone'
-  ) THEN
-    CREATE POLICY "Public avatars are readable by everyone"
-    ON storage.objects FOR SELECT
-    USING (bucket_id = 'avatars');
-  END IF;
+  -- Hapus policy broad SELECT di storage.objects yang memicu warning public_bucket_allows_listing.
+  -- File avatar tetap bisa diakses publik langsung via URL karena bucket 'avatars' sudah public = true.
+  DROP POLICY IF EXISTS "Public avatars are readable by everyone" ON storage.objects;
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname = 'Authenticated users can upload avatars'
@@ -1498,8 +1514,11 @@ USING (true);
 DROP POLICY IF EXISTS "Authenticated users can insert feedback" ON public.feedbacks;
 CREATE POLICY "Authenticated users can insert feedback"
 ON public.feedbacks FOR INSERT
-TO authenticated, anon
-WITH CHECK (true);
+TO authenticated
+WITH CHECK (
+    auth.uid() IS NOT NULL
+    AND created_by_id = auth.uid()::text
+);
 
 DROP POLICY IF EXISTS "Feedback author or admin can update feedback" ON public.feedbacks;
 CREATE POLICY "Feedback author or admin can update feedback"
@@ -1526,8 +1545,11 @@ USING (true);
 DROP POLICY IF EXISTS "Authenticated users can upvote" ON public.feedback_upvotes;
 CREATE POLICY "Authenticated users can upvote"
 ON public.feedback_upvotes FOR INSERT
-TO authenticated, anon
-WITH CHECK (true);
+TO authenticated
+WITH CHECK (
+    auth.uid() IS NOT NULL
+    AND user_id = auth.uid()::text
+);
 
 DROP POLICY IF EXISTS "Users can remove their own upvote" ON public.feedback_upvotes;
 CREATE POLICY "Users can remove their own upvote"
@@ -1539,7 +1561,11 @@ USING (
 
 -- Function & Trigger to sync upvote_count
 CREATE OR REPLACE FUNCTION public.handle_feedback_upvote_count()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+LANGUAGE plpgsql 
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
     IF (TG_OP = 'INSERT') THEN
         UPDATE public.feedbacks
@@ -1556,7 +1582,9 @@ BEGIN
     END IF;
     RETURN NULL;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.handle_feedback_upvote_count() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS tr_feedback_upvote_count ON public.feedback_upvotes;
 CREATE TRIGGER tr_feedback_upvote_count

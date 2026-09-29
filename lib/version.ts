@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.58"
+export const APP_VERSION = "v2.3.59"
 export const APP_BUILD = "2026.09.29"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.59",
+    date: "29 Sep 2026",
+    codename: "DOODLE.EXE - Late-Join Match Sync & Reload Shortcut Protection",
+    changes: [
+      "Prevent Accidental Browser Refresh: Mengintersepsi kombinasi Ctrl+R (jongkok + reload) dan F5 saat bermain DOODLE.EXE agar pemain tidak ter-refresh atau mental dari room.",
+      "Clean Iframe Warning: Menghapus atribut 'pointer-lock' yang tidak dikenali pada tag iframe DOODLE.EXE untuk menghilangkan warning console browser.",
+      "Automatic Late-Join Sync: Host otomatis mendeteksi dan mengirim paket spawn 'start (late)' berkala ke pemain yang baru masuk ke room saat match sedang berjalan.",
+      "Interactive Guest Join Button: Tombol guest otomatis berubah menjadi 'GABUNG MATCH (SEDANG BERJALAN)' jika match sudah aktif, dan otomatis melakukan request join tanpa stuck 'MENUNGGU HOST...'.",
+      "Prevent Join State Reset: Memperbaiki siklus join agar tidak menimpa paksa state permainan kembali ke tampilan lobby jika match telah berlangsung.",
+    ],
+  },
   {
     version: "v2.3.58",
     date: "29 Sep 2026",
