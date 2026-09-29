@@ -5,12 +5,23 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.55"
+export const APP_VERSION = "v2.3.56"
 export const APP_BUILD = "2026.09.29"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.56",
+    date: "29 Sep 2026",
+    codename: "DOODLE.EXE - Host-Only Match Start Authority",
+    changes: [
+      "Host-Only Start Authority: Hak memulai pertandingan (START MATCH) kini sepenuhnya dibatasi hanya untuk host room.",
+      "Disabled Guest Button: Tombol pada layar pemain guest diubah menjadi 'MENUNGGU HOST...' dalam kondisi disabled.",
+      "Lobby Status Info: Keterangan status menampilkan informasi host yang ditunggu serta panduan hanya host yang dapat memulai.",
+      "Reject Guest Start Signals: Host secara tegas menolak dan membalas sinyal 'startreq' dari guest saat masih di dalam lobby.",
+    ],
+  },
   {
     version: "v2.3.55",
     date: "29 Sep 2026",
