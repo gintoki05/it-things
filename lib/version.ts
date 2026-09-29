@@ -5,12 +5,22 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.63"
+export const APP_VERSION = "v2.3.64"
 export const APP_BUILD = "2026.09.29"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.64",
+    date: "29 Sep 2026",
+    codename: "DOODLE.EXE - Fix Bomb Mission Win/Loss Logic & End Screen",
+    changes: [
+      "Fix Evaluasi Pemenang Ronde: Menyimpan dan menyinkronkan state lastWinner dan lastReason secara authoritative pada server snapshot, mengatasi bug banner pemenang tertukar/terbalik saat skor berimbang atau mengejar.",
+      "Personalized Round & Match End Banner: Menampilkan status VICTORY / DEFEAT secara personal berdasarkan tim pemain dan pemenang ronde/match sesungguhnya.",
+      "Perbaikan Alasan Kemenangan: Menyajikan label alasan kemenangan retro yang presisi (Bom Meledak, Bom Dijinakkan, Seluruh CT/Tero Tereliminasi, dsb.).",
+    ],
+  },
   {
     version: "v2.3.63",
     date: "29 Sep 2026",

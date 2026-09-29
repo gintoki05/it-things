@@ -61,6 +61,9 @@ export class BombMode {
     this.teams = { red: [], blue: [] };
     this.alivePlayerIds = new Set();
     this.carrierHistory = [];
+    this.lastWinner = null;
+    this.lastReason = null;
+    this.roundEndSoundPlayed = false;
 
     // Bomb State
     // state: 'carried' | 'dropped' | 'planted' | 'defused' | 'exploded'
@@ -273,6 +276,9 @@ export class BombMode {
       blue: Array.isArray(teams.blue) ? [...teams.blue] : [],
     };
     this.carrierHistory = [];
+    this.lastWinner = null;
+    this.lastReason = null;
+    this.roundEndSoundPlayed = false;
     this.startRoundHost();
   }
 
@@ -284,6 +290,9 @@ export class BombMode {
     this.phaseEndsAt = now + BOMB_CONFIG.PREP_TIME * 1000;
     this.explodesAt = 0;
     this.interaction = null;
+    this.lastWinner = null;
+    this.lastReason = null;
+    this.roundEndSoundPlayed = false;
 
     // Populate alive players from active teams
     this.alivePlayerIds = new Set([...this.teams.red, ...this.teams.blue]);
@@ -477,6 +486,9 @@ export class BombMode {
     this.phaseEndsAt = now + BOMB_CONFIG.POST_ROUND_TIME * 1000;
     this.revision++;
 
+    this.lastWinner = winner;
+    this.lastReason = reason;
+
     if (winner === "red") this.scores.red++;
     else if (winner === "blue") this.scores.blue++;
 
@@ -486,6 +498,8 @@ export class BombMode {
       type: "round_end",
       winner,
       reason,
+      lastWinner: winner,
+      lastReason: reason,
       scores: { ...this.scores },
     });
   }
@@ -682,6 +696,8 @@ export class BombMode {
       scores: { ...this.scores },
       teams: { red: [...this.teams.red], blue: [...this.teams.blue] },
       alivePlayerIds: Array.from(this.alivePlayerIds),
+      lastWinner: this.lastWinner,
+      lastReason: this.lastReason,
       bomb: {
         state: this.bomb.state,
         carrierId: this.bomb.carrierId,
@@ -738,6 +754,18 @@ export class BombMode {
     }
     if (packet.alivePlayerIds) {
       this.alivePlayerIds = new Set(packet.alivePlayerIds);
+    }
+    if (packet.lastWinner !== undefined) {
+      this.lastWinner = packet.lastWinner;
+    }
+    if (packet.lastReason !== undefined) {
+      this.lastReason = packet.lastReason;
+    }
+    if (packet.winner !== undefined) {
+      this.lastWinner = packet.winner;
+    }
+    if (packet.reason !== undefined) {
+      this.lastReason = packet.reason;
     }
 
     // Bomb State Sync
@@ -842,15 +870,27 @@ export class BombMode {
       });
     }
 
+    this.lastWinner = null;
+    this.lastReason = null;
+    this.roundEndSoundPlayed = false;
     this.disableSpectatorClient();
   }
 
   // Client Event: Round End
   onRoundEndClient(packet) {
+    if (packet.winner) this.lastWinner = packet.winner;
+    if (packet.reason) this.lastReason = packet.reason;
+    if (packet.lastWinner) this.lastWinner = packet.lastWinner;
+    if (packet.lastReason) this.lastReason = packet.lastReason;
+
     const myId = this.game?.peer?.id;
     const myTeam = this.teams.red.includes(myId) ? "red" : this.teams.blue.includes(myId) ? "blue" : null;
-    const won = myTeam && packet.winner === myTeam;
-    this.playRoundEndSound(won);
+    const roundWinner = this.lastWinner || packet.winner;
+    const won = myTeam && roundWinner === myTeam;
+    if (!this.roundEndSoundPlayed) {
+      this.roundEndSoundPlayed = true;
+      this.playRoundEndSound(won);
+    }
   }
 
   // Client Event: Match End

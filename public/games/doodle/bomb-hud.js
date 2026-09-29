@@ -202,10 +202,29 @@ export class BombHud {
     // 7. Round End Victory Banner
     if (bombMode.phase === "round_end") {
       this.el.roundEnd.classList.add("show");
-      const isRedWin = bombMode.lastWinner === "red" || bombMode.scores.red > bombMode.scores.blue;
+      const winner =
+        bombMode.lastWinner ||
+        (bombMode.scores.red > bombMode.scores.blue
+          ? "red"
+          : bombMode.scores.blue > bombMode.scores.red
+          ? "blue"
+          : null);
+      const isRedWin = winner === "red";
+      const isMyTeamRed = bombMode.teams.red.includes(myId);
+      const isMyTeamBlue = bombMode.teams.blue.includes(myId);
+      const myTeam = isMyTeamRed ? "red" : isMyTeamBlue ? "blue" : null;
+      const isMyWin = myTeam && winner === myTeam;
+      const isMyLoss = myTeam && winner && winner !== myTeam;
       const reason = this.formatWinReason(bombMode.lastReason);
 
-      this.el.winTitle.textContent = isRedWin ? "TERRORIST WIN!" : "COUNTER-TERRORIST WIN!";
+      let teamText = isRedWin ? "TERRORIST WIN!" : "COUNTER-TERRORIST WIN!";
+      if (isMyWin) {
+        teamText = `VICTORY! ${teamText}`;
+      } else if (isMyLoss) {
+        teamText = `DEFEAT! ${teamText}`;
+      }
+
+      this.el.winTitle.textContent = teamText;
       this.el.winTitle.className = `bm-win-title ${isRedWin ? "red" : "blue"}`;
       this.el.winReason.textContent = reason;
     } else {
@@ -223,12 +242,14 @@ export class BombHud {
         return "SELURUH ANGGOTA CT TELAH DIELIMINASI";
       case "tero_eliminated":
         return "SELURUH ANGGOTA TERO TELAH DIELIMINASI";
+      case "all_eliminated":
+        return "KEDUA TIM TERELIMINASI (BOM GAGAL DIPASANG)";
       case "time_expired":
         return "WAKTU HABIS (BOM GAGAL DIPASANG)";
       case "tero_forfeit":
-        return "TIM TERO MENINGGALKAN PERTANDINGAN";
+        return "TIM TERO MENYERAH / MENINGGALKAN MATCH";
       case "ct_forfeit":
-        return "TIM CT MENINGGALKAN PERTANDINGAN";
+        return "TIM CT MENYERAH / MENINGGALKAN MATCH";
       default:
         return "RONDE BERAKHIR";
     }
