@@ -5,12 +5,23 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.53"
+export const APP_VERSION = "v2.3.54"
 export const APP_BUILD = "2026.09.29"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.54",
+    date: "29 Sep 2026",
+    codename: "DOODLE.EXE - Point Blank Style Team Picker & Strict Mode Fix",
+    changes: [
+      "Fix Strict Mode Variable Declaration: Memperbaiki pemisahan deklarasi variabel global (zt, It) agar tidak melempar ReferenceError di ES Module, memastikan layar menu utama dan lobby tidak crash.",
+      "PB-Style Team Selection: Pilih kubu langsung di lobby dengan tombol JOIN RED / JOIN BLUE layaknya Point Blank, lengkap dengan visual kartu tim dan status pemain live.",
+      "Prevent Premature Game Start: Pemain tetap berada di dalam lobby saat berganti tim tanpa sengaja memicu permainan solo.",
+      "Seamless Team Sync: Perubahan tim secara instan terdistribusi ke seluruh pemain di dalam lobby secara realtime.",
+    ],
+  },
   {
     version: "v2.3.53",
     date: "29 Sep 2026",
