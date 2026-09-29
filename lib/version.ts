@@ -5,12 +5,23 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.62"
+export const APP_VERSION = "v2.3.63"
 export const APP_BUILD = "2026.09.29"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.63",
+    date: "29 Sep 2026",
+    codename: "DOODLE.EXE - Bomb Mission Mode (Luxville) & Realtime Handshake Fix",
+    changes: [
+      "Bomb Mission Mode (Luxville): Mode ronde kompetitif Tero vs CT (first to 5 rounds). Tero bertugas plant C4 di Site A/B, CT bertugas defuse C4 atau mengeliminasi seluruh Tero.",
+      "Tactical Bomb HUD & Audio: Menambahkan panel status bom retro, timer countdown plant/defuse, alarm bip C4 akseleratif, serta efek ledakan destruktif 3D.",
+      "Spectator Mode: Pemain yang gugur dalam ronde otomatis masuk ke mode spectator melayang bebas hingga ronde selesai tanpa respawn instan.",
+      "Fast PeerJS & Realtime Signaling Fallback: Mempercepat timeout PeerJS (2.5s) dan menstabilkan fallback WebSocket Supabase Realtime agar client Incognito/beda jaringan dapat langsung terhubung ke room tanpa kendala WebRTC IP masking.",
+    ],
+  },
   {
     version: "v2.3.62",
     date: "29 Sep 2026",
