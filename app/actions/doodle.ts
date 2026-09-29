@@ -106,43 +106,5 @@ export async function fetchActiveDoodleRoomsAction(
     }
   }
 
-  // 2. Fallback: Parse recent chat invitations from chat_messages (last 20 mins)
-  try {
-    const supabase = createServerSupabase(token)
-    if (supabase) {
-      const twentyMinsAgo = new Date(now - 20 * 60 * 1000).toISOString()
-      const { data: messages } = await supabase
-        .from("chat_messages")
-        .select("message, user_name, created_at")
-        .gte("created_at", twentyMinsAgo)
-        .ilike("message", "%[DOODLE WAR 98]%")
-        .order("created_at", { ascending: false })
-        .limit(10)
-
-      if (messages && messages.length > 0) {
-        for (const msg of messages) {
-          const match = msg.message?.match(/Kode:\s*\[([a-zA-Z0-9_-]+)\]/i)
-          if (match && match[1]) {
-            const code = match[1].trim().toUpperCase()
-            if (!seenCodes.has(code)) {
-              seenCodes.add(code)
-              resultRooms.push({
-                roomCode: code,
-                hostName: msg.user_name || "Host",
-                playerCount: 1,
-                maxPlayers: 10,
-                map: "district",
-                createdAt: msg.created_at,
-                updatedAt: new Date(msg.created_at).getTime(),
-              })
-            }
-          }
-        }
-      }
-    }
-  } catch {
-    // Non-fatal fallback
-  }
-
   return { rooms: resultRooms }
 }

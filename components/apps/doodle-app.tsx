@@ -91,21 +91,25 @@ export function DoodleApp() {
   const mergeRooms = React.useCallback((incoming: ActiveDoodleRoom[]) => {
     setActiveRooms((prev) => {
       const map = new Map<string, ActiveDoodleRoom>()
-      // Existing
-      prev.forEach((r) => map.set(r.roomCode.toUpperCase(), r))
+      const now = Date.now()
+      // Existing (only if fresh < 20s)
+      prev.forEach((r) => {
+        if (r.updatedAt && now - r.updatedAt < 20000) {
+          map.set(r.roomCode.toUpperCase(), r)
+        }
+      })
       // Incoming
       incoming.forEach((r) => {
         const code = r.roomCode.toUpperCase()
         map.set(code, {
           ...r,
           roomCode: code,
-          updatedAt: r.updatedAt || Date.now(),
+          updatedAt: r.updatedAt || now,
         })
       })
-      // Drop stale rooms (> 30s without update)
-      const now = Date.now()
+      // Drop stale rooms (> 20s without update)
       const clean = Array.from(map.values()).filter(
-        (r) => !r.updatedAt || now - r.updatedAt < 30000
+        (r) => r.updatedAt && now - r.updatedAt < 20000
       )
       activeRoomsRef.current = clean
       iframeRef.current?.contentWindow?.postMessage(
@@ -127,16 +131,41 @@ export function DoodleApp() {
       })
     }
 
-    // 2. Fetch from Next.js server actions (in-memory + recent chat fallback)
+    // 2. Fetch from Next.js server actions (in-memory cache with 25s TTL)
     try {
       const res = await fetchActiveDoodleRoomsAction()
-      if (res?.rooms && res.rooms.length > 0) {
-        mergeRooms(res.rooms)
+      if (res?.rooms) {
+        const now = Date.now()
+        setActiveRooms((prev) => {
+          const map = new Map<string, ActiveDoodleRoom>()
+          prev.forEach((r) => {
+            if (r.updatedAt && now - r.updatedAt < 15000) {
+              map.set(r.roomCode.toUpperCase(), r)
+            }
+          })
+          res.rooms.forEach((r) => {
+            const code = r.roomCode.toUpperCase()
+            map.set(code, {
+              ...r,
+              roomCode: code,
+              updatedAt: r.updatedAt || now,
+            })
+          })
+          const clean = Array.from(map.values()).filter(
+            (r) => r.updatedAt && now - r.updatedAt < 20000
+          )
+          activeRoomsRef.current = clean
+          iframeRef.current?.contentWindow?.postMessage(
+            { type: "DOODLE_ACTIVE_ROOMS", rooms: clean },
+            "*"
+          )
+          return clean
+        })
       }
     } catch {
       // Non-fatal fallback
     }
-  }, [clientId, mergeRooms])
+  }, [clientId])
 
   // Initial iframeSrc that only regenerates when explicitly restarted via key
   const [iframeSrc, setIframeSrc] = React.useState<string>(() => {

@@ -5,12 +5,21 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.59"
+export const APP_VERSION = "v2.3.60"
 export const APP_BUILD = "2026.09.29"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.60",
+    date: "29 Sep 2026",
+    codename: "DOODLE.EXE - Fix Blank Canvas Script Error & Purge Ghost Rooms",
+    changes: [
+      "Fix Blank Canvas Syntax Error: Memperbaiki kesalahan kurung sintaksis pada reconciler loop game.js sehingga engine Three.js dan UI menu dapat dimuat normal tanpa layar kosong.",
+      "Purge Stale & Ghost Rooms: Menghapus fallback query chat lama (20 menit) di fetchActiveDoodleRoomsAction dan memperketat TTL pembersihan room (< 20 detik) agar room host yang sudah offline tidak muncul di daftar ROOM AKTIF.",
+    ],
+  },
   {
     version: "v2.3.59",
     date: "29 Sep 2026",
