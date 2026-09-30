@@ -5,12 +5,23 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.66"
+export const APP_VERSION = "v2.3.67"
 export const APP_BUILD = "2026.09.30"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.67",
+    date: "30 Sep 2026",
+    codename: "DOODLE.EXE - Point Blank Combat Badges & Solo Wave Leaderboard",
+    changes: [
+      "Point Blank Combat Feedback: Sistem medali eliminasi gaya Point Blank (Headshot, Chain Killer, Double Kill, Triple Kill, Chain Headshot, Chain Stopper, Piercing Shot, Mass Kill) lengkap dengan audio callouts autentik dan procedural synth.",
+      "Doodle Typography & Styling: Desain badge eliminasi semi-transparan dengan tipografi doodle cursive ('Patrick Hand' / 'Caveat') dan animasi slam impact dinamis.",
+      "Solo Wave Klasemen (Leaderboard): Sistem peringkat mode Solo Survival Wave dengan modal Win98 retro, podium Top 3, sinkronisasi Supabase Realtime, dan auto-submit score saat player game over.",
+      "Offline & Local Fallback: Dukungan penuh penyimpanan lokal (localStorage checkpoint & best score) agar tetap fungsional dan mulus dalam kondisi offline.",
+    ],
+  },
   {
     version: "v2.3.66",
     date: "30 Sep 2026",

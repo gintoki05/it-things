@@ -12,10 +12,12 @@ import {
   unregisterDoodleRoomAction,
   heartbeatDoodleRoomAction,
   fetchActiveDoodleRoomsAction,
+  submitDoodleSoloScoreAction,
   type ActiveDoodleRoom,
 } from "@/app/actions/doodle"
+import { DoodleLeaderboard } from "@/components/apps/doodle/doodle-leaderboard"
 import { playRetroNotificationSound } from "@/lib/sound-effects"
-import { Maximize2, Minimize2, RotateCw, Share2, Copy, Check, Gamepad2, Palette, Users, Wifi } from "lucide-react"
+import { Maximize2, Minimize2, RotateCw, Share2, Copy, Check, Gamepad2, Palette, Users, Wifi, Trophy } from "lucide-react"
 
 const INK_OPTIONS = [
   { id: 0, name: "Pulpen Biru", hex: "#1a31c2" },
@@ -33,6 +35,7 @@ export function DoodleApp() {
 
   const [isFullscreen, setIsFullscreen] = React.useState<boolean>(false)
   const [showRestartConfirm, setShowRestartConfirm] = React.useState<boolean>(false)
+  const [showLeaderboard, setShowLeaderboard] = React.useState<boolean>(false)
   const [key, setKey] = React.useState<number>(0)
   const [selectedInk, setSelectedInk] = React.useState<number>(() => {
     if (typeof window !== "undefined") {
@@ -676,12 +679,33 @@ export function DoodleApp() {
             "*"
           )
         }
+      } else if (e.data?.type === "OPEN_DOODLE_LEADERBOARD") {
+        setShowLeaderboard(true)
+      } else if (e.data?.type === "DOODLE_SOLO_GAMEOVER") {
+        const wave = Math.max(1, Number(e.data.wave) || 1)
+        const score = Math.max(0, Number(e.data.score) || 0)
+        const kills = Math.max(0, Number(e.data.kills) || 0)
+        const headshots = Math.max(0, Number(e.data.headshots) || 0)
+        void (async () => {
+          try {
+            const token = (await supabase?.auth.getSession())?.data.session?.access_token ?? null
+            if (token && user) {
+              await submitDoodleSoloScoreAction(token, {
+                wave,
+                score,
+                kills,
+                headshots,
+                nickname,
+              })
+            }
+          } catch {}
+        })()
       }
     }
 
     window.addEventListener("message", handleMessage)
     return () => window.removeEventListener("message", handleMessage)
-  }, [handleShareToChat, nickname, queryActiveRooms, trackLobby, untrackLobby])
+  }, [handleShareToChat, nickname, queryActiveRooms, trackLobby, untrackLobby, user])
 
   // Listen to custom global event: join doodle room from chat
   React.useEffect(() => {
@@ -789,6 +813,17 @@ export function DoodleApp() {
               )}
             </button>
           )}
+
+          {/* Klasemen Solo Button */}
+          <button
+            type="button"
+            onClick={() => setShowLeaderboard(true)}
+            className="flex items-center gap-1 px-1.5 py-0.5 font-mono text-[10px] font-bold bg-[#fff8e7] hover:bg-[#ffeed0] text-[#8a4b00] border border-[#d49b20] rounded-[2px] cursor-pointer active:translate-y-px shadow-sm transition-colors"
+            title="Lihat Klasemen & Rekor Solo Wave Tim"
+          >
+            <Trophy className="w-3 h-3 text-amber-500 fill-amber-500/20" />
+            <span>KLASEMEN</span>
+          </button>
 
           {/* Restart */}
 
@@ -974,6 +1009,11 @@ export function DoodleApp() {
         variant="warning"
         onConfirm={handleRestart}
       />
+
+      {/* Klasemen / Leaderboard Modal */}
+      {showLeaderboard && (
+        <DoodleLeaderboard onClose={() => setShowLeaderboard(false)} />
+      )}
     </div>
   )
 }
