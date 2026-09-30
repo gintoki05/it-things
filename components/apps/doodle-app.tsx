@@ -16,8 +16,12 @@ import {
   type ActiveDoodleRoom,
 } from "@/app/actions/doodle"
 import { DoodleLeaderboard } from "@/components/apps/doodle/doodle-leaderboard"
+import {
+  DoodleSkinCustomizer,
+  type DoodleCustomSkin,
+} from "@/components/apps/doodle/doodle-skin-customizer"
 import { playRetroNotificationSound } from "@/lib/sound-effects"
-import { Maximize2, Minimize2, RotateCw, Share2, Copy, Check, Gamepad2, Palette, Users, Wifi, Trophy } from "lucide-react"
+import { Maximize2, Minimize2, RotateCw, Share2, Copy, Check, Gamepad2, Palette, Users, Wifi, Trophy, Sparkles } from "lucide-react"
 
 const INK_OPTIONS = [
   { id: 0, name: "Pulpen Biru", hex: "#1a31c2" },
@@ -36,6 +40,7 @@ export function DoodleApp() {
   const [isFullscreen, setIsFullscreen] = React.useState<boolean>(false)
   const [showRestartConfirm, setShowRestartConfirm] = React.useState<boolean>(false)
   const [showLeaderboard, setShowLeaderboard] = React.useState<boolean>(false)
+  const [showSkinCustomizer, setShowSkinCustomizer] = React.useState<boolean>(false)
   const [key, setKey] = React.useState<number>(0)
   const [selectedInk, setSelectedInk] = React.useState<number>(() => {
     if (typeof window !== "undefined") {
@@ -530,6 +535,18 @@ export function DoodleApp() {
     }
   }, [])
 
+  const handleApplySkin = React.useCallback((newSkin: DoodleCustomSkin) => {
+    setSelectedInk(newSkin.ink)
+    iframeRef.current?.contentWindow?.postMessage(
+      { type: "SET_CUSTOM_SKIN", skin: newSkin },
+      "*"
+    )
+    iframeRef.current?.contentWindow?.postMessage(
+      { type: "SET_INK", ink: newSkin.ink },
+      "*"
+    )
+  }, [])
+
   // Listen to messages from iframe game
   React.useEffect(() => {
     const handleMessage = (e: MessageEvent) => {
@@ -671,6 +688,15 @@ export function DoodleApp() {
           "*"
         )
         void queryActiveRooms()
+        try {
+          const savedSkin = localStorage.getItem("doodle_custom_skin")
+          if (savedSkin) {
+            iframeRef.current?.contentWindow?.postMessage(
+              { type: "SET_CUSTOM_SKIN", skin: JSON.parse(savedSkin) },
+              "*"
+            )
+          }
+        } catch {}
         if (pendingRoomRef.current) {
           const room = pendingRoomRef.current
           pendingRoomRef.current = null
@@ -681,6 +707,8 @@ export function DoodleApp() {
         }
       } else if (e.data?.type === "OPEN_DOODLE_LEADERBOARD") {
         setShowLeaderboard(true)
+      } else if (e.data?.type === "OPEN_DOODLE_SKINS") {
+        setShowSkinCustomizer(true)
       } else if (e.data?.type === "DOODLE_SOLO_GAMEOVER") {
         const wave = Math.max(1, Number(e.data.wave) || 1)
         const score = Math.max(0, Number(e.data.score) || 0)
@@ -823,6 +851,17 @@ export function DoodleApp() {
           >
             <Trophy className="w-3 h-3 text-amber-500 fill-amber-500/20" />
             <span>KLASEMEN</span>
+          </button>
+
+          {/* Custom Skin & Lemari Kostum Button */}
+          <button
+            type="button"
+            onClick={() => setShowSkinCustomizer(true)}
+            className="flex items-center gap-1 px-1.5 py-0.5 font-mono text-[10px] font-bold bg-[#f5f3ff] hover:bg-[#ede9fe] text-[#6d28d9] border border-[#a78bfa] rounded-[2px] cursor-pointer active:translate-y-px shadow-sm transition-colors"
+            title="Buka Lemari Kostum (Custom Skin Topi, Senjata & Wajah)"
+          >
+            <Sparkles className="w-3 h-3 text-purple-600" />
+            <span>SKIN</span>
           </button>
 
           {/* Restart */}
@@ -1013,6 +1052,14 @@ export function DoodleApp() {
       {/* Klasemen / Leaderboard Modal */}
       {showLeaderboard && (
         <DoodleLeaderboard onClose={() => setShowLeaderboard(false)} />
+      )}
+
+      {/* Lemari Kostum / Skin Customizer Modal */}
+      {showSkinCustomizer && (
+        <DoodleSkinCustomizer
+          onApply={handleApplySkin}
+          onClose={() => setShowSkinCustomizer(false)}
+        />
       )}
     </div>
   )
