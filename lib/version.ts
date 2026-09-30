@@ -5,12 +5,22 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.65"
-export const APP_BUILD = "2026.09.29"
+export const APP_VERSION = "v2.3.66"
+export const APP_BUILD = "2026.09.30"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.66",
+    date: "30 Sep 2026",
+    codename: "DOODLE.EXE - Bomb Mission Dynamic FX & Sound Design",
+    changes: [
+      "Dynamic Plant & Defuse Sound FX: Audio procedural DTMF military keypad tick saat pasang bom, serta noise wire cutter snip & electrical sizzle saat defuse bom.",
+      "Visual Sparks & Hazard Styling: Partikel percikan listrik oranye dan biru neon saat plant/defuse, plus animated hazard stripes pada progress bar HUD.",
+      "Epic Bomb Detonation Effects: Ledakan spektakuler dengan camera shake hebat, blinding white screen flash, bola api masif, smoke plume, shockwave crater, dan sub-bass rumble yang menggetarkan controller.",
+    ],
+  },
   {
     version: "v2.3.65",
     date: "29 Sep 2026",

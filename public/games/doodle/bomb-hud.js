@@ -176,17 +176,18 @@ export class BombHud {
 
     // 5. Local Interact Progress Bar
     if (bombMode.localInteract.active) {
-      this.el.progressWrap.classList.add("show");
+      const isPlant = bombMode.localInteract.kind === "plant";
+      this.el.progressWrap.className = `bm-progress-wrap show ${isPlant ? "plant" : "defuse"}`;
       const elapsed = (now - bombMode.localInteract.startedAt) / 1000;
       const duration = bombMode.localInteract.duration || 3.0;
       const pct = Math.min(100, Math.max(0, Math.round((elapsed / duration) * 100)));
 
       this.el.progressLabel.textContent =
-        bombMode.localInteract.kind === "plant" ? "MEMASANG BOM C4..." : "MENJINAKKAN BOM...";
+        isPlant ? "MEMASANG BOM C4..." : "MENJINAKKAN BOM...";
       this.el.progressFill.style.width = `${pct}%`;
       this.el.progressPct.textContent = `${pct}%`;
     } else {
-      this.el.progressWrap.classList.remove("show");
+      this.el.progressWrap.className = "bm-progress-wrap";
     }
 
     // 6. Spectator Overlay

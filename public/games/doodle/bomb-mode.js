@@ -204,28 +204,65 @@ export class BombMode {
     });
   }
 
-  // Synthesized Bomb Sounds (Using Web Audio)
+  // Synthesized Bomb Sounds & Audio/Visual Effects (Web Audio + Doodle Particles)
   playAudioBeep(freq = 1800, dur = 0.08, gain = 0.35) {
+    this.playAudioTone(freq, dur, gain, "square", freq * 0.9);
+  }
+
+  playAudioTone(freq = 1000, dur = 0.08, gain = 0.3, type = "square", freqEnd = null) {
     try {
       const audio = this.game?.audio;
       if (!audio?.ctx) return;
       if (audio.ctx.state === "suspended") audio.ctx.resume();
       audio.tone({
         freq,
-        freqEnd: freq * 0.9,
+        freqEnd: freqEnd || freq,
         dur,
         gain,
-        type: "square",
+        type,
       });
     } catch {}
   }
 
-  playPlantSound() {
+  // Keypad tick while planting
+  playKeypadTick(pct = 0) {
     try {
       const audio = this.game?.audio;
       if (!audio?.ctx) return;
-      audio.noise({ dur: 0.12, gain: 0.4, type: "highpass", freq: 2400 });
-      this.playAudioBeep(1400, 0.12, 0.3);
+      const dtmfFreqs = [1209, 1336, 1477, 1633];
+      const f = dtmfFreqs[Math.floor(Math.random() * dtmfFreqs.length)] + (pct * 3.5);
+      this.playAudioTone(f, 0.045, 0.22, "square");
+      this.game?.input?.rumble?.(0.12, 0.1, 35);
+    } catch {}
+  }
+
+  // Wire snip & electrical sizzle while defusing
+  playWireSnipTick(pct = 0) {
+    try {
+      const audio = this.game?.audio;
+      if (!audio?.ctx) return;
+      audio.noise({ dur: 0.04, gain: 0.32, type: "highpass", freq: 4200 });
+      this.playAudioTone(320 + Math.random() * 80 + (pct * 2.5), 0.06, 0.18, "sawtooth");
+      this.game?.input?.rumble?.(0.2, 0.16, 50);
+    } catch {}
+  }
+
+  playPlantSound(pos = null) {
+    try {
+      const audio = this.game?.audio;
+      if (!audio?.ctx) return;
+      audio.noise({ dur: 0.12, gain: 0.45, type: "highpass", freq: 2400 });
+      this.playAudioTone(1760, 0.08, 0.3, "square");
+      setTimeout(() => this.playAudioTone(2349, 0.14, 0.35, "square"), 90);
+
+      // Visual plant shockwave & smoke
+      const effects = this.game?.effects;
+      const plantPos = pos ? new THREE.Vector3(pos.x, pos.y, pos.z) : this.bomb.position;
+      if (effects) {
+        effects.strokeBurst(plantPos, 1, 28, 6, { life: 0.45, size: 0.06 }); // 1 is k.RED
+        effects.smoke(plantPos, new THREE.Vector3(0, 1, 0), 3);
+        effects.sparks(plantPos, new THREE.Vector3(0, 1, 0), 3, 10, 4); // 3 is k.ORANGE
+      }
     } catch {}
   }
 
@@ -233,16 +270,101 @@ export class BombMode {
     try {
       const audio = this.game?.audio;
       if (!audio?.ctx) return;
-      audio.noise({ dur: 0.15, gain: 0.3, type: "bandpass", freq: 3000, q: 2 });
-      this.playAudioBeep(900, 0.1, 0.25);
+      audio.noise({ dur: 0.15, gain: 0.45, type: "bandpass", freq: 3000, q: 2 });
+      [659.25, 880, 1318.51].forEach((f, idx) => {
+        setTimeout(() => this.playAudioTone(f, 0.16, 0.25, "triangle"), idx * 90);
+      });
+
+      // Visual electric disarm burst
+      const effects = this.game?.effects;
+      const bombPos = this.bomb.position.clone();
+      bombPos.y += 0.2;
+      if (effects) {
+        effects.strokeBurst(bombPos, 0, 32, 7, { life: 0.6, size: 0.07 }); // 0 is k.BLUE
+        effects.sparks(bombPos, new THREE.Vector3(0, 1, 0), 0, 14, 6);
+        effects.smoke(bombPos, new THREE.Vector3(0, 1, 0), 2);
+      }
     } catch {}
   }
 
   playExplosionSound() {
+    this.triggerBombExplosionEffects();
+  }
+
+  // Grand C4 Detonation Effects
+  triggerBombExplosionEffects() {
     try {
       const audio = this.game?.audio;
+      const effects = this.game?.effects;
+      const player = this.game?.player;
+      const input = this.game?.input;
+      const bombPos = this.bomb.position.clone();
+
+      // 1. Intense Camera Shake
+      if (effects) {
+        effects.shakeAmt = Math.max(effects.shakeAmt || 0, 2.4);
+      }
+
+      // 2. White Screen Flash & Blast Proximity Damage
+      if (player) {
+        player.flashFx = 1.0;
+        const dist = player.body?.pos?.distanceTo(bombPos) || 999;
+        if (dist < 22 && player.alive) {
+          player.lastHit = { amount: 999, crit: true, src: "c4_blast" };
+          player.takeDamage(999, bombPos);
+        }
+      }
+
+      // 3. Heavy Controller Vibration
+      if (input?.rumble) {
+        input.rumble(1.0, 1.0, 750);
+      }
+
+      // 4. Primary Particle Explosion (Giant fireball + ink debris)
+      if (effects) {
+        effects.explosion(bombPos, 16, 2); // 2 is k.BLACK
+        effects.strokeBurst(bombPos, 3, 50, 16, { life: 1.6, size: 0.18 }); // 3 is k.ORANGE
+        effects.strokeBurst(bombPos, 1, 42, 12, { life: 1.4, size: 0.14 }); // 1 is k.RED
+        effects.splat(bombPos, new THREE.Vector3(0, 1, 0), 2, 4.2, null, 12);
+        effects.smoke(bombPos, new THREE.Vector3(0, 1, 0), 12);
+
+        // Staggered secondary detonations for seismic rumble feel
+        [110, 220, 360].forEach((delay, idx) => {
+          setTimeout(() => {
+            const offset = new THREE.Vector3((Math.random() - 0.5) * 3.5, Math.random() * 1.5, (Math.random() - 0.5) * 3.5);
+            const subPos = bombPos.clone().add(offset);
+            effects.explosion(subPos, 8, idx % 2 === 0 ? 3 : 1);
+            effects.strokeBurst(subPos, 3, 24, 9, { life: 0.85, size: 0.09 });
+            if (effects.shakeAmt < 1.2) effects.shakeAmt += 0.6;
+          }, delay);
+        });
+      }
+
+      // 5. Deep Seismic Audio Blast
+      if (audio?.ctx) {
+        try {
+          const ctx = audio.ctx;
+          const nowT = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(85, nowT);
+          osc.frequency.exponentialRampToValueAtTime(20, nowT + 1.2);
+          gain.gain.setValueAtTime(0.85, nowT);
+          gain.gain.exponentialRampToValueAtTime(0.001, nowT + 1.4);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(nowT);
+          osc.stop(nowT + 1.5);
+        } catch {}
+      }
       if (audio?.explosion) {
-        audio.explosion(this.bomb.position);
+        audio.explosion(bombPos);
+      }
+
+      // Hide bomb mesh on detonation
+      if (this.bombMesh) {
+        this.bombMesh.visible = false;
       }
     } catch {}
   }
@@ -979,6 +1101,36 @@ export class BombMode {
             token: this.localInteract.token,
           });
         }
+
+        // Active interact effect tick (audio keypad / wire snip + sparks)
+        const elapsed = (now - this.localInteract.startedAt) / 1000;
+        const duration = this.localInteract.duration || 3.0;
+        const pct = Math.min(100, Math.max(0, Math.round((elapsed / duration) * 100)));
+        const interval = this.localInteract.kind === "plant" ? 280 : 340;
+
+        if (!this.localInteract.lastEffectTick || now - this.localInteract.lastEffectTick >= interval) {
+          this.localInteract.lastEffectTick = now;
+          const effects = this.game?.effects;
+
+          if (this.localInteract.kind === "plant") {
+            this.playKeypadTick(pct);
+            if (effects) {
+              const sparkPos = player.body.pos.clone();
+              sparkPos.y += 0.3;
+              sparkPos.addScaledVector(player.forward, 0.6);
+              effects.sparks(sparkPos, new THREE.Vector3(0, 1, 0), 3, 3, 2); // 3 is k.ORANGE
+              effects.strokeBurst(sparkPos, 3, 3, 2, { life: 0.15, size: 0.03 });
+            }
+          } else if (this.localInteract.kind === "defuse") {
+            this.playWireSnipTick(pct);
+            if (effects) {
+              const sparkPos = this.bomb.position.clone();
+              sparkPos.y += 0.18;
+              effects.sparks(sparkPos, new THREE.Vector3(0, 1, 0), 0, 4, 3); // 0 is k.BLUE
+              effects.strokeBurst(sparkPos, 0, 3, 2, { life: 0.16, size: 0.03 });
+            }
+          }
+        }
       }
     } else if (interactKeyDown) {
       // Check if we can start an interaction
@@ -992,6 +1144,21 @@ export class BombMode {
         const yDiff = Math.abs(player.body.pos.y - this.bomb.position.y);
         if (dist <= BOMB_CONFIG.INTERACT_MAX_DIST && yDiff <= BOMB_CONFIG.INTERACT_MAX_Y_DIFF) {
           this.startLocalInteract("defuse", BOMB_CONFIG.DEFUSE_TIME);
+        }
+      }
+    }
+
+    // Remote player interaction sparks (visual cue for teammates & enemies)
+    if (this.interaction && this.interaction.playerId !== myId) {
+      if (!this.lastRemoteEffectTick || now - this.lastRemoteEffectTick > 300) {
+        this.lastRemoteEffectTick = now;
+        const interPos = this.interaction.pos;
+        const effects = this.game?.effects;
+        if (interPos && effects) {
+          const pt = new THREE.Vector3(interPos.x, interPos.y + 0.3, interPos.z);
+          const color = this.interaction.kind === "plant" ? 3 : 0; // 3 orange, 0 blue
+          effects.sparks(pt, new THREE.Vector3(0, 1, 0), color, 4, 3);
+          effects.strokeBurst(pt, color, 3, 2, { life: 0.15, size: 0.03 });
         }
       }
     }
@@ -1024,6 +1191,7 @@ export class BombMode {
       startedAt: performance.now(),
       duration,
       lastHeartbeat: performance.now(),
+      lastEffectTick: 0,
     };
 
     // Disable offensive weapons while interacting
