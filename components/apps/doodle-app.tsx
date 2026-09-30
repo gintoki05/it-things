@@ -91,6 +91,15 @@ export function DoodleApp() {
   const hostRoomDataRef = React.useRef<ActiveDoodleRoom | null>(null)
   const [showRoomList, setShowRoomList] = React.useState<boolean>(false)
 
+  // Outgoing broadcast token-bucket rate limiter:
+  // Supabase free tier rate limit: 100 msgs/second project-wide.
+  // Each client is strictly capped to max 12 broadcast msgs/sec, burst capacity 16.
+  const broadcastTokensRef = React.useRef<number>(14)
+  const lastTokenRefillRef = React.useRef<number>(Date.now())
+  const criticalQueueRef = React.useRef<any[]>([])
+  const queueFlushTimerRef = React.useRef<NodeJS.Timeout | null>(null)
+  const lastBeaconResponseRef = React.useRef<number>(0)
+
   const nickname = React.useMemo(() => {
     return (user?.name || "Player").trim().slice(0, 14)
   }, [user?.name])
@@ -130,15 +139,19 @@ export function DoodleApp() {
     })
   }, [])
 
-  // Query active rooms from all available sources (Realtime Broadcast Ping + Server Action Cache)
-  const queryActiveRooms = React.useCallback(async () => {
-    // 1. Send broadcast query to all live hosts
-    if (lobbyChannelReadyRef.current && lobbyChannelRef.current) {
-      lobbyChannelRef.current.send({
-        type: "broadcast",
-        event: "doodle_query_rooms",
-        payload: { from: clientId },
-      })
+  // Query active rooms from all available sources
+  // Broadcast query ONLY sent if broadcastQuery is explicitly true (manual refresh or initial mount).
+  // Background interval ONLY uses Next.js server actions to prevent Realtime broadcast spam!
+  const queryActiveRooms = React.useCallback(async (broadcastQuery = false) => {
+    // 1. Send broadcast query to all live hosts ONLY if explicitly requested and channel joined
+    if (broadcastQuery && lobbyChannelReadyRef.current && lobbyChannelRef.current) {
+      if (lobbyChannelRef.current.state === "joined") {
+        lobbyChannelRef.current.send({
+          type: "broadcast",
+          event: "doodle_query_rooms",
+          payload: { from: clientId },
+        })
+      }
     }
 
     // 2. Fetch from Next.js server actions (in-memory cache with 25s TTL)
@@ -219,13 +232,18 @@ export function DoodleApp() {
         }
       })
       .on("broadcast", { event: "doodle_query_rooms" }, () => {
-        // If I am hosting an active room, immediately respond with my beacon
+        // If I am hosting an active room, respond with beacon (throttled to max 1 per 4s)
+        const now = Date.now()
+        if (now - lastBeaconResponseRef.current < 4000) return
+        lastBeaconResponseRef.current = now
         if (isHostingRef.current && currentLobbyCodeRef.current && hostRoomDataRef.current) {
-          channel.send({
-            type: "broadcast",
-            event: "doodle_room_beacon",
-            payload: hostRoomDataRef.current,
-          })
+          if (lobbyChannelRef.current?.state === "joined") {
+            channel.send({
+              type: "broadcast",
+              event: "doodle_room_beacon",
+              payload: hostRoomDataRef.current,
+            })
+          }
         }
       })
       .on("broadcast", { event: "doodle_room_closed" }, ({ payload }) => {
@@ -273,8 +291,8 @@ export function DoodleApp() {
             channel.track(pendingLobbyTrackRef.current)
             pendingLobbyTrackRef.current = null
           }
-          // Immediately discover any live rooms
-          void queryActiveRooms()
+          // Immediately discover any live rooms (initial broadcast query)
+          void queryActiveRooms(true)
         }
       })
 
@@ -288,13 +306,13 @@ export function DoodleApp() {
     }
   }, [clientId, mergeRooms, queryActiveRooms])
 
-  // Host heartbeat effect: periodic beacon push and server action refresh every 3.5s
+  // Host heartbeat effect: periodic beacon push and server action refresh every 6s
   React.useEffect(() => {
     if (!isHosting || !currentLobbyCode) return
 
     const sendBeacon = () => {
       if (hostRoomDataRef.current) {
-        if (lobbyChannelReadyRef.current && lobbyChannelRef.current) {
+        if (lobbyChannelReadyRef.current && lobbyChannelRef.current && lobbyChannelRef.current.state === "joined") {
           lobbyChannelRef.current.send({
             type: "broadcast",
             event: "doodle_room_beacon",
@@ -306,18 +324,18 @@ export function DoodleApp() {
     }
 
     sendBeacon()
-    const timer = setInterval(sendBeacon, 3500)
+    const timer = setInterval(sendBeacon, 6000)
     return () => clearInterval(timer)
   }, [isHosting, currentLobbyCode])
 
-  // Client background sync: query active rooms every 4s when not hosting
+  // Client background sync: query active rooms every 5s when not hosting (via Server Action ONLY - 0 Realtime broadcasts!)
   React.useEffect(() => {
     if (currentLobbyCode) return
 
-    void queryActiveRooms()
+    void queryActiveRooms(false)
     const timer = setInterval(() => {
-      void queryActiveRooms()
-    }, 4000)
+      void queryActiveRooms(false)
+    }, 5000)
 
     return () => clearInterval(timer)
   }, [currentLobbyCode, queryActiveRooms])
@@ -330,13 +348,77 @@ export function DoodleApp() {
     )
   }, [activeRooms])
 
+  // Safe room broadcast sender with Token-Bucket Rate Limiter & HTTP POST prevention
+  const trySendRoomBroadcast = React.useCallback((payload: any) => {
+    const channel = roomChannelRef.current
+    if (!channel || channel.state !== "joined") {
+      // Channel is NOT joined yet. DO NOT call channel.send()!
+      // Calling channel.send() when websocket is not joined triggers @supabase/realtime-js
+      // to fall back to HTTP POST /api/broadcast, causing HTTP rate limits!
+      const isPos = payload?.type === "game_msg" && payload?.msg?.t === "ps"
+      if (!isPos && pendingRoomBroadcastsRef.current.length < 10) {
+        pendingRoomBroadcastsRef.current.push(payload)
+      }
+      return
+    }
+
+    const now = Date.now()
+    const elapsed = Math.max(0, (now - lastTokenRefillRef.current) / 1000)
+    lastTokenRefillRef.current = now
+    // Refill 10 tokens per second up to max 14 tokens
+    broadcastTokensRef.current = Math.min(14, broadcastTokensRef.current + elapsed * 10)
+
+    const isPos = payload?.type === "game_msg" && payload?.msg?.t === "ps"
+
+    if (broadcastTokensRef.current >= 1) {
+      broadcastTokensRef.current -= 1
+      try {
+        void channel.send({
+          type: "broadcast",
+          event: "doodle_signal",
+          payload,
+        })
+      } catch {}
+    } else {
+      // Rate limit reached!
+      if (isPos) {
+        // Redundant position packet — drop it safely
+        return
+      }
+      // Critical packet (damage, kills, events): queue it for safe throttled dispatch
+      if (criticalQueueRef.current.length < 10) {
+        criticalQueueRef.current.push(payload)
+      }
+      if (!queueFlushTimerRef.current) {
+        queueFlushTimerRef.current = setTimeout(() => {
+          queueFlushTimerRef.current = null
+          if (criticalQueueRef.current.length > 0 && roomChannelRef.current?.state === "joined") {
+            const next = criticalQueueRef.current.shift()
+            if (next) {
+              try {
+                void roomChannelRef.current.send({
+                  type: "broadcast",
+                  event: "doodle_signal",
+                  payload: next,
+                })
+              } catch {}
+            }
+          }
+        }, 90)
+      }
+    }
+  }, [])
+
   // Supabase Realtime Signaling Channel for Doodle War Room
-
-
   React.useEffect(() => {
     if (!subscribedRoom || !supabase) {
       roomChannelReadyRef.current = false
       pendingRoomBroadcastsRef.current = []
+      criticalQueueRef.current = []
+      if (queueFlushTimerRef.current) {
+        clearTimeout(queueFlushTimerRef.current)
+        queueFlushTimerRef.current = null
+      }
       if (roomChannelRef.current && supabase) {
         supabase.removeChannel(roomChannelRef.current)
         roomChannelRef.current = null
@@ -373,21 +455,13 @@ export function DoodleApp() {
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
           roomChannelReadyRef.current = true
-          // Drain buffered packets immediately over the active websocket
+          // Drain buffered packets safely with spacing
           const queued = [...pendingRoomBroadcastsRef.current]
           pendingRoomBroadcastsRef.current = []
           queued.forEach((p, idx) => {
             setTimeout(() => {
-              if (roomChannelRef.current && roomChannelReadyRef.current) {
-                try {
-                  void roomChannelRef.current.send({
-                    type: "broadcast",
-                    event: "doodle_signal",
-                    payload: p,
-                  })
-                } catch {}
-              }
-            }, (idx + 1) * 30)
+              trySendRoomBroadcast(p)
+            }, (idx + 1) * 80)
           })
           iframeRef.current?.contentWindow?.postMessage(
             { type: "SUPABASE_CHANNEL_READY", roomCode: subscribedRoom },
@@ -401,12 +475,17 @@ export function DoodleApp() {
     return () => {
       roomChannelReadyRef.current = false
       pendingRoomBroadcastsRef.current = []
+      criticalQueueRef.current = []
+      if (queueFlushTimerRef.current) {
+        clearTimeout(queueFlushTimerRef.current)
+        queueFlushTimerRef.current = null
+      }
       if (roomChannelRef.current && supabase) {
         supabase.removeChannel(roomChannelRef.current)
         roomChannelRef.current = null
       }
     }
-  }, [subscribedRoom, clientId])
+  }, [subscribedRoom, clientId, trySendRoomBroadcast])
 
   const handleSelectInk = React.useCallback((inkId: number) => {
     setSelectedInk(inkId)
@@ -653,25 +732,13 @@ export function DoodleApp() {
         const payload = e.data.payload
         const isPosPacket = payload?.type === "game_msg" && payload?.msg?.t === "ps"
         const now = Date.now()
-        if (roomChannelReadyRef.current && roomChannelRef.current) {
-          if (isPosPacket) {
-            const stream = `${payload.to || "*"}|${payload.msg?.from || payload.from}`
-            const last = lastBroadcastTimeRef.current.get(stream)
-            if (last !== undefined && now - last < 200) return
-            lastBroadcastTimeRef.current.set(stream, now)
-          }
-          try {
-            void roomChannelRef.current.send({
-              type: "broadcast",
-              event: "doodle_signal",
-              payload,
-            })
-          } catch {}
-        } else if (!isPosPacket) {
-          if (pendingRoomBroadcastsRef.current.length < 20) {
-            pendingRoomBroadcastsRef.current.push(payload)
-          }
+        if (isPosPacket) {
+          const stream = `${payload.to || "*"}|${payload.msg?.from || payload.from}`
+          const last = lastBroadcastTimeRef.current.get(stream)
+          if (last !== undefined && now - last < 95) return
+          lastBroadcastTimeRef.current.set(stream, now)
         }
+        trySendRoomBroadcast(payload)
       } else if (e.data?.type === "DOODLE_SHARE_ROOM") {
         if (e.data.roomCode) {
           void handleShareToChat(e.data.roomCode)
@@ -681,7 +748,8 @@ export function DoodleApp() {
           { type: "DOODLE_ACTIVE_ROOMS", rooms: activeRoomsRef.current },
           "*"
         )
-        void queryActiveRooms()
+        // Background lobby update from iframe uses Server Action only — no realtime broadcast!
+        void queryActiveRooms(false)
       } else if (e.data?.type === "DOODLE_READY") {
         iframeRef.current?.contentWindow?.postMessage(
           { type: "DOODLE_ACTIVE_ROOMS", rooms: activeRoomsRef.current },
