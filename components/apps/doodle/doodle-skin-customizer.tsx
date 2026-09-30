@@ -2,8 +2,7 @@
 
 import * as React from "react"
 import * as THREE from "three"
-import { X, Sparkles, Check, RotateCw, Wand2, Shield, Crosshair } from "lucide-react"
-import { RetroActionButton } from "@/components/ui/retro-action-button"
+import { X, Sparkles, Check } from "lucide-react"
 import { playRetroNotificationSound } from "@/lib/sound-effects"
 import { cn } from "@/lib/utils"
 
@@ -47,69 +46,272 @@ export const DEFAULT_DOODLE_SKIN: DoodleCustomSkin = {
 }
 
 export const INK_OPTIONS = [
-  { id: 0, name: "Pulpen Biru", hex: "#1a31c2", desc: "Tinta standar dinas" },
-  { id: 1, name: "Pulpen Merah", hex: "#dc1f33", desc: "Tinta koreksi agresif" },
-  { id: 2, name: "Spidol Hitam", hex: "#2e3342", desc: "Tinta pekat permanen" },
-  { id: 3, name: "Stabilo Oranye", hex: "#eb8c14", desc: "Tinta terang mencolok" },
-  { id: 4, name: "Stabilo Hijau", hex: "#1f994d", desc: "Tinta stabilo neon" },
-  { id: 5, name: "Stabilo Pink", hex: "#e666a8", desc: "Tinta cerah playful" },
+  { id: 0, name: "Pulpen Biru", hex: "#1a31c2", desc: "Tinta standar dinas retro" },
+  { id: 1, name: "Pulpen Merah", hex: "#dc1f33", desc: "Tinta koreksi tempur agresif" },
+  { id: 2, name: "Spidol Hitam", hex: "#2e3342", desc: "Tinta pekat permanen berani" },
+  { id: 3, name: "Stabilo Oranye", hex: "#eb8c14", desc: "Tinta terang mencolok menyala" },
+  { id: 4, name: "Stabilo Hijau", hex: "#1f994d", desc: "Tinta stabilo neon taktis" },
+  { id: 5, name: "Stabilo Pink", hex: "#e666a8", desc: "Tinta cerah stylish energetik" },
 ]
 
-export const HAT_OPTIONS: { id: DoodleHatType; name: string; icon: string; desc: string }[] = [
-  { id: "cap", name: "Topi Baseball", icon: "🧢", desc: "Topi casual doodle street" },
-  { id: "beret", name: "Baret Komando (PB)", icon: "🎖️", desc: "Baret taktis prajurit elit Point Blank" },
-  { id: "band", name: "Bandana Ninja", icon: "🥷", desc: "Ikat kepala ninja dengan pita berkibar" },
-  { id: "helmet", name: "Helm SWAT Taktis", icon: "🪖", desc: "Pelindung kepala anti-peluru kevlar" },
-  { id: "hood", name: "Hoodie Assassin", icon: "🧥", desc: "Tudung misterius penyelinap bayangan" },
-  { id: "crown", name: "Mahkota Juara", icon: "👑", desc: "Mahkota emas penguasa wave tertinggi" },
-  { id: "cowboy", name: "Topi Koboi Sheriff", icon: "🤠", desc: "Topi kulit lebar penegak hukum barat" },
-  { id: "horns", name: "Tanduk Demon", icon: "😈", desc: "Tanduk iblis doodle berdarah dingin" },
-  { id: "none", name: "Polos (Gundul)", icon: "⚪", desc: "Stickman doodle orisinal tanpa aksesori" },
+export const HAT_OPTIONS: { id: DoodleHatType; name: string; desc: string }[] = [
+  { id: "cap", name: "Topi Baseball", desc: "Topi kasual street doodle" },
+  { id: "beret", name: "Baret Komando (PB)", desc: "Baret taktis prajurit elit Point Blank" },
+  { id: "band", name: "Bandana Ninja", desc: "Ikat kepala ninja dengan pita berkibar" },
+  { id: "helmet", name: "Helm SWAT Taktis", desc: "Pelindung kevlar anti-peluru" },
+  { id: "hood", name: "Hoodie Assassin", desc: "Tudung misterius penyelinap bayangan" },
+  { id: "crown", name: "Mahkota Juara", desc: "Mahkota emas penguasa wave tertinggi" },
+  { id: "cowboy", name: "Topi Koboi Sheriff", desc: "Topi kulit lebar penegak hukum" },
+  { id: "horns", name: "Tanduk Demon", desc: "Tanduk iblis doodle berdarah dingin" },
+  { id: "none", name: "Polos (Gundul)", desc: "Stickman doodle orisinal klasik" },
 ]
 
 export const WEAPON_SKIN_OPTIONS: { id: DoodleWeaponSkinType; name: string; hex: string; desc: string }[] = [
   { id: "classic", name: "Standard Ink", hex: "#1a31c2", desc: "Sesuai warna pulpen pilihanmu" },
   { id: "gold", name: "Gold Royale PB", hex: "#eab308", desc: "Lapis emas murni 24k mengkilap mewah" },
   { id: "dragon", name: "Crimson Dragon", hex: "#e11d48", desc: "Goresan naga api merah membara" },
-  { id: "cyber", name: "Cyberpunk Neon", hex: "#06b6d4", desc: "Garis laser cyan & aksen sintetis modern" },
+  { id: "cyber", name: "Cyberpunk Neon", hex: "#06b6d4", desc: "Laser cyan & aksen sintetis modern" },
   { id: "shadow", name: "Shadow Tactical", hex: "#18181b", desc: "Hitam matte anti-refleksi peredam silau" },
 ]
 
-export const FACE_OPTIONS: { id: DoodleFaceType; name: string; icon: string; desc: string }[] = [
-  { id: "classic", name: "Fokus / Serius", icon: "😐", desc: "Tatapan siap tempur bertahan dari wave" },
-  { id: "psycho", name: "Senyum Sadis (PB)", icon: "😈", desc: "Seringai killer saat mencetak headshot berantai" },
-  { id: "shades", name: "Kacamata Thug Life", icon: "🕶️", desc: "Kacamata hitam anti silau: Deal with it" },
-  { id: "angry", name: "Alis Marah", icon: "😠", desc: "Alis menukik tajam penuh dendam peluru" },
-  { id: "derp", name: "Mata Silang (X_X)", icon: "😵", desc: "Ekspresi kocak pusing kena tembak" },
+export const FACE_OPTIONS: { id: DoodleFaceType; name: string; desc: string }[] = [
+  { id: "classic", name: "Fokus / Serius", desc: "Tatapan siap tempur bertahan dari wave" },
+  { id: "psycho", name: "Senyum Sadis (PB)", desc: "Seringai killer saat kill berantai" },
+  { id: "shades", name: "Kacamata Thug Life", desc: "Kacamata hitam anti silau: Deal with it" },
+  { id: "angry", name: "Alis Marah", desc: "Alis menukik tajam penuh dendam" },
+  { id: "derp", name: "Mata Silang (X_X)", desc: "Ekspresi kocak pusing kena tembak" },
 ]
 
-export const SKIN_PRESETS: { name: string; icon: string; skin: DoodleCustomSkin }[] = [
+export const SKIN_PRESETS: { name: string; tag: string; skin: DoodleCustomSkin }[] = [
   {
     name: "Trooper Point Blank",
-    icon: "🎖️",
+    tag: "PB CLASSIC",
     skin: { hat: "beret", weaponSkin: "dragon", face: "psycho", ink: 1 },
   },
   {
     name: "Golden Emperor",
-    icon: "👑",
+    tag: "ROYALTY",
     skin: { hat: "crown", weaponSkin: "gold", face: "shades", ink: 3 },
   },
   {
     name: "Shadow Shinobi",
-    icon: "🥷",
+    tag: "STEALTH",
     skin: { hat: "band", weaponSkin: "shadow", face: "classic", ink: 2 },
   },
   {
     name: "Cyber Rebel",
-    icon: "⚡",
+    tag: "NEON 2077",
     skin: { hat: "hood", weaponSkin: "cyber", face: "shades", ink: 4 },
   },
   {
     name: "Sheriff Doodle",
-    icon: "🤠",
+    tag: "WILD WEST",
     skin: { hat: "cowboy", weaponSkin: "classic", face: "angry", ink: 0 },
   },
 ]
+
+// ========================================================
+// Bespoke Hand-Drawn Doodle SVG Icons for All Custom Items
+// ========================================================
+
+function DoodleHatIcon({ id, className = "w-7 h-7" }: { id: DoodleHatType; className?: string }) {
+  switch (id) {
+    case "cap":
+      return (
+        <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M5 21c0-6 4-11 11-11s11 5 11 11H5z" fill="#3b82f6" fillOpacity="0.25" />
+          <path d="M16 10v-2m-1 2h2" />
+          <path d="M22 17c3.5 0 7 1.5 8 3.5-1 1-5 1.5-9 1.5" fill="#1d4ed8" fillOpacity="0.4" />
+          <path d="M16 10c-3 4-5 8-5 11" strokeDasharray="1 2" />
+          <path d="M16 10c3 4 5 8 5 11" strokeDasharray="1 2" />
+        </svg>
+      )
+    case "beret":
+      return (
+        <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <ellipse cx="16" cy="15" rx="12" ry="7" transform="rotate(-12 16 15)" fill="#dc2626" fillOpacity="0.3" stroke="#b91c1c" />
+          <path d="M7 19c2 3 7 4 15 2" stroke="#1c1917" strokeWidth="2.2" />
+          <path d="M9 13l2.5 3.5 2.5-3.5" fill="#f59e0b" stroke="#d97706" />
+          <circle cx="11.5" cy="14.5" r="1.5" fill="#fef08a" stroke="#b45309" />
+        </svg>
+      )
+    case "band":
+      return (
+        <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 14h24v5H4z" fill="#d97706" fillOpacity="0.3" stroke="#b45309" />
+          <rect x="11" y="13" width="10" height="7" rx="1" fill="#e2e8f0" stroke="#475569" />
+          <circle cx="13" cy="16.5" r="0.8" fill="#475569" />
+          <circle cx="19" cy="16.5" r="0.8" fill="#475569" />
+          <path d="M27 18c2 2 3 5 2 7m-1-6c2 1 4 3 3.5 5" stroke="#b45309" strokeWidth="2" />
+        </svg>
+      )
+    case "helmet":
+      return (
+        <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 18C6 11 10 7 16 7s10 4 10 11H6z" fill="#334155" fillOpacity="0.35" stroke="#1e293b" />
+          <path d="M4 18h24c0 2-2 3-5 3H9c-3 0-5-1-5-3z" fill="#1e293b" />
+          <path d="M11 14h10v3H11z" fill="#0284c7" fillOpacity="0.7" stroke="#0369a1" />
+          <path d="M9 21l2 5m12-5l-2 5" stroke="#64748b" />
+        </svg>
+      )
+    case "hood":
+      return (
+        <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M16 4L7 16c-1 6 1 12 9 12s10-6 9-12L16 4z" fill="#0f172a" fillOpacity="0.3" stroke="#0f172a" />
+          <path d="M16 7c-4 5-5 8-5 13s2 5 5 5 5-2 5-5-1-8-5-13z" fill="#020617" />
+          <circle cx="13.5" cy="18" r="1" fill="#38bdf8" />
+          <circle cx="18.5" cy="18" r="1" fill="#38bdf8" />
+        </svg>
+      )
+    case "crown":
+      return (
+        <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M5 22L7 11l5 6 4-9 4 9 5-6 2 11H5z" fill="#fbbf24" fillOpacity="0.4" stroke="#d97706" />
+          <circle cx="7" cy="10" r="1.5" fill="#ef4444" stroke="#b91c1c" />
+          <circle cx="16" cy="7" r="1.8" fill="#3b82f6" stroke="#1d4ed8" />
+          <circle cx="25" cy="10" r="1.5" fill="#ef4444" stroke="#b91c1c" />
+          <rect x="5" y="21" width="22" height="3" fill="#f59e0b" stroke="#b45309" />
+        </svg>
+      )
+    case "cowboy":
+      return (
+        <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M11 12c1-3 3-4 5-4s4 1 5 4v6h-10v-6z" fill="#78350f" fillOpacity="0.3" stroke="#78350f" />
+          <path d="M11 14c2-1 4-1 5 0s3 0 5-1" />
+          <path d="M3 20c3-2 8-2 13-2s10 0 13 2c-2 2-6 2-13 2s-11 0-13-2z" fill="#92400e" fillOpacity="0.4" stroke="#78350f" />
+          <path d="M11 17h10" stroke="#f59e0b" strokeWidth="1.5" />
+        </svg>
+      )
+    case "horns":
+      return (
+        <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9 22c-1-5-3-9-6-11 4 1 7 4 8 9" fill="#dc2626" fillOpacity="0.4" stroke="#b91c1c" />
+          <path d="M23 22c1-5 3-9 6-11-4 1-7 4-8 9" fill="#dc2626" fillOpacity="0.4" stroke="#b91c1c" />
+          <path d="M5 14c1 1 2 2 3 4m16-4c-1 1-2 2-3 4" stroke="#7f1d1d" strokeDasharray="1 1.5" />
+        </svg>
+      )
+    case "none":
+    default:
+      return (
+        <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="16" cy="16" r="9" fill="#e2e8f0" fillOpacity="0.3" stroke="#475569" />
+          <path d="M11 16h0.5M20.5 16h0.5" stroke="#0f172a" strokeWidth="2.5" />
+          <path d="M13 20c1.5 1 4.5 1 6 0" stroke="#475569" />
+        </svg>
+      )
+  }
+}
+
+function DoodleWeaponIcon({ id, className = "w-7 h-7" }: { id: DoodleWeaponSkinType; className?: string }) {
+  switch (id) {
+    case "gold":
+      return (
+        <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M5 18l14-6 8 3v4l-7 2-4-2H5v-1z" fill="#facc15" fillOpacity="0.4" stroke="#ca8a04" />
+          <path d="M14 18v5l-3 1v-5" fill="#ca8a04" stroke="#854d0e" />
+          <path d="M22 13l2-4 3 1-1 4" stroke="#ca8a04" />
+          <path d="M27 8l1-2m-1 2l-2-1m2 1l2 1" stroke="#f59e0b" strokeWidth="1.5" />
+          <circle cx="8" cy="13" r="1.5" fill="#fef08a" />
+        </svg>
+      )
+    case "dragon":
+      return (
+        <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M5 19l14-5 8 2v4l-7 3-4-2H5v-2z" fill="#ef4444" fillOpacity="0.35" stroke="#b91c1c" />
+          <path d="M18 10c2-3 5-4 8-3-2 3-2 6-4 8" fill="#f97316" fillOpacity="0.5" stroke="#ea580c" />
+          <path d="M14 18v5l-3 1v-5" fill="#b91c1c" stroke="#7f1d1d" />
+          <circle cx="23" cy="12" r="1.2" fill="#fef08a" stroke="#b45309" />
+        </svg>
+      )
+    case "cyber":
+      return (
+        <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M5 19l14-6 8 3v3l-7 2-4-2H5v0z" fill="#06b6d4" fillOpacity="0.3" stroke="#0891b2" />
+          <path d="M27 15h4m-2-2v4" stroke="#06b6d4" strokeWidth="2" />
+          <path d="M14 18v5l-3 1v-5" fill="#0e7490" stroke="#155e75" />
+          <path d="M11 15h7" stroke="#e879f9" strokeWidth="1.5" />
+          <rect x="7" y="17" width="2" height="2" fill="#22d3ee" />
+        </svg>
+      )
+    case "shadow":
+      return (
+        <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 19l16-6 8 2v4l-7 3-5-2H3v-1z" fill="#18181b" fillOpacity="0.5" stroke="#27272a" />
+          <path d="M27 15h4v2h-4z" fill="#3f3f46" stroke="#27272a" />
+          <path d="M14 18v5l-3 1v-5" fill="#27272a" stroke="#18181b" />
+          <circle cx="20" cy="14" r="1" fill="#ef4444" />
+        </svg>
+      )
+    case "classic":
+    default:
+      return (
+        <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M5 18l14-6 8 3v4l-7 2-4-2H5v-1z" fill="#3b82f6" fillOpacity="0.25" stroke="#1d4ed8" />
+          <path d="M14 18v5l-3 1v-5" fill="#1d4ed8" fillOpacity="0.4" stroke="#1e3a8a" />
+          <path d="M22 13l2-3 2 1-1 3" stroke="#1d4ed8" />
+        </svg>
+      )
+  }
+}
+
+function DoodleFaceIcon({ id, className = "w-7 h-7" }: { id: DoodleFaceType; className?: string }) {
+  switch (id) {
+    case "psycho":
+      return (
+        <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="16" cy="16" r="11" fill="#fee2e2" fillOpacity="0.4" stroke="#dc2626" />
+          <circle cx="11.5" cy="13" r="2.5" fill="#fff" stroke="#991b1b" strokeWidth="1.8" />
+          <circle cx="12" cy="13" r="1" fill="#991b1b" />
+          <circle cx="20.5" cy="13" r="2.5" fill="#fff" stroke="#991b1b" strokeWidth="1.8" />
+          <circle cx="20" cy="13" r="1" fill="#991b1b" />
+          <path d="M9 19c2 5 12 5 14 0-2 2-12 2-14 0z" fill="#fff" stroke="#991b1b" />
+          <path d="M12 20.5v1.5m4-1.5v1.5m4-1.5v1.5" stroke="#991b1b" strokeWidth="1.2" />
+        </svg>
+      )
+    case "shades":
+      return (
+        <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="16" cy="16" r="11" fill="#e2e8f0" fillOpacity="0.3" stroke="#475569" />
+          <rect x="7" y="12" width="7" height="6" fill="#0f172a" stroke="#0f172a" rx="1" />
+          <rect x="18" y="12" width="7" height="6" fill="#0f172a" stroke="#0f172a" rx="1" />
+          <path d="M14 14h4" stroke="#0f172a" strokeWidth="2.5" />
+          <path d="M9 13.5l3 3m10-3l3 3" stroke="#fff" strokeWidth="1.2" />
+          <path d="M13 22h6" stroke="#475569" strokeWidth="2" />
+        </svg>
+      )
+    case "angry":
+      return (
+        <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="16" cy="16" r="11" fill="#fef3c7" fillOpacity="0.3" stroke="#d97706" />
+          <path d="M8 11l5 3m11-3l-5 3" stroke="#b45309" strokeWidth="2.4" />
+          <circle cx="11.5" cy="15.5" r="1.5" fill="#78350f" />
+          <circle cx="20.5" cy="15.5" r="1.5" fill="#78350f" />
+          <path d="M12 22c2-2 6-2 8 0" stroke="#78350f" strokeWidth="2.2" />
+        </svg>
+      )
+    case "derp":
+      return (
+        <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="16" cy="16" r="11" fill="#f3e8ff" fillOpacity="0.3" stroke="#9333ea" />
+          <path d="M9 12l5 5m-5 0l5-5m4 0l5 5m-5 0l5-5" stroke="#7e22ce" strokeWidth="2" />
+          <path d="M12 21c2 1 6 1 8-0.5" stroke="#7e22ce" strokeWidth="2" />
+          <path d="M18 21.5c1 1 1 3 0 4s-2 0-1-3" fill="#ec4899" stroke="#be185d" />
+        </svg>
+      )
+    case "classic":
+    default:
+      return (
+        <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="16" cy="16" r="11" fill="#f8fafc" fillOpacity="0.4" stroke="#475569" />
+          <circle cx="11.5" cy="14.5" r="2.2" fill="#fff" stroke="#334155" strokeWidth="1.5" />
+          <circle cx="12" cy="14.5" r="1" fill="#0f172a" />
+          <circle cx="20.5" cy="14.5" r="2.2" fill="#fff" stroke="#334155" strokeWidth="1.5" />
+          <circle cx="20" cy="14.5" r="1" fill="#0f172a" />
+          <path d="M13 20.5c1.5 1 4.5 1 6 0" stroke="#334155" strokeWidth="2" />
+        </svg>
+      )
+  }
+}
 
 interface DoodleSkinCustomizerProps {
   currentSkin?: DoodleCustomSkin
@@ -150,304 +352,448 @@ export function DoodleSkinCustomizer({
   const [isAutoRotate, setIsAutoRotate] = React.useState<boolean>(true)
   const canvasRef = React.useRef<HTMLCanvasElement>(null)
 
-  // 3D Preview Engine with Three.js
+  // ========================================================
+  // 3D Preview Engine with Lighting, Outlines, & Cel Shading
+  // ========================================================
   React.useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
 
     let animationFrameId: number
-    const width = canvas.clientWidth || 240
-    const height = canvas.clientHeight || 280
+    const width = canvas.clientWidth || 250
+    const height = canvas.clientHeight || 300
 
     const scene = new THREE.Scene()
-    scene.background = new THREE.Color("#f7f4ea") // Doodle paper color
+    scene.background = new THREE.Color("#fbf9f1") // Warm doodle sketchbook paper
 
-    const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100)
-    camera.position.set(0, 1.25, 3.6)
+    const camera = new THREE.PerspectiveCamera(38, width / height, 0.1, 100)
+    camera.position.set(0, 1.25, 3.65)
     camera.lookAt(0, 0.95, 0)
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true })
     renderer.setSize(width, height)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
-    // Lighting
-    const amb = new THREE.AmbientLight(0xffffff, 0.9)
+    // Studio 3-Point Cel Lighting
+    const amb = new THREE.AmbientLight(0xffffff, 0.8)
     scene.add(amb)
-    const dir = new THREE.DirectionalLight(0xfff5e6, 0.6)
-    dir.position.set(2, 4, 3)
-    scene.add(dir)
 
-    // Character Group
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.3)
+    keyLight.position.set(2.5, 4.5, 3.5)
+    scene.add(keyLight)
+
+    // Soft blue rim light for comic edge definition
+    const rimLight = new THREE.DirectionalLight(0x7dd3fc, 0.8)
+    rimLight.position.set(-3, 3, -3)
+    scene.add(rimLight)
+
+    // Warm ground bounce light
+    const bounceLight = new THREE.DirectionalLight(0xfde68a, 0.35)
+    bounceLight.position.set(0, -2, 1)
+    scene.add(bounceLight)
+
+    // Ground Sketch Shadow (Hand-drawn circular shadow)
+    const shadowGeo = new THREE.RingGeometry(0.04, 0.48, 32)
+    const shadowMat = new THREE.MeshBasicMaterial({
+      color: 0xbaa98c,
+      transparent: true,
+      opacity: 0.45,
+      side: THREE.DoubleSide,
+    })
+    const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat)
+    shadowMesh.rotation.x = -Math.PI / 2
+    shadowMesh.position.y = 0.015
+    scene.add(shadowMesh)
+
+    // Character Root Group
     const charRoot = new THREE.Group()
     scene.add(charRoot)
 
     // Ink color resolver
     const activeHex = INK_OPTIONS[skin.ink]?.hex || "#1a31c2"
     const inkColor = new THREE.Color(activeHex)
-    const blackColor = new THREE.Color("#18181b")
+    const outlineColor = new THREE.Color("#18181b")
 
-    // Materials
-    const bodyMat = new THREE.MeshBasicMaterial({ color: inkColor, wireframe: false })
-    const outlineMat = new THREE.MeshBasicMaterial({ color: blackColor })
+    // Core Materials with 3D Normals & Highlight (No flat black blob!)
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: inkColor,
+      roughness: 0.32,
+      metalness: 0.12,
+    })
 
-    // Torso & Hips
-    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.14, 0.55, 12), bodyMat)
+    const darkAccentMat = new THREE.MeshStandardMaterial({
+      color: outlineColor,
+      roughness: 0.4,
+      metalness: 0.2,
+    })
+
+    const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff })
+
+    // Helper: Add inked outline edges to geometry
+    const addEdges = (mesh: THREE.Mesh, color = 0x111827) => {
+      const edges = new THREE.EdgesGeometry(mesh.geometry, 30)
+      const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color, linewidth: 1.5 }))
+      mesh.add(line)
+      return mesh
+    }
+
+    // Torso (Paper Stickman Body with Contours)
+    const torsoGeo = new THREE.CylinderGeometry(0.18, 0.14, 0.55, 16)
+    const torso = addEdges(new THREE.Mesh(torsoGeo, bodyMat))
     torso.position.y = 0.9
     charRoot.add(torso)
 
     // Belt / Hips
-    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.08, 12), outlineMat)
+    const belt = addEdges(new THREE.Mesh(new THREE.CylinderGeometry(0.155, 0.155, 0.08, 16), darkAccentMat))
     belt.position.y = 0.62
     charRoot.add(belt)
 
-    // Legs
-    for (const side of [-1, 1]) {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.04, 0.58, 8), bodyMat)
-      leg.position.set(side * 0.09, 0.32, 0)
-      charRoot.add(leg)
+    // Legs in Tactical Ready Stance
+    const legL = addEdges(new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.04, 0.58, 10), bodyMat))
+    legL.position.set(-0.11, 0.32, -0.05)
+    legL.rotation.x = 0.08
+    charRoot.add(legL)
 
-      const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.16), outlineMat)
-      shoe.position.set(side * 0.09, 0.03, 0.03)
-      charRoot.add(shoe)
-    }
+    const shoeL = addEdges(new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.065, 0.17), darkAccentMat))
+    shoeL.position.set(-0.11, 0.035, -0.01)
+    charRoot.add(shoeL)
 
-    // Arms
-    const armL = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.035, 0.48, 8), bodyMat)
-    armL.position.set(-0.25, 0.9, 0.05)
-    armL.rotation.z = 0.25
-    charRoot.add(armL)
+    const legR = addEdges(new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.04, 0.58, 10), bodyMat))
+    legR.position.set(0.11, 0.32, 0.06)
+    legR.rotation.x = -0.12
+    charRoot.add(legR)
 
-    const armR = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.035, 0.45, 8), bodyMat)
-    armR.position.set(0.24, 0.95, 0.2)
-    armR.rotation.x = -0.7
-    armR.rotation.z = -0.3
-    charRoot.add(armR)
+    const shoeR = addEdges(new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.065, 0.17), darkAccentMat))
+    shoeR.position.set(0.11, 0.035, 0.11)
+    charRoot.add(shoeR)
 
-    // Head
+    // Head Group
     const headGroup = new THREE.Group()
     headGroup.position.set(0, 1.34, 0)
     charRoot.add(headGroup)
 
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.23, 16, 12), bodyMat)
+    const headGeo = new THREE.SphereGeometry(0.23, 20, 16)
+    const head = addEdges(new THREE.Mesh(headGeo, bodyMat))
     headGroup.add(head)
 
-    // Face Expression
+    // Face Expression with Guaranteed Contrast
     const faceG = new THREE.Group()
     faceG.position.set(0, 0.02, 0.22)
     headGroup.add(faceG)
 
     if (skin.face === "shades") {
-      // Thug life pixel shades
-      const glassL = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.05, 0.04), outlineMat)
-      glassL.position.x = -0.065
+      // Thug life pixel shades with white glints
+      const glassMat = new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.1, metalness: 0.8 })
+      const glassL = addEdges(new THREE.Mesh(new THREE.BoxGeometry(0.115, 0.055, 0.035), glassMat), 0xffffff)
+      glassL.position.x = -0.068
       faceG.add(glassL)
-      const glassR = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.05, 0.04), outlineMat)
-      glassR.position.x = 0.065
+
+      const glassR = addEdges(new THREE.Mesh(new THREE.BoxGeometry(0.115, 0.055, 0.035), glassMat), 0xffffff)
+      glassR.position.x = 0.068
       faceG.add(glassR)
-      const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 0.03), outlineMat)
+
+      const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 0.025), glassMat)
       bridge.position.y = 0.015
       faceG.add(bridge)
+
+      // Comic reflection streaks on shades
+      const glintMat = new THREE.MeshBasicMaterial({ color: 0xffffff })
+      const glintL = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.012, 0.04), glintMat)
+      glintL.position.set(-0.068, 0.015, 0.01)
+      glintL.rotation.z = 0.6
+      faceG.add(glintL)
     } else if (skin.face === "derp") {
-      // X eyes
+      // X_X eyes with white backing
       for (const side of [-1, 1]) {
+        const eyePlate = new THREE.Mesh(new THREE.CircleGeometry(0.05, 12), eyeWhiteMat)
+        eyePlate.position.set(side * 0.075, 0.02, -0.005)
+        faceG.add(eyePlate)
+
         for (const rot of [0.75, -0.75]) {
-          const cross = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.018, 0.02), outlineMat)
-          cross.position.set(side * 0.07, 0.02, 0)
+          const cross = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.018, 0.02), darkAccentMat)
+          cross.position.set(side * 0.075, 0.02, 0.005)
           cross.rotation.z = rot
           faceG.add(cross)
         }
       }
+
+      // Playful tongue
+      const tongue = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.025, 0.025, 0.04, 8),
+        new THREE.MeshBasicMaterial({ color: 0xf43f5e })
+      )
+      tongue.position.set(0.02, -0.09, 0.01)
+      tongue.rotation.x = 0.4
+      faceG.add(tongue)
     } else {
-      // Standard eyes
+      // High-contrast Eyes (White sclera backing + dark pupils)
       for (const side of [-1, 1]) {
-        const eye = new THREE.Mesh(new THREE.SphereGeometry(0.032, 8, 6), outlineMat)
-        eye.position.set(side * 0.07, 0.02, 0)
-        eye.scale.set(0.8, 1.2, 0.6)
-        faceG.add(eye)
+        // White sclera so eye never disappears
+        const sclera = new THREE.Mesh(new THREE.SphereGeometry(0.042, 10, 8), eyeWhiteMat)
+        sclera.position.set(side * 0.075, 0.025, 0)
+        sclera.scale.set(0.9, 1.25, 0.6)
+        faceG.add(sclera)
+
+        // Dark pupil
+        const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.022, 8, 6), darkAccentMat)
+        pupil.position.set(side * 0.075, 0.025, 0.022)
+        pupil.scale.set(0.8, 1.2, 0.6)
+        faceG.add(pupil)
       }
 
       // Eyebrows
       if (skin.face === "angry") {
         for (const side of [-1, 1]) {
-          const brow = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.02, 0.02), outlineMat)
-          brow.position.set(side * 0.07, 0.08, 0)
-          brow.rotation.z = side * -0.4
+          const brow = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.022, 0.02), darkAccentMat)
+          brow.position.set(side * 0.075, 0.085, 0.01)
+          brow.rotation.z = side * -0.42
           faceG.add(brow)
         }
       }
 
       // Mouth
       if (skin.face === "psycho") {
-        // Psycho grin
-        const grin = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.018, 6, 12, Math.PI * 0.9), outlineMat)
-        grin.position.set(0, -0.07, 0)
+        // Point Blank psycho wide grin with comic teeth
+        const teethPlate = new THREE.Mesh(new THREE.CircleGeometry(0.065, 12), eyeWhiteMat)
+        teethPlate.position.set(0, -0.07, 0)
+        teethPlate.scale.set(1.2, 0.6, 1)
+        faceG.add(teethPlate)
+
+        const grin = new THREE.Mesh(new THREE.TorusGeometry(0.072, 0.016, 6, 14, Math.PI * 0.95), darkAccentMat)
+        grin.position.set(0, -0.07, 0.01)
         grin.rotation.z = Math.PI
         faceG.add(grin)
       } else {
-        // Neutral slight smile
-        const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.014, 6, 10, Math.PI * 0.8), outlineMat)
-        mouth.position.set(0, -0.07, 0)
+        const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.048, 0.012, 6, 10, Math.PI * 0.8), darkAccentMat)
+        mouth.position.set(0, -0.075, 0)
         faceG.add(mouth)
       }
     }
 
-    // Hat / Headgear
+    // ========================================================
+    // Hat & Headgear Models with Rich Stylization
+    // ========================================================
     const hatG = new THREE.Group()
     headGroup.add(hatG)
 
     if (skin.hat === "cap") {
-      const capDome = new THREE.Mesh(
-        new THREE.SphereGeometry(0.245, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.55),
-        bodyMat
+      const capDome = addEdges(
+        new THREE.Mesh(new THREE.SphereGeometry(0.245, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), bodyMat)
       )
       capDome.position.y = 0.04
-      capDome.scale.set(1.04, 0.7, 1.04)
+      capDome.scale.set(1.05, 0.72, 1.05)
       hatG.add(capDome)
 
-      const visor = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.03, 0.22), bodyMat)
-      visor.position.set(0, 0.03, 0.2)
-      visor.rotation.x = -0.18
+      const visor = addEdges(new THREE.Mesh(new THREE.BoxGeometry(0.29, 0.032, 0.23), bodyMat))
+      visor.position.set(0, 0.03, 0.21)
+      visor.rotation.x = -0.16
       hatG.add(visor)
+
+      // Top button
+      const btn = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), darkAccentMat)
+      btn.position.y = 0.21
+      hatG.add(btn)
     } else if (skin.hat === "beret") {
-      // Point Blank Red / Ink Beret
-      const beretMat = new THREE.MeshBasicMaterial({
-        color: skin.ink === 1 ? new THREE.Color("#b91c1c") : inkColor,
-      })
-      const beret = new THREE.Mesh(
-        new THREE.SphereGeometry(0.26, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.52),
-        beretMat
+      // Point Blank Red / Ink Beret with Golden Crest
+      const beretColor = skin.ink === 1 ? new THREE.Color("#b91c1c") : inkColor
+      const beretMat = new THREE.MeshStandardMaterial({ color: beretColor, roughness: 0.5 })
+      const beret = addEdges(
+        new THREE.Mesh(new THREE.SphereGeometry(0.265, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.52), beretMat),
+        0x7f1d1d
       )
       beret.position.set(0.04, 0.08, 0)
-      beret.rotation.z = -0.25
-      beret.scale.set(1.2, 0.65, 1.15)
+      beret.rotation.z = -0.26
+      beret.scale.set(1.22, 0.65, 1.15)
       hatG.add(beret)
 
-      // Gold Tactical Emblem / Badge
+      // Headband rim
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.02, 6, 18), darkAccentMat)
+      rim.rotation.x = Math.PI / 2
+      rim.position.set(0, 0.04, 0)
+      hatG.add(rim)
+
+      // Gold Tactical Eagle Crest Emblem
       const badge = new THREE.Mesh(
-        new THREE.BoxGeometry(0.05, 0.07, 0.02),
-        new THREE.MeshBasicMaterial({ color: 0xf59e0b })
+        new THREE.BoxGeometry(0.05, 0.075, 0.02),
+        new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.8, roughness: 0.2 })
       )
       badge.position.set(-0.13, 0.11, 0.16)
       badge.rotation.z = 0.2
       hatG.add(badge)
     } else if (skin.hat === "band") {
       // Ninja headband
-      const band = new THREE.Mesh(
-        new THREE.TorusGeometry(0.235, 0.026, 6, 16),
-        new THREE.MeshBasicMaterial({ color: 0xd97706 })
-      )
+      const bandMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.4 })
+      const band = addEdges(new THREE.Mesh(new THREE.TorusGeometry(0.235, 0.028, 6, 18), bandMat))
       band.rotation.x = Math.PI / 2
       band.position.y = 0.06
       hatG.add(band)
 
-      // Tails behind
+      // Metallic Forehead Plate
+      const plate = new THREE.Mesh(
+        new THREE.BoxGeometry(0.12, 0.048, 0.025),
+        new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.7, roughness: 0.2 })
+      )
+      plate.position.set(0, 0.06, 0.23)
+      hatG.add(plate)
+
+      // Flowing Tails
       for (const offset of [-0.05, 0.05]) {
-        const tail = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.02, 0.35), new THREE.MeshBasicMaterial({ color: 0xd97706 }))
+        const tail = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.02, 0.38), bandMat)
         tail.position.set(offset, 0.04, -0.28)
         tail.rotation.x = 0.35
         hatG.add(tail)
       }
     } else if (skin.hat === "helmet") {
-      // SWAT tactical helmet
-      const helmMat = new THREE.MeshBasicMaterial({ color: 0x334155 })
-      const helm = new THREE.Mesh(new THREE.SphereGeometry(0.265, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.58), helmMat)
+      // SWAT tactical kevlar helmet
+      const helmMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.6 })
+      const helm = addEdges(
+        new THREE.Mesh(new THREE.SphereGeometry(0.265, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.58), helmMat),
+        0x0f172a
+      )
       helm.position.y = 0.02
       helm.scale.set(1.08, 0.88, 1.08)
       hatG.add(helm)
 
-      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.265, 0.028, 6, 16), helmMat)
-      rim.rotation.x = Math.PI / 2
-      rim.position.y = -0.02
-      hatG.add(rim)
+      // Tactical Goggle Strap
+      const strap = new THREE.Mesh(new THREE.TorusGeometry(0.265, 0.026, 6, 18), darkAccentMat)
+      strap.rotation.x = Math.PI / 2
+      strap.position.y = 0.02
+      hatG.add(strap)
     } else if (skin.hat === "hood") {
-      // Assassin hood
-      const hoodMat = new THREE.MeshBasicMaterial({ color: 0x1e293b })
-      const hood = new THREE.Mesh(new THREE.SphereGeometry(0.275, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.65), hoodMat)
+      // Assassin dark hood
+      const hoodMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.65 })
+      const hood = addEdges(
+        new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.65), hoodMat),
+        0x020617
+      )
       hood.position.set(0, 0.01, -0.02)
-      hood.scale.set(1.05, 1.15, 1.02)
+      hood.scale.set(1.06, 1.15, 1.04)
       hatG.add(hood)
     } else if (skin.hat === "crown") {
-      // Gold Champion Crown
-      const crownMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b })
-      const crownBase = new THREE.Mesh(new THREE.TorusGeometry(0.21, 0.025, 6, 16), crownMat)
+      // Gold Champion Crown with inlaid gems
+      const crownMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.85, roughness: 0.15 })
+      const crownBase = new THREE.Mesh(new THREE.TorusGeometry(0.21, 0.025, 6, 18), crownMat)
       crownBase.rotation.x = Math.PI / 2
       crownBase.position.y = 0.22
       hatG.add(crownBase)
 
+      const gemColors = [0xef4444, 0x3b82f6, 0x10b981, 0x8b5cf6, 0xef4444]
       for (let i = 0; i < 5; i++) {
-        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.18, 4), crownMat)
         const angle = (i / 5) * Math.PI * 2
+        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.18, 5), crownMat)
         spike.position.set(Math.cos(angle) * 0.2, 0.3, Math.sin(angle) * 0.2)
         hatG.add(spike)
+
+        // Inlaid ruby/sapphire gem
+        const gem = new THREE.Mesh(
+          new THREE.SphereGeometry(0.02, 6, 6),
+          new THREE.MeshBasicMaterial({ color: gemColors[i] })
+        )
+        gem.position.set(Math.cos(angle) * 0.22, 0.23, Math.sin(angle) * 0.22)
+        hatG.add(gem)
       }
     } else if (skin.hat === "cowboy") {
-      // Cowboy hat
-      const leatherMat = new THREE.MeshBasicMaterial({ color: 0x78350f })
-      const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.025, 16), leatherMat)
+      // Cowboy Stetson
+      const leatherMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.7 })
+      const brim = addEdges(new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 0.025, 18), leatherMat))
       brim.position.y = 0.08
       brim.rotation.x = 0.08
       brim.scale.set(1.08, 1, 1.25)
       hatG.add(brim)
 
-      const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.23, 0.2, 12), leatherMat)
+      const crown = addEdges(new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.23, 0.2, 14), leatherMat))
       crown.position.y = 0.18
       hatG.add(crown)
     } else if (skin.hat === "horns") {
-      // Demon horns
-      const hornMat = new THREE.MeshBasicMaterial({ color: 0xb91c1c })
+      // Demon obsidian horns with glowing gradient tips
+      const hornMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.2, metalness: 0.3 })
       for (const side of [-1, 1]) {
-        const horn = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.22, 6), hornMat)
-        horn.position.set(side * 0.14, 0.24, 0.04)
+        const horn = addEdges(new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.24, 7), hornMat))
+        horn.position.set(side * 0.14, 0.25, 0.04)
         horn.rotation.z = side * -0.42
         horn.rotation.x = -0.2
         hatG.add(horn)
       }
     }
 
-    // Weapon in hand
+    // ========================================================
+    // Dynamic Tactical Weapon Pose (Both Hands on Weapon)
+    // ========================================================
     const weaponG = new THREE.Group()
-    weaponG.position.set(0.28, 0.88, 0.35)
+    weaponG.position.set(0.18, 0.82, 0.32)
+    weaponG.rotation.y = -0.15
     charRoot.add(weaponG)
 
-    // Weapon Skin Material
-    let wColor = inkColor
-    let wHighlight = outlineMat
+    // Weapon Skin Finishes
+    let wMat = bodyMat
+    let wAccentMat = darkAccentMat
 
     if (skin.weaponSkin === "gold") {
-      wColor = new THREE.Color("#f59e0b") // Golden
-      wHighlight = new THREE.MeshBasicMaterial({ color: 0x78350f })
+      wMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.88, roughness: 0.15 })
+      wAccentMat = new THREE.MeshStandardMaterial({ color: 0x78350f, metalness: 0.5, roughness: 0.3 })
     } else if (skin.weaponSkin === "dragon") {
-      wColor = new THREE.Color("#e11d48") // Crimson dragon
-      wHighlight = new THREE.MeshBasicMaterial({ color: 0xfacc15 })
+      wMat = new THREE.MeshStandardMaterial({ color: 0xe11d48, metalness: 0.4, roughness: 0.25 })
+      wAccentMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.7, roughness: 0.2 })
     } else if (skin.weaponSkin === "cyber") {
-      wColor = new THREE.Color("#06b6d4") // Neon Cyan
-      wHighlight = new THREE.MeshBasicMaterial({ color: 0xd946ef })
+      wMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, metalness: 0.6, roughness: 0.2 })
+      wAccentMat = new THREE.MeshStandardMaterial({ color: 0xd946ef, metalness: 0.5, roughness: 0.2 })
     } else if (skin.weaponSkin === "shadow") {
-      wColor = new THREE.Color("#18181b") // Matte Black
-      wHighlight = new THREE.MeshBasicMaterial({ color: 0x52525b })
+      wMat = new THREE.MeshStandardMaterial({ color: 0x18181b, metalness: 0.3, roughness: 0.5 })
+      wAccentMat = new THREE.MeshStandardMaterial({ color: 0x3f3f46, metalness: 0.4, roughness: 0.4 })
     }
 
-    const wMat = new THREE.MeshBasicMaterial({ color: wColor })
+    // Rifle Receiver
+    const receiver = addEdges(new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, 0.48), wMat))
+    weaponG.add(receiver)
 
-    // Assault Rifle Model
-    const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.1, 0.52), wMat)
+    // Barrel
+    const barrel = addEdges(new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.36, 8), wAccentMat))
+    barrel.rotation.x = Math.PI / 2
+    barrel.position.set(0, 0.02, 0.38)
     weaponG.add(barrel)
 
-    const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.22, 6), wHighlight)
-    tip.rotation.x = Math.PI / 2
-    tip.position.set(0, 0.02, 0.32)
-    weaponG.add(tip)
+    // Muzzle flash hider
+    const muzzle = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.026, 0.06, 8), darkAccentMat)
+    muzzle.rotation.x = Math.PI / 2
+    muzzle.position.set(0, 0.02, 0.57)
+    weaponG.add(muzzle)
 
-    const mag = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.18, 0.09), wHighlight)
-    mag.position.set(0, -0.12, 0.02)
-    mag.rotation.x = 0.25
+    // Curved Banana Magazine
+    const mag = addEdges(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.19, 0.1), wAccentMat))
+    mag.position.set(0, -0.13, 0.06)
+    mag.rotation.x = 0.28
     weaponG.add(mag)
 
-    const stock = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, 0.16), wHighlight)
-    stock.position.set(0, -0.02, -0.3)
+    // Stock
+    const stock = addEdges(new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.09, 0.2), wAccentMat))
+    stock.position.set(0, -0.02, -0.32)
     weaponG.add(stock)
 
-    // Mouse / Touch Drag to Rotate
+    // Red Dot Holographic Sight
+    const sight = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.045, 0.08), darkAccentMat)
+    sight.position.set(0, 0.08, 0)
+    weaponG.add(sight)
+
+    const opticDot = new THREE.Mesh(new THREE.SphereGeometry(0.008, 6, 6), new THREE.MeshBasicMaterial({ color: 0xef4444 }))
+    opticDot.position.set(0, 0.08, 0.045)
+    weaponG.add(opticDot)
+
+    // Right Arm gripping trigger
+    const armR = addEdges(new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.035, 0.45, 8), bodyMat))
+    armR.position.set(0.24, 0.96, 0.15)
+    armR.rotation.x = -0.65
+    armR.rotation.z = -0.35
+    charRoot.add(armR)
+
+    // Left Arm supporting handguard
+    const armL = addEdges(new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.035, 0.52, 8), bodyMat))
+    armL.position.set(-0.16, 0.92, 0.18)
+    armL.rotation.x = -0.5
+    armL.rotation.y = 0.45
+    armL.rotation.z = 0.5
+    charRoot.add(armL)
+
+    // Interactive Drag / Touch Turntable
     let isDragging = false
     let prevMouseX = 0
     let rotSpeed = 0
@@ -480,17 +826,19 @@ export function DoodleSkinCustomizer({
     window.addEventListener("touchmove", handlePointerMove, { passive: true })
     window.addEventListener("touchend", handlePointerUp)
 
-    // Animation Loop
+    // Animation Loop (Breathing + Smooth Rotation)
     let clock = 0
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate)
-      clock += 0.025
+      clock += 0.03
 
-      // Subtle breathing / bobbing
-      charRoot.position.y = Math.sin(clock * 2) * 0.02
+      // Breathing bobbing
+      charRoot.position.y = Math.sin(clock * 1.8) * 0.015
+      torso.scale.x = 1 + Math.sin(clock * 1.8) * 0.015
+      weaponG.position.y = 0.82 + Math.sin(clock * 1.8) * 0.008
 
       if (isAutoRotate && !isDragging) {
-        charRoot.rotation.y += 0.012
+        charRoot.rotation.y += 0.011
       } else if (!isDragging && Math.abs(rotSpeed) > 0.001) {
         charRoot.rotation.y += rotSpeed
         rotSpeed *= 0.94
@@ -557,12 +905,14 @@ export function DoodleSkinCustomizer({
           {/* Left Column: 3D Live Turntable Preview */}
           <div className="flex flex-col items-center justify-between bg-[#fbf9f1] border-2 border-t-[#808080] border-l-[#808080] border-b-white border-r-white p-2 rounded-xs w-full md:w-64 shrink-0 shadow-inner">
             <div className="w-full text-center pb-1 border-b border-[#d8d2be] text-[11px] font-mono text-stone-600 flex items-center justify-between">
-              <span className="font-bold">PREVIEW 3D</span>
+              <span className="font-bold flex items-center gap-1">
+                <span>🎨</span> PREVIEW 3D
+              </span>
               <button
                 type="button"
                 onClick={() => setIsAutoRotate((v) => !v)}
                 className={`text-[9px] px-1.5 py-0.5 border rounded cursor-pointer ${
-                  isAutoRotate ? "bg-amber-200 border-amber-500 font-bold" : "bg-stone-200 border-stone-400"
+                  isAutoRotate ? "bg-amber-200 border-amber-500 font-bold text-amber-900" : "bg-stone-200 border-stone-400 text-stone-600"
                 }`}
                 title="Toggle Putar Otomatis"
               >
@@ -618,47 +968,47 @@ export function DoodleSkinCustomizer({
               <button
                 type="button"
                 onClick={() => setActiveTab("hat")}
-                className={`px-2 py-1 border border-t-white border-l-white border-b-black border-r-black cursor-pointer font-bold transition-all ${
+                className={`px-2.5 py-1 border border-t-white border-l-white border-b-black border-r-black cursor-pointer font-bold transition-all flex items-center gap-1.5 ${
                   activeTab === "hat" ? "bg-white border-b-white font-extrabold translate-y-px" : "bg-[#C0C0C0]"
                 }`}
               >
-                🎩 Topi
+                <span>🎩</span> Topi
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("weapon")}
-                className={`px-2 py-1 border border-t-white border-l-white border-b-black border-r-black cursor-pointer font-bold transition-all ${
+                className={`px-2.5 py-1 border border-t-white border-l-white border-b-black border-r-black cursor-pointer font-bold transition-all flex items-center gap-1.5 ${
                   activeTab === "weapon" ? "bg-white border-b-white font-extrabold translate-y-px text-red-700" : "bg-[#C0C0C0]"
                 }`}
               >
-                🔫 Senjata
+                <span>🔫</span> Senjata
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("face")}
-                className={`px-2 py-1 border border-t-white border-l-white border-b-black border-r-black cursor-pointer font-bold transition-all ${
+                className={`px-2.5 py-1 border border-t-white border-l-white border-b-black border-r-black cursor-pointer font-bold transition-all flex items-center gap-1.5 ${
                   activeTab === "face" ? "bg-white border-b-white font-extrabold translate-y-px" : "bg-[#C0C0C0]"
                 }`}
               >
-                😈 Wajah
+                <span>😈</span> Wajah
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("ink")}
-                className={`px-2 py-1 border border-t-white border-l-white border-b-black border-r-black cursor-pointer font-bold transition-all ${
+                className={`px-2.5 py-1 border border-t-white border-l-white border-b-black border-r-black cursor-pointer font-bold transition-all flex items-center gap-1.5 ${
                   activeTab === "ink" ? "bg-white border-b-white font-extrabold translate-y-px text-blue-700" : "bg-[#C0C0C0]"
                 }`}
               >
-                🖋️ Tinta
+                <span>🖋️</span> Tinta
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("preset")}
-                className={`px-2 py-1 border border-t-white border-l-white border-b-black border-r-black cursor-pointer font-bold transition-all ${
+                className={`px-2.5 py-1 border border-t-white border-l-white border-b-black border-r-black cursor-pointer font-bold transition-all flex items-center gap-1.5 ${
                   activeTab === "preset" ? "bg-amber-100 border-b-amber-100 font-extrabold text-amber-900 translate-y-px" : "bg-[#C0C0C0]"
                 }`}
               >
-                ⚡ Preset
+                <span>⚡</span> Preset
               </button>
             </div>
 
@@ -677,15 +1027,17 @@ export function DoodleSkinCustomizer({
                           setSkin((prev) => ({ ...prev, hat: item.id }))
                           playRetroNotificationSound(0.05)
                         }}
-                        className={`text-left p-2 border rounded-xs flex items-center gap-2 cursor-pointer transition-colors ${
+                        className={`text-left p-2 border rounded-xs flex items-center gap-2.5 cursor-pointer transition-colors ${
                           isSelected
                             ? "bg-[#000080] text-white border-black font-bold shadow-inner"
                             : "bg-white text-black border-stone-300 hover:bg-stone-50"
                         }`}
                       >
-                        <span className="text-xl shrink-0">{item.icon}</span>
+                        <div className="w-8 h-8 rounded shrink-0 bg-stone-100 border border-stone-200 flex items-center justify-center p-0.5">
+                          <DoodleHatIcon id={item.id} className="w-7 h-7" />
+                        </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-xs truncate">{item.name}</div>
+                          <div className="text-xs truncate font-bold">{item.name}</div>
                           <div
                             className={`text-[10px] truncate ${
                               isSelected ? "text-stone-300" : "text-stone-500"
@@ -705,7 +1057,7 @@ export function DoodleSkinCustomizer({
               {activeTab === "weapon" && (
                 <div className="space-y-1.5">
                   <div className="text-[11px] font-mono text-stone-600 bg-amber-50 p-1.5 border border-amber-200 rounded">
-                    ⚡ Skin senjata langsung terlihat di mode First-Person dan merubah warna tracer tembakan!
+                    ⚡ Skin senjata langsung terlihat di mode First-Person & merubah warna tracer tembakan!
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                     {WEAPON_SKIN_OPTIONS.map((item) => {
@@ -718,18 +1070,23 @@ export function DoodleSkinCustomizer({
                             setSkin((prev) => ({ ...prev, weaponSkin: item.id }))
                             playRetroNotificationSound(0.06)
                           }}
-                          className={`text-left p-2 border rounded-xs flex items-center gap-2 cursor-pointer transition-colors ${
+                          className={`text-left p-2 border rounded-xs flex items-center gap-2.5 cursor-pointer transition-colors ${
                             isSelected
                               ? "bg-[#000080] text-white border-black font-bold shadow-inner"
                               : "bg-white text-black border-stone-300 hover:bg-stone-50"
                           }`}
                         >
-                          <span
-                            className="w-5 h-5 rounded-full shrink-0 border border-white/60 shadow"
-                            style={{ backgroundColor: item.hex }}
-                          />
+                          <div
+                            className="w-8 h-8 rounded shrink-0 flex items-center justify-center p-0.5 border shadow-sm"
+                            style={{
+                              backgroundColor: item.hex + "20",
+                              borderColor: item.hex,
+                            }}
+                          >
+                            <DoodleWeaponIcon id={item.id} className="w-7 h-7" />
+                          </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-xs truncate">{item.name}</div>
+                            <div className="text-xs truncate font-bold">{item.name}</div>
                             <div
                               className={`text-[10px] truncate ${
                                 isSelected ? "text-stone-300" : "text-stone-500"
@@ -759,15 +1116,17 @@ export function DoodleSkinCustomizer({
                           setSkin((prev) => ({ ...prev, face: item.id }))
                           playRetroNotificationSound(0.05)
                         }}
-                        className={`text-left p-2 border rounded-xs flex items-center gap-2 cursor-pointer transition-colors ${
+                        className={`text-left p-2 border rounded-xs flex items-center gap-2.5 cursor-pointer transition-colors ${
                           isSelected
                             ? "bg-[#000080] text-white border-black font-bold shadow-inner"
                             : "bg-white text-black border-stone-300 hover:bg-stone-50"
                         }`}
                       >
-                        <span className="text-xl shrink-0">{item.icon}</span>
+                        <div className="w-8 h-8 rounded shrink-0 bg-stone-100 border border-stone-200 flex items-center justify-center p-0.5">
+                          <DoodleFaceIcon id={item.id} className="w-7 h-7" />
+                        </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-xs truncate">{item.name}</div>
+                          <div className="text-xs truncate font-bold">{item.name}</div>
                           <div
                             className={`text-[10px] truncate ${
                               isSelected ? "text-stone-300" : "text-stone-500"
@@ -802,12 +1161,14 @@ export function DoodleSkinCustomizer({
                             : "bg-white text-black border-stone-300 hover:bg-stone-50"
                         }`}
                       >
-                        <span
-                          className="w-6 h-6 rounded-full shrink-0 border-2 border-stone-300 shadow"
+                        <div
+                          className="w-7 h-7 rounded-full shrink-0 border-2 border-white shadow-md flex items-center justify-center text-white text-xs font-bold"
                           style={{ backgroundColor: item.hex }}
-                        />
+                        >
+                          ✓
+                        </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-xs truncate">{item.name}</div>
+                          <div className="text-xs truncate font-bold">{item.name}</div>
                           <div
                             className={`text-[10px] truncate ${
                               isSelected ? "text-stone-300" : "text-stone-500"
@@ -837,11 +1198,16 @@ export function DoodleSkinCustomizer({
                         onClick={() => applyPreset(p)}
                         className="text-left p-2.5 bg-white hover:bg-amber-50 border border-stone-300 hover:border-amber-400 rounded-xs flex items-center justify-between cursor-pointer group shadow-xs active:translate-y-px"
                       >
-                        <div className="flex items-center gap-2">
-                          <span className="text-2xl">{p.icon}</span>
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded bg-amber-50 border border-amber-200 flex items-center justify-center">
+                            <DoodleHatIcon id={p.skin.hat} className="w-7 h-7" />
+                          </div>
                           <div>
-                            <div className="text-xs font-bold text-stone-900 group-hover:text-amber-900">
-                              {p.name}
+                            <div className="text-xs font-bold text-stone-900 group-hover:text-amber-900 flex items-center gap-1.5">
+                              <span>{p.name}</span>
+                              <span className="text-[9px] font-mono bg-amber-200/80 text-amber-900 px-1 rounded">
+                                {p.tag}
+                              </span>
                             </div>
                             <div className="text-[10px] text-stone-500 flex items-center gap-1.5 mt-0.5">
                               <span>Topi: {p.skin.hat}</span>
@@ -850,7 +1216,7 @@ export function DoodleSkinCustomizer({
                             </div>
                           </div>
                         </div>
-                        <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                        <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-200 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                           PAKAI
                         </span>
                       </button>
