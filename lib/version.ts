@@ -5,12 +5,23 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.67"
+export const APP_VERSION = "v2.3.68"
 export const APP_BUILD = "2026.09.30"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.68",
+    date: "30 Sep 2026",
+    codename: "DOODLE.EXE - Lemari Kostum 3D & Authentic Skin Customizer",
+    changes: [
+      "3D Custom Skin & Locker (LEMARI_KOSTUM.EXE): Fitur kustomisasi skin karakter interaktif dengan preview model 3D real-time berputar 360°, dilengkapi pilihan topi (Koboi, Baret, Topi Balik, Helm SWAT), skin senjata (Neon Drip, Gold Ink, Cyber Blue, Camo Doodle, Sakura Pink), dan ekspresi wajah.",
+      "Authentic Doodle Stickman Visuals: Rendering stickman otentik gaya sketchbook kertas notebook (#fffef8) dengan garis tepi sketsa tinta tajam dan bayangan sketsa melingkar di bawah kaki.",
+      "Bespoke Icon Badges & Responsive Layout: Ikon aset SVG buatan khusus untuk setiap gear & skin, perbaikan layout modal tanpa horizontal overflow, serta kartu preset lengkap sekali klik.",
+      "Persistent Local Equipment: Integrasi penyimpanan lokal (doodle_custom_skin) otomatis sehingga pilihan skin langsung tersinkronisasi saat masuk ke arena permainan.",
+    ],
+  },
   {
     version: "v2.3.67",
     date: "30 Sep 2026",
