@@ -5,12 +5,23 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.68"
+export const APP_VERSION = "v2.3.69"
 export const APP_BUILD = "2026.09.30"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.69",
+    date: "30 Sep 2026",
+    codename: "DOODLE.EXE - Supabase Realtime Anti-Spam & Network Optimizer",
+    changes: [
+      "Token-Bucket Broadcast Limiter: Membatasi broadcast per-client hingga maksimal 10–12 msg/detik dengan antrean prioritas untuk combat events penting (damage, kills, bomb) agar kuota Realtime selalu terjaga aman.",
+      "Single-Cast Multicast & Anti-Echo: Menghilangkan duplikasi relay host dan memblokir re-broadcast paket Supabase kembali ke Supabase, mencegah lonjakan pesan eksponensial.",
+      "HTTP Broadcast Fallback Blocker: Mengunci pemanggilan broadcast hanya saat channel WebSocket berstatus 'joined', melenyapkan lonjakan spam HTTP POST /api/broadcast saat reconnecting.",
+      "Server Action Lobby Discovery: Memigrasikan background polling daftar room aktif ke Server Action Next.js (0 pesan broadcast), menjaga kuota project tanpa packet loss.",
+    ],
+  },
   {
     version: "v2.3.68",
     date: "30 Sep 2026",
