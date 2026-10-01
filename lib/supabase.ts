@@ -16,5 +16,12 @@ export const isSupabaseConfigured = Boolean(
 )
 
 export const supabase = isSupabaseConfigured
-  ? createClient<Database>(supabaseUrl, supabaseKey)
+  ? createClient<Database>(supabaseUrl, supabaseKey, {
+      realtime: {
+        params: {
+          eventsPerSecond: 20,
+        },
+        disconnectOnEmptyChannelsAfterMs: 10000,
+      },
+    })
   : null

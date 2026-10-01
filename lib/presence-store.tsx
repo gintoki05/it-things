@@ -132,36 +132,9 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
         }
       })
 
-    // Re-track saat tab aktif kembali
-    const handleVisibility = async () => {
-      if (typeof document !== "undefined" && document.visibilityState === "visible") {
-        const currentUser = userRef.current
-        const isGuestNow = isGuestRef.current
-        const payload: PresenceUser = {
-          userId: currentUserId,
-          name: currentUser?.name || (isGuestNow ? "Tamu" : "User"),
-          avatarUrl: currentUser?.avatarUrl,
-          role: currentUser?.role || (isGuestNow ? "guest" : "member"),
-          isGuest: Boolean(isGuestNow || currentUser?.isGuest),
-          onlineAt: new Date().toISOString(),
-        }
-        try {
-          await channel.track(payload)
-        } catch {
-          // Ignore
-        }
-      }
-    }
-
-    if (typeof document !== "undefined") {
-      document.addEventListener("visibilitychange", handleVisibility)
-    }
-
+    // The SUBSCRIBED callback re-tracks after reconnect. Switching tabs does
+    // not change membership and must not spend another Presence update.
     return () => {
-      if (typeof document !== "undefined") {
-        document.removeEventListener("visibilitychange", handleVisibility)
-      }
-      channel.untrack().catch(() => {})
       supabase?.removeChannel(channel)
     }
   }, [user?.id, user?.name, user?.avatarUrl, isGuest])

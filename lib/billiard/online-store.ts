@@ -158,15 +158,17 @@ export function useBilliardOnline({
                 lockedOpponentRef.current &&
                 lockedOpponentRef.current !== msg.playerName
               ) {
-                channel.send({
-                  type: "broadcast",
-                  event: "billiard_event",
-                  payload: {
-                    type: "room_full",
-                    roomCode,
-                    message: "Room sudah penuh! Pertandingan sedang berlangsung (Maksimal 2 Pemain).",
-                  } satisfies BilliardRealtimeMessage,
-                })
+                if (channel.state === "joined") {
+                  void channel.send({
+                    type: "broadcast",
+                    event: "billiard_event",
+                    payload: {
+                      type: "room_full",
+                      roomCode,
+                      message: "Room sudah penuh! Pertandingan sedang berlangsung (Maksimal 2 Pemain).",
+                    } satisfies BilliardRealtimeMessage,
+                  })
+                }
                 return
               }
               lockedOpponentRef.current = msg.playerName
@@ -208,15 +210,17 @@ export function useBilliardOnline({
               lockedOpponentRef.current = key
             } else if (lockedOpponentRef.current !== key) {
               // Pemain ke-3 masuk, tolak segera!
-              channel.send({
-                type: "broadcast",
-                event: "billiard_event",
-                payload: {
-                  type: "room_full",
-                  roomCode,
-                  message: "Room sudah penuh! Pertandingan sedang berlangsung (Maksimal 2 Pemain).",
-                } satisfies BilliardRealtimeMessage,
-              })
+              if (channel.state === "joined") {
+                void channel.send({
+                  type: "broadcast",
+                  event: "billiard_event",
+                  payload: {
+                    type: "room_full",
+                    roomCode,
+                    message: "Room sudah penuh! Pertandingan sedang berlangsung (Maksimal 2 Pemain).",
+                  } satisfies BilliardRealtimeMessage,
+                })
+              }
               return
             }
           }
@@ -239,15 +243,17 @@ export function useBilliardOnline({
             onlineAt: new Date().toISOString(),
           })
           // Broadcast pengumuman agar pemain lawan mengetahui nama kita
-          channel.send({
-            type: "broadcast",
-            event: "billiard_event",
-            payload: {
-              type: "player_joined",
-              playerId: isHost ? "player1" : "player2",
-              playerName,
-            } satisfies BilliardRealtimeMessage,
-          })
+          if (channel.state === "joined") {
+            void channel.send({
+              type: "broadcast",
+              event: "billiard_event",
+              payload: {
+                type: "player_joined",
+                playerId: isHost ? "player1" : "player2",
+                playerName,
+              } satisfies BilliardRealtimeMessage,
+            })
+          }
         } else {
           setIsConnected(false)
         }
@@ -266,12 +272,14 @@ export function useBilliardOnline({
 
   const sendEvent = React.useCallback(
     (message: BilliardRealtimeMessage) => {
-      if (channelRef.current && isConnected) {
-        channelRef.current.send({
-          type: "broadcast",
-          event: "billiard_event",
-          payload: message,
-        })
+      if (channelRef.current && isConnected && channelRef.current.state === "joined") {
+        try {
+          void channelRef.current.send({
+            type: "broadcast",
+            event: "billiard_event",
+            payload: message,
+          })
+        } catch {}
       }
     },
     [isConnected]

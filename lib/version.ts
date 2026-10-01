@@ -5,12 +5,25 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.69"
-export const APP_BUILD = "2026.09.30"
+export const APP_VERSION = "v2.3.70"
+export const APP_BUILD = "2026.10.01"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.70",
+    date: "01 Okt 2026",
+    codename: "DOODLE.EXE - Dual Kriss & Perbaikan Multiplayer",
+    changes: [
+      "Dual Kriss di slot 5: dua SMG dengan tembakan bergantian, 60 peluru, reload bersama, dan damage yang menurun di jarak jauh.",
+      "Angka damage kecil muncul di titik kena player lalu menghilang; headshot ditandai merah.",
+      "Perbaikan relay multiplayer: update posisi dibatasi per aliran, broadcast dibatching sesuai jumlah pemain, dan heartbeat diprioritaskan.",
+      "Antrean pesan penting dikuras otomatis; update Presence lobby digabung dan dibatasi untuk mengurangi rate limit.",
+      "Listener notifikasi desktop digabung dalam satu channel; pengiriman Paint War dan Billiard dijaga saat channel siap.",
+      "Protokol Doodle diperbarui: semua pemain perlu refresh dan membuat lobby baru setelah update.",
+    ],
+  },
   {
     version: "v2.3.69",
     date: "30 Sep 2026",

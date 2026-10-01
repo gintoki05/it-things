@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { DoodleBroadcastQueue } from "@/lib/doodle-broadcast-queue"
 import { RetroActionButton } from "@/components/ui/retro-action-button"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useAuth } from "@/lib/auth"
@@ -57,7 +58,8 @@ export function DoodleApp() {
   const [subscribedRoom, setSubscribedRoom] = React.useState<string | null>(null)
   const roomChannelRef = React.useRef<RealtimeChannel | null>(null)
   const roomChannelReadyRef = React.useRef<boolean>(false)
-  const pendingRoomBroadcastsRef = React.useRef<any[]>([])
+  const roomBroadcastQueueRef = React.useRef(new DoodleBroadcastQueue())
+  const roomPlayerCountRef = React.useRef(4)
   const lastBroadcastTimeRef = React.useRef<Map<string, number>>(new Map())
   const [isSharing, setIsSharing] = React.useState<boolean>(false)
   const [notificationMsg, setNotificationMsg] = React.useState<string | null>(null)
@@ -84,6 +86,9 @@ export function DoodleApp() {
   const lobbyChannelRef = React.useRef<RealtimeChannel | null>(null)
   const lobbyChannelReadyRef = React.useRef<boolean>(false)
   const pendingLobbyTrackRef = React.useRef<Record<string, unknown> | null>(null)
+  const lobbyUntrackPendingRef = React.useRef(false)
+  const lastLobbyPresenceRef = React.useRef<number | null>(null)
+  const lobbyPresenceSignatureRef = React.useRef<string | null>(null)
   const [isHosting, setIsHosting] = React.useState<boolean>(false)
   const isHostingRef = React.useRef<boolean>(false)
   const currentLobbyCodeRef = React.useRef<string | null>(null)
@@ -91,13 +96,6 @@ export function DoodleApp() {
   const hostRoomDataRef = React.useRef<ActiveDoodleRoom | null>(null)
   const [showRoomList, setShowRoomList] = React.useState<boolean>(false)
 
-  // Outgoing broadcast token-bucket rate limiter:
-  // Supabase free tier rate limit: 100 msgs/second project-wide.
-  // Each client is strictly capped to max 12 broadcast msgs/sec, burst capacity 16.
-  const broadcastTokensRef = React.useRef<number>(14)
-  const lastTokenRefillRef = React.useRef<number>(Date.now())
-  const criticalQueueRef = React.useRef<any[]>([])
-  const queueFlushTimerRef = React.useRef<NodeJS.Timeout | null>(null)
   const lastBeaconResponseRef = React.useRef<number>(0)
 
   const nickname = React.useMemo(() => {
@@ -286,17 +284,48 @@ export function DoodleApp() {
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
           lobbyChannelReadyRef.current = true
-          // Flush any pending track that arrived before channel was ready
-          if (pendingLobbyTrackRef.current) {
-            channel.track(pendingLobbyTrackRef.current)
-            pendingLobbyTrackRef.current = null
+          // Re-announce the current host after reconnect, through the same limiter.
+          if (hostRoomDataRef.current) {
+            pendingLobbyTrackRef.current = hostRoomDataRef.current as unknown as Record<string, unknown>
           }
+          lobbyPresenceSignatureRef.current = null
           // Immediately discover any live rooms (initial broadcast query)
           void queryActiveRooms(true)
+        } else {
+          lobbyChannelReadyRef.current = false
         }
       })
 
+    // Presence is slow-changing metadata, capped below 5 calls / 30 seconds.
+    const presenceTimer = setInterval(() => {
+      if (channel.state !== "joined") return
+      const now = Date.now()
+      if (lastLobbyPresenceRef.current !== null && now - lastLobbyPresenceRef.current < 15000) return
+      const data = pendingLobbyTrackRef.current
+      if (data) {
+        const signature = JSON.stringify([
+          data.roomCode, data.hostName, data.playerCount,
+          data.maxPlayers, data.map, data.gameMode,
+        ])
+        pendingLobbyTrackRef.current = null
+        if (signature === lobbyPresenceSignatureRef.current) return
+        lastLobbyPresenceRef.current = now
+        void channel.track(data).then((result) => {
+          if (result === "ok") lobbyPresenceSignatureRef.current = signature
+          else if (!pendingLobbyTrackRef.current && hostRoomDataRef.current) {
+            pendingLobbyTrackRef.current = hostRoomDataRef.current as unknown as Record<string, unknown>
+          }
+        }).catch((error) => console.warn("[Doodle] Lobby presence failed:", error))
+      } else if (lobbyUntrackPendingRef.current) {
+        lobbyUntrackPendingRef.current = false
+        lastLobbyPresenceRef.current = now
+        lobbyPresenceSignatureRef.current = null
+        void channel.untrack().catch((error) => console.warn("[Doodle] Lobby untrack failed:", error))
+      }
+    }, 500)
+
     return () => {
+      clearInterval(presenceTimer)
       lobbyChannelReadyRef.current = false
       pendingLobbyTrackRef.current = null
       if (lobbyChannelRef.current && supabase) {
@@ -348,77 +377,19 @@ export function DoodleApp() {
     )
   }, [activeRooms])
 
-  // Safe room broadcast sender with Token-Bucket Rate Limiter & HTTP POST prevention
+  // Queue all sends; the room timer drains batches without depending on new input.
   const trySendRoomBroadcast = React.useCallback((payload: any) => {
-    const channel = roomChannelRef.current
-    if (!channel || channel.state !== "joined") {
-      // Channel is NOT joined yet. DO NOT call channel.send()!
-      // Calling channel.send() when websocket is not joined triggers @supabase/realtime-js
-      // to fall back to HTTP POST /api/broadcast, causing HTTP rate limits!
-      const isPos = payload?.type === "game_msg" && payload?.msg?.t === "ps"
-      if (!isPos && pendingRoomBroadcastsRef.current.length < 10) {
-        pendingRoomBroadcastsRef.current.push(payload)
-      }
-      return
-    }
-
-    const now = Date.now()
-    const elapsed = Math.max(0, (now - lastTokenRefillRef.current) / 1000)
-    lastTokenRefillRef.current = now
-    // Refill 10 tokens per second up to max 14 tokens
-    broadcastTokensRef.current = Math.min(14, broadcastTokensRef.current + elapsed * 10)
-
-    const isPos = payload?.type === "game_msg" && payload?.msg?.t === "ps"
-
-    if (broadcastTokensRef.current >= 1) {
-      broadcastTokensRef.current -= 1
-      try {
-        void channel.send({
-          type: "broadcast",
-          event: "doodle_signal",
-          payload,
-        })
-      } catch {}
-    } else {
-      // Rate limit reached!
-      if (isPos) {
-        // Redundant position packet — drop it safely
-        return
-      }
-      // Critical packet (damage, kills, events): queue it for safe throttled dispatch
-      if (criticalQueueRef.current.length < 10) {
-        criticalQueueRef.current.push(payload)
-      }
-      if (!queueFlushTimerRef.current) {
-        queueFlushTimerRef.current = setTimeout(() => {
-          queueFlushTimerRef.current = null
-          if (criticalQueueRef.current.length > 0 && roomChannelRef.current?.state === "joined") {
-            const next = criticalQueueRef.current.shift()
-            if (next) {
-              try {
-                void roomChannelRef.current.send({
-                  type: "broadcast",
-                  event: "doodle_signal",
-                  payload: next,
-                })
-              } catch {}
-            }
-          }
-        }, 90)
-      }
+    if (!roomBroadcastQueueRef.current.enqueue(payload)) {
+      console.warn("[Doodle] Control queue full; waiting for Realtime recovery")
     }
   }, [])
 
   // Supabase Realtime Signaling Channel for Doodle War Room
   React.useEffect(() => {
+    const queue = roomBroadcastQueueRef.current
     if (!subscribedRoom || !supabase) {
       roomChannelReadyRef.current = false
-      pendingRoomBroadcastsRef.current = []
-      criticalQueueRef.current = []
-      if (queueFlushTimerRef.current) {
-        clearTimeout(queueFlushTimerRef.current)
-        queueFlushTimerRef.current = null
-      }
+      queue.clear()
       if (roomChannelRef.current && supabase) {
         supabase.removeChannel(roomChannelRef.current)
         roomChannelRef.current = null
@@ -438,11 +409,16 @@ export function DoodleApp() {
 
     channel
       .on("broadcast", { event: "doodle_signal" }, ({ payload }) => {
-        if (payload) {
-          iframeRef.current?.contentWindow?.postMessage(
-            { type: "SUPABASE_SIGNAL", payload },
-            "*"
-          )
+        const packets = payload?.type === "doodle_batch"
+          ? (Array.isArray(payload.packets) ? payload.packets.slice(0, 64) : [])
+          : [payload]
+        for (const packet of packets) {
+          if (packet && typeof packet === "object") {
+            iframeRef.current?.contentWindow?.postMessage(
+              { type: "SUPABASE_SIGNAL", payload: packet },
+              "*"
+            )
+          }
         }
       })
       .on("presence", { event: "sync" }, () => {
@@ -455,14 +431,6 @@ export function DoodleApp() {
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
           roomChannelReadyRef.current = true
-          // Drain buffered packets safely with spacing
-          const queued = [...pendingRoomBroadcastsRef.current]
-          pendingRoomBroadcastsRef.current = []
-          queued.forEach((p, idx) => {
-            setTimeout(() => {
-              trySendRoomBroadcast(p)
-            }, (idx + 1) * 80)
-          })
           iframeRef.current?.contentWindow?.postMessage(
             { type: "SUPABASE_CHANNEL_READY", roomCode: subscribedRoom },
             "*"
@@ -472,20 +440,29 @@ export function DoodleApp() {
         }
       })
 
+    const flushTimer = setInterval(() => {
+      if (roomChannelRef.current !== channel || channel.state !== "joined") return
+      const packets = queue.take(Date.now(), roomPlayerCountRef.current)
+      if (!packets.length) return
+      void channel.send({
+        type: "broadcast",
+        event: "doodle_signal",
+        payload: { type: "doodle_batch", packets },
+      }).then((result) => {
+        if (result !== "ok") console.warn("[Doodle] Broadcast failed:", result)
+      }).catch((error) => console.warn("[Doodle] Broadcast failed:", error))
+    }, 100)
+
     return () => {
+      clearInterval(flushTimer)
       roomChannelReadyRef.current = false
-      pendingRoomBroadcastsRef.current = []
-      criticalQueueRef.current = []
-      if (queueFlushTimerRef.current) {
-        clearTimeout(queueFlushTimerRef.current)
-        queueFlushTimerRef.current = null
-      }
+      queue.clear()
       if (roomChannelRef.current && supabase) {
         supabase.removeChannel(roomChannelRef.current)
         roomChannelRef.current = null
       }
     }
-  }, [subscribedRoom, clientId, trySendRoomBroadcast])
+  }, [subscribedRoom, clientId])
 
   const handleSelectInk = React.useCallback((inkId: number) => {
     setSelectedInk(inkId)
@@ -495,21 +472,15 @@ export function DoodleApp() {
     iframeRef.current?.contentWindow?.postMessage({ type: "SET_INK", ink: inkId }, "*")
   }, [])
 
-  // Safe track helper: queues if channel not ready yet, otherwise tracks immediately
+  // Keep only the latest lobby metadata during bursts of join/map updates.
   const trackLobby = React.useCallback((data: Record<string, unknown> | ActiveDoodleRoom) => {
-    if (lobbyChannelReadyRef.current && lobbyChannelRef.current) {
-      lobbyChannelRef.current.track(data as Record<string, unknown>)
-    } else {
-      // Queue it — will be flushed when channel reaches SUBSCRIBED
-      pendingLobbyTrackRef.current = data as Record<string, unknown>
-    }
+    pendingLobbyTrackRef.current = data as Record<string, unknown>
+    lobbyUntrackPendingRef.current = false
   }, [])
 
   const untrackLobby = React.useCallback(() => {
     pendingLobbyTrackRef.current = null
-    if (lobbyChannelRef.current) {
-      lobbyChannelRef.current.untrack()
-    }
+    lobbyUntrackPendingRef.current = true
   }, [])
 
   const handleRestart = React.useCallback(() => {
@@ -630,11 +601,16 @@ export function DoodleApp() {
   React.useEffect(() => {
     const handleMessage = (e: MessageEvent) => {
       if (e.source !== iframeRef.current?.contentWindow || e.origin !== window.location.origin) return
-      if (e.data?.type === "DOODLE_LOBBY_STATE") {
+      if (e.data?.type === "DOODLE_NETWORK_STATE") {
+        const count = Number(e.data.playerCount)
+        if (Number.isFinite(count)) roomPlayerCountRef.current = Math.min(10, Math.max(4, count))
+      } else if (e.data?.type === "DOODLE_LOBBY_STATE") {
         const code = e.data.roomCode || null
         const hosting = e.data.isHost === true
+        roomPlayerCountRef.current = Math.max(4, Number(e.data.playerCount) || 4)
         setCurrentLobbyCode(code)
         setIsHosting(hosting)
+        const wasHosting = isHostingRef.current
         isHostingRef.current = hosting
         if (code) {
           setSubscribedRoom(String(code).toUpperCase().replace(/-\d+$/, ""))
@@ -653,8 +629,8 @@ export function DoodleApp() {
             hostRoomDataRef.current = roomData
             trackLobby(roomData)
             void registerDoodleRoomAction(roomData)
-            if (lobbyChannelReadyRef.current && lobbyChannelRef.current) {
-              lobbyChannelRef.current.send({
+            if (lobbyChannelReadyRef.current && lobbyChannelRef.current && lobbyChannelRef.current.state === "joined") {
+              void lobbyChannelRef.current.send({
                 type: "broadcast",
                 event: "doodle_room_beacon",
                 payload: roomData,
@@ -663,11 +639,11 @@ export function DoodleApp() {
           }
         } else {
           // Untrack from global lobby when leaving host
-          if (isHostingRef.current && currentLobbyCodeRef.current) {
+          if (wasHosting && currentLobbyCodeRef.current) {
             const oldCode = currentLobbyCodeRef.current
             void unregisterDoodleRoomAction(oldCode)
-            if (lobbyChannelReadyRef.current && lobbyChannelRef.current) {
-              lobbyChannelRef.current.send({
+            if (lobbyChannelReadyRef.current && lobbyChannelRef.current && lobbyChannelRef.current.state === "joined") {
+              void lobbyChannelRef.current.send({
                 type: "broadcast",
                 event: "doodle_room_closed",
                 payload: { roomCode: oldCode },
@@ -678,6 +654,7 @@ export function DoodleApp() {
           untrackLobby()
         }
       } else if (e.data?.type === "DOODLE_LOBBY_UPDATE" && e.data.roomCode) {
+        roomPlayerCountRef.current = Math.max(4, Number(e.data.playerCount) || 4)
         // Update player count / map in lobby while still hosting
         if (isHostingRef.current) {
           const roomData: ActiveDoodleRoom = {
@@ -693,8 +670,8 @@ export function DoodleApp() {
           hostRoomDataRef.current = roomData
           trackLobby(roomData)
           void registerDoodleRoomAction(roomData)
-          if (lobbyChannelReadyRef.current && lobbyChannelRef.current) {
-            lobbyChannelRef.current.send({
+          if (lobbyChannelReadyRef.current && lobbyChannelRef.current && lobbyChannelRef.current.state === "joined") {
+            void lobbyChannelRef.current.send({
               type: "broadcast",
               event: "doodle_room_beacon",
               payload: roomData,
@@ -710,14 +687,14 @@ export function DoodleApp() {
           return prev
         })
       } else if (e.data?.type === "UNSUBSCRIBE_ROOM") {
-        pendingRoomBroadcastsRef.current = []
+        roomBroadcastQueueRef.current.clear()
         lastBroadcastTimeRef.current.clear()
         setSubscribedRoom(null)
         if (isHostingRef.current && currentLobbyCodeRef.current) {
           const oldCode = currentLobbyCodeRef.current
           void unregisterDoodleRoomAction(oldCode)
-          if (lobbyChannelReadyRef.current && lobbyChannelRef.current) {
-            lobbyChannelRef.current.send({
+          if (lobbyChannelReadyRef.current && lobbyChannelRef.current && lobbyChannelRef.current.state === "joined") {
+            void lobbyChannelRef.current.send({
               type: "broadcast",
               event: "doodle_room_closed",
               payload: { roomCode: oldCode },
@@ -801,7 +778,7 @@ export function DoodleApp() {
 
     window.addEventListener("message", handleMessage)
     return () => window.removeEventListener("message", handleMessage)
-  }, [handleShareToChat, nickname, queryActiveRooms, trackLobby, untrackLobby, user])
+  }, [handleShareToChat, nickname, queryActiveRooms, trackLobby, untrackLobby, trySendRoomBroadcast, user])
 
   // Listen to custom global event: join doodle room from chat
   React.useEffect(() => {

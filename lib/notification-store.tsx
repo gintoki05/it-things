@@ -123,35 +123,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [])
 
-  // ─── Fetch Initial Unread Chat Count ────────────────────────
-  const fetchInitialUnreadChat = React.useCallback(async () => {
-    if (!isSupabaseConfigured || !supabase) return
-    try {
-      const lastRead = typeof window !== "undefined" ? localStorage.getItem(LAST_READ_CHAT_KEY) : null
-      if (!lastRead) {
-        // Initial visit: set checkpoint to current time so historical messages aren't unread
-        if (typeof window !== "undefined") {
-          localStorage.setItem(LAST_READ_CHAT_KEY, new Date().toISOString())
-        }
-        setUnreadChatCount(0)
-        return
-      }
-
-      const token = (await supabase?.auth.getSession())?.data.session?.access_token || null
-      const { count, error } = await getUnreadChatCountAction({
-        lastRead,
-        userId: user?.id,
-        token,
-      })
-
-      if (!error && typeof count === "number") {
-        setUnreadChatCount(count)
-      }
-    } catch (err) {
-      console.warn("fetchInitialUnreadChat error:", err)
-    }
-  }, [user?.id])
-
   // Load saved mute state & check browser notification support
   React.useEffect(() => {
     if (typeof window === "undefined") return
@@ -172,7 +143,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [])
 
-  // Unified master bootstrap on mount: fetches badges, unread chat, memo, pics, and lapak in 1 single call
+  // Unified master bootstrap on mount & auth change: fetches badges, unread chat, memo, pics, and lapak in 1 single call
   React.useEffect(() => {
     const bootstrapDesktop = async () => {
       try {
@@ -211,101 +182,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
 
     bootstrapDesktop()
-
-    const handleVoteChanged = () => fetchActiveVoteCount()
-    const handlePantryChanged = () => fetchActivePantryCount()
-    const handleSplitBillChanged = () => fetchActiveSplitBillCount()
-    const handleFeedbackChanged = () => fetchActiveFeedbackCount()
-
-    if (typeof window !== "undefined") {
-      window.addEventListener("vote-changed", handleVoteChanged)
-      window.addEventListener("pantry-changed", handlePantryChanged)
-      window.addEventListener("splitbill-changed", handleSplitBillChanged)
-      window.addEventListener("feedback-changed", handleFeedbackChanged)
-    }
-
-    if (!isSupabaseConfigured || !supabase) {
-      return () => {
-        if (typeof window !== "undefined") {
-          window.removeEventListener("vote-changed", handleVoteChanged)
-          window.removeEventListener("pantry-changed", handlePantryChanged)
-          window.removeEventListener("splitbill-changed", handleSplitBillChanged)
-          window.removeEventListener("feedback-changed", handleFeedbackChanged)
-        }
-      }
-    }
-
-    const voteChannel = supabase
-      .channel("global-vote-badges")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "vote_groups" },
-        () => {
-          fetchActiveVoteCount()
-        }
-      )
-      .subscribe()
-
-    const pantryChannel = supabase
-      .channel("global-pantry-badges")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "pantry_items" },
-        () => {
-          fetchActivePantryCount()
-        }
-      )
-      .subscribe()
-
-    const splitbillChannel = supabase
-      .channel("global-splitbill-badges")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "split_bills" },
-        () => {
-          fetchActiveSplitBillCount()
-        }
-      )
-      .subscribe()
-
-    const paintwarChannel = supabase
-      .channel("global-paintwar-badges")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "paint_war_players" },
-        () => {
-          fetchActivePaintWarCount()
-        }
-      )
-      .subscribe()
-
-    const feedbackChannel = supabase
-      .channel("global-feedback-badges")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "feedbacks" },
-        () => {
-          fetchActiveFeedbackCount()
-        }
-      )
-      .subscribe()
-
-    return () => {
-      if (supabase) {
-        supabase.removeChannel(voteChannel)
-        supabase.removeChannel(pantryChannel)
-        supabase.removeChannel(splitbillChannel)
-        supabase.removeChannel(paintwarChannel)
-        supabase.removeChannel(feedbackChannel)
-      }
-      if (typeof window !== "undefined") {
-        window.removeEventListener("vote-changed", handleVoteChanged)
-        window.removeEventListener("pantry-changed", handlePantryChanged)
-        window.removeEventListener("splitbill-changed", handleSplitBillChanged)
-        window.removeEventListener("feedback-changed", handleFeedbackChanged)
-      }
-    }
-  }, [fetchActiveVoteCount, fetchActivePantryCount, fetchActiveSplitBillCount, fetchActivePaintWarCount, fetchActiveFeedbackCount, fetchInitialUnreadChat])
+  }, [user?.id])
 
   const isMutedRef = React.useRef(isMuted)
   React.useEffect(() => {
@@ -474,12 +351,70 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     []
   )
 
-  // Subscribe to Supabase Realtime chat messages globally
+  // Unified Realtime channel for all desktop notifications, live badges & chat
   React.useEffect(() => {
-    if (!isSupabaseConfigured || !supabase) return
+    const handleVoteChanged = () => fetchActiveVoteCount()
+    const handlePantryChanged = () => fetchActivePantryCount()
+    const handleSplitBillChanged = () => fetchActiveSplitBillCount()
+    const handleFeedbackChanged = () => fetchActiveFeedbackCount()
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("vote-changed", handleVoteChanged)
+      window.addEventListener("pantry-changed", handlePantryChanged)
+      window.addEventListener("splitbill-changed", handleSplitBillChanged)
+      window.addEventListener("feedback-changed", handleFeedbackChanged)
+    }
+
+    if (!isSupabaseConfigured || !supabase) {
+      return () => {
+        if (typeof window !== "undefined") {
+          window.removeEventListener("vote-changed", handleVoteChanged)
+          window.removeEventListener("pantry-changed", handlePantryChanged)
+          window.removeEventListener("splitbill-changed", handleSplitBillChanged)
+          window.removeEventListener("feedback-changed", handleFeedbackChanged)
+        }
+      }
+    }
 
     const channel = supabase
-      .channel("global-chat-notifications")
+      .channel("global-desktop-channel")
+      // Badges
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "vote_groups" },
+        () => {
+          fetchActiveVoteCount()
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "pantry_items" },
+        () => {
+          fetchActivePantryCount()
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "split_bills" },
+        () => {
+          fetchActiveSplitBillCount()
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "paint_war_players" },
+        () => {
+          fetchActivePaintWarCount()
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "feedbacks" },
+        () => {
+          fetchActiveFeedbackCount()
+        }
+      )
+      // Chat messages
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "chat_messages" },
@@ -525,6 +460,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           }
         }
       )
+      // Chat reactions
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "chat_reactions" },
@@ -568,8 +504,21 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       if (supabase) {
         supabase.removeChannel(channel)
       }
+      if (typeof window !== "undefined") {
+        window.removeEventListener("vote-changed", handleVoteChanged)
+        window.removeEventListener("pantry-changed", handlePantryChanged)
+        window.removeEventListener("splitbill-changed", handleSplitBillChanged)
+        window.removeEventListener("feedback-changed", handleFeedbackChanged)
+      }
     }
-  }, [handleIncomingChatMessage])
+  }, [
+    fetchActiveVoteCount,
+    fetchActivePantryCount,
+    fetchActiveSplitBillCount,
+    fetchActivePaintWarCount,
+    fetchActiveFeedbackCount,
+    handleIncomingChatMessage,
+  ])
 
   // Listen to custom event for programmatic open / clear
   React.useEffect(() => {

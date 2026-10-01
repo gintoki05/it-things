@@ -33,6 +33,11 @@ canvas#c { position: fixed; inset: 0; width: 100vw; height: 100vh; display: bloc
 .hitmarker.show { animation: hm .24s ease-out; }
 .hitmarker.crit i { background: var(--red); width: 4.5px; height: 44px; top: -22px; left: -2.25px; }
 .hitmarker.kill i { background: var(--red); width: 5px; height: 50px; top: -25px; left: -2.5px; }
+.damage-numbers { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.damage-number { position: absolute; color: #b45b17; font-size: 14px; font-weight: 700; line-height: 1; white-space: nowrap; text-shadow: -1px 0 var(--paper), 1px 0 var(--paper), 0 -1px var(--paper), 0 1px var(--paper); }
+.damage-number.crit { color: var(--red); }
+#hud.nogame .damage-numbers { display: none; }
+@media (max-width: 767px) { .damage-number { font-size: 12px; } }
 @keyframes hm { 0% { opacity: 1; transform: scale(1.5); } 100% { opacity: 0; transform: scale(1); } }
 .message { position: absolute; left: 0; right: 0; top: 24%; text-align: center; }
 .msg-main { font-size: 88px; color: var(--ink); transform: rotate(-2deg); opacity: 0; letter-spacing: 3px; line-height: 1; }

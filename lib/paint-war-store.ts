@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import type { RealtimeChannel } from "@supabase/supabase-js"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth"
 import {
@@ -260,6 +261,8 @@ export function usePaintWar(roomId: string = DEFAULT_PAINT_ROOM_ID) {
 
   // External listener for incoming realtime draw events
   const drawEventListenerRef = React.useRef<((event: DrawEvent) => void) | null>(null)
+  // Realtime channel reference for safe broadcast delivery
+  const channelRef = React.useRef<RealtimeChannel | null>(null)
 
   // Presence-aware player list, prioritized online players
   const activePlayers = React.useMemo(() => {
@@ -443,6 +446,7 @@ export function usePaintWar(roomId: string = DEFAULT_PAINT_ROOM_ID) {
 
     const channelName = `paint-war-lobby-${roomId}`
     const channel = supabase.channel(channelName)
+    channelRef.current = channel
 
     // Realtime Presence tracking
     channel.on("presence", { event: "sync" }, () => {
@@ -584,6 +588,7 @@ export function usePaintWar(roomId: string = DEFAULT_PAINT_ROOM_ID) {
       })
 
     return () => {
+      channelRef.current = null
       supabase?.removeChannel(channel)
     }
   }, [roomId, user])
@@ -613,18 +618,23 @@ export function usePaintWar(roomId: string = DEFAULT_PAINT_ROOM_ID) {
 
   // ─── 5. Actions ───────────────────────────────────────────
 
-  // Broadcast Draw Event helper
+  // Broadcast Draw Event helper (WebSocket joined only - blocks REST fallback spam)
   const broadcastCanvasEvent = React.useCallback(
     (event: DrawEvent) => {
       if (!isSupabaseConfigured || !supabase) return
-      const channel = supabase.channel(`paint-war-lobby-${roomId}`)
-      channel.send({
-        type: "broadcast",
-        event: "draw_event",
-        payload: event,
-      })
+      const channel = channelRef.current
+      if (!channel || channel.state !== "joined") return
+      try {
+        void channel.send({
+          type: "broadcast",
+          event: "draw_event",
+          payload: event,
+        })
+      } catch {
+        // Drop safely if socket buffer is busy or reconnecting
+      }
     },
-    [roomId]
+    []
   )
 
   // End Round
