@@ -1,12 +1,12 @@
-// North-up Luxville radar. Geometry comes from the same colliders as gameplay.
-export class LuxvilleMinimap {
+// Geometry comes from the same colliders as gameplay. Ampera is rotated so
+// Ilir is up; Luxville retains its original north-up orientation.
+export class MapMinimap {
   constructor(root) {
     this.canvas = document.createElement("canvas");
-    this.canvas.className = "luxville-minimap";
+    this.canvas.className = "doodle-minimap";
     this.canvas.width = this.canvas.height = 480;
     this.canvas.hidden = true;
     this.canvas.setAttribute("role", "img");
-    this.canvas.setAttribute("aria-label", "Minimap Luxville: posisi dan arah pemain, site A dan B");
     root.appendChild(this.canvas);
     this.ctx = this.canvas.getContext("2d");
     this.background = document.createElement("canvas");
@@ -16,6 +16,7 @@ export class LuxvilleMinimap {
 
   build(level, world) {
     this.level = level;
+    this.canvas.setAttribute("aria-label", level.minimapDescription || "Minimap Luxville: posisi dan arah pemain, site A dan B");
     const { minX, maxX, minZ, maxZ } = level.bounds;
     this.scale = 208 / Math.max(maxX - minX, maxZ - minZ);
     this.project = (x, z) => [
@@ -25,10 +26,15 @@ export class LuxvilleMinimap {
     const ctx = this.background.getContext("2d");
     ctx.setTransform(2, 0, 0, 2, 0, 0);
     ctx.clearRect(0, 0, 240, 240);
+    for (const area of level.minimapAreas || []) {
+      const [x, z] = this.project(area.minX, area.minZ);
+      ctx.fillStyle = area.color;
+      ctx.fillRect(x, z, (area.maxX - area.minX) * this.scale, (area.maxZ - area.minZ) * this.scale);
+    }
     // Upper walkways are translucent; ground walls and cover remain readable.
     for (const elevated of [true, false]) {
       for (const box of world.boxes) {
-        if (box.max.y <= 0 || box.min.y >= 8 || box.data.noShoot || box.data.tag === "minimap-ceiling") continue;
+        if (box.max.y <= 0 || box.min.y >= 8 || box.data.noShoot || box.data.tag === "minimap-ceiling" || box.data.tag === "ampera-deck") continue;
         if ((box.min.y >= 2.5) !== elevated) continue;
         if (box.data.breakable) continue; // Draw live breakables separately.
         const [x, z] = this.project(box.min.x, box.min.z);
@@ -50,15 +56,16 @@ export class LuxvilleMinimap {
     }
     ctx.font = "bold 10px monospace";
     ctx.fillStyle = "#24395b";
-    ctx.strokeText("LUXVILLE · N ↑", 120, 9);
-    ctx.fillText("LUXVILLE · N ↑", 120, 9);
+    const title = level.minimapTitle || "LUXVILLE · N ↑";
+    ctx.strokeText(title, 120, 9);
+    ctx.fillText(title, 120, 9);
     ctx.font = "9px monospace";
     ctx.strokeText("▲ KAMU", 120, 233);
     ctx.fillText("▲ KAMU", 120, 233);
   }
 
   update(level, world, position, camera, visible, now, bombData = null) {
-    this.canvas.hidden = !visible || level.key !== "luxville";
+    this.canvas.hidden = !visible || !["luxville", "ampera"].includes(level.key);
     if (this.canvas.hidden || !this.ctx) return;
     if (level !== this.level) {
       this.build(level, world);

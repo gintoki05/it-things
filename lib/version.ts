@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.71"
+export const APP_VERSION = "v2.3.72"
 export const APP_BUILD = "2026.10.01"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.72",
+    date: "01 Okt 2026",
+    codename: "DOODLE.EXE - Ampera & Tepian Musi",
+    changes: [
+      "Map Ampera dengan tiga jalur jembatan, kawasan BKB, Pasar 16 Ilir, Plaza 7 Ulu, Kampung Kapitan, dan minimap transparan.",
+      "Detail menara, jam, lampu jalan, kios, dan tepian Musi; grapple aktif pada struktur map dengan cincin kait di menara.",
+      "Pesawat melintas berkala serta kapal kargo, kapal penumpang, dan jukung bergerak menyusuri Musi.",
+      "Spawn TDM Ampera dipisah per tim untuk awal match, respawn, dan late join; jatuh kembali ke spawn aman.",
+      "Perbaikan spawn Bomb Mission agar posisi awal dan pergantian ronde mengikuti titik spawn tim dari host.",
+    ],
+  },
   {
     version: "v2.3.71",
     date: "01 Okt 2026",

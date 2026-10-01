@@ -445,11 +445,18 @@ export class BombMode {
 
     // Calculate spawn assignments for all players
     const spawns = this.calculateTeamSpawns();
+    const spawnPositions = Object.fromEntries(
+      Object.entries(spawns).map(([id, index]) => {
+        const position = this.getTeamSpawnPosition(id, index);
+        return [id, position ? { x: position.x, y: position.y, z: position.z } : null];
+      }),
+    );
 
     // Broadcast authoritative round start snapshot
     this.broadcastSnapshot({
       type: "round_start",
       spawns,
+      spawnPositions,
     });
   }
 
@@ -467,6 +474,17 @@ export class BombMode {
       spawns[id] = idx % Math.max(1, blueSpawns.length);
     });
     return spawns;
+  }
+
+  getTeamSpawnPosition(playerId, assignedIndex = null) {
+    const team = this.teams?.red?.includes(playerId) ? "red"
+      : this.teams?.blue?.includes(playerId) ? "blue" : null;
+    if (!team) return null;
+    const points = this.game?.level?.teamSpawns?.[team === "red" ? 0 : 1];
+    if (!points?.length) return null;
+    const index = Number.isInteger(assignedIndex) && assignedIndex >= 0
+      ? assignedIndex : this.teams[team].indexOf(playerId);
+    return points[index % points.length]?.clone() || null;
   }
 
   // --- HOST STATE MACHINE & TIMERS ---
@@ -939,7 +957,6 @@ export class BombMode {
   onRoundStartClient(packet) {
     const myId = this.game?.peer?.id;
     const player = this.game?.player;
-    const level = this.game?.level;
 
     // Reset local player weapons, HP, ammo, effects
     if (this.game?.state) {
@@ -963,10 +980,12 @@ export class BombMode {
       });
       // Teleport to assigned spawn
       const mySpawnIdx = packet.spawns ? packet.spawns[myId] : null;
-      const isRed = this.teams.red.includes(myId);
-      const teamList = isRed ? level?.teamSpawns?.[0] : level?.teamSpawns?.[1];
-      if (teamList && mySpawnIdx != null && teamList[mySpawnIdx]) {
-        player.body.pos.copy(teamList[mySpawnIdx]);
+      const assigned = packet.spawnPositions?.[myId];
+      const spawnPosition = assigned && [assigned.x, assigned.y, assigned.z].every(Number.isFinite)
+        ? new THREE.Vector3(assigned.x, assigned.y, assigned.z)
+        : this.getTeamSpawnPosition(myId, mySpawnIdx);
+      if (spawnPosition) {
+        player.body.pos.copy(spawnPosition);
         player.body.vel.set(0, 0, 0);
       }
       if (player.J?.hips?.parent) {

@@ -246,8 +246,8 @@ canvas#c { position: fixed; inset: 0; width: 100vw; height: 100vh; display: bloc
 #hud.nogame .reload-ind, #hud.nogame .scope-reload { display: none; }
 
 
-/* Luxville radar sits below the score and never captures gameplay input. */
-.luxville-minimap {
+/* Map radar sits below the score and never captures gameplay input. */
+.doodle-minimap {
   position: absolute;
   left: max(12px, env(safe-area-inset-left));
   top: 108px;
@@ -257,12 +257,12 @@ canvas#c { position: fixed; inset: 0; width: 100vw; height: 100vh; display: bloc
   background: transparent;
   border: 0;
 }
-.luxville-minimap[hidden], #hud.nogame .luxville-minimap { display: none; }
+.doodle-minimap[hidden], #hud.nogame .doodle-minimap { display: none; }
 @media (max-width: 767px) {
-  .luxville-minimap { top: 100px; width: 136px; height: 136px; left: 8px; }
+  .doodle-minimap { top: 100px; width: 136px; height: 136px; left: 8px; }
 }
 @media (max-height: 500px) {
-  .luxville-minimap { top: 82px; width: 116px; height: 116px; }
+  .doodle-minimap { top: 82px; width: 116px; height: 116px; }
 }
 
 /* =========================================================
