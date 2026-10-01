@@ -18,7 +18,7 @@ const contexts = [];
 function transport(id, host) {
   const context = vm.createContext({
     performance: { now: () => 1000 }, setInterval() {}, clearTimeout() {},
-    Hs: class { allow() { return true } }, jo: new Set(), Uo: () => true,
+    e0: () => "test-session", Hs: class { allow() { return true } }, jo: new Set(), Uo: () => true,
     window: { parent: { postMessage() {} } },
   });
   const start = source.indexOf('Fi=class{');
@@ -124,5 +124,5 @@ context.packet = { t: 'skin', relay: true, d: custom };
 assert.ok(vm.runInContext('Uo(packet)', context));
 context.packet.d = { ...custom, face: 'bad' };
 assert.equal(vm.runInContext('Uo(packet)', context), false);
-assert.ok(source.includes('["skin","stat","startreq","teamreq"].includes(n.t)'));
+assert.ok(source.includes('["matchready","skin","stat","startreq","teamreq"].includes(n.t)'));
 console.log('PASS: protocol validates allowed cosmetics and accepts skin updates in lobby');

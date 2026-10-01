@@ -5,12 +5,25 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.73"
+export const APP_VERSION = "v2.3.74"
 export const APP_BUILD = "2026.10.01"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.74",
+    date: "01 Okt 2026",
+    codename: "DOODLE.EXE - Join Room & Relay Multiplayer",
+    changes: [
+      "Posisi dan damage antarpemain tersampaikan melalui relay meski koneksi P2P belum tersedia.",
+      "Join terikat pada host dan sesi room; balasan dari percobaan join lama tidak dapat mengganti lobby aktif.",
+      "Retry join mengganti koneksi tab yang tertinggal, mencegah pemain duplikat dan membersihkan koneksi yang tidak aktif di lobby.",
+      "Paket mulai match dikirim ulang sampai klien mengonfirmasi; paket duplikat tidak mereset match dan spawn tetap mengikuti host.",
+      "Identitas host setelah migrasi tetap konsisten melalui kode lobby lama; callback kanal lama tidak mengganggu room baru.",
+      "Protokol multiplayer diperbarui: semua pemain perlu reload dan membuat lobby baru setelah rilis.",
+    ],
+  },
   {
     version: "v2.3.73",
     date: "01 Okt 2026",

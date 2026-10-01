@@ -409,6 +409,7 @@ export function DoodleApp() {
 
     channel
       .on("broadcast", { event: "doodle_signal" }, ({ payload }) => {
+        if (roomChannelRef.current !== channel) return
         const packets = payload?.type === "doodle_batch"
           ? (Array.isArray(payload.packets) ? payload.packets.slice(0, 64) : [])
           : [payload]
@@ -422,6 +423,7 @@ export function DoodleApp() {
         }
       })
       .on("presence", { event: "sync" }, () => {
+        if (roomChannelRef.current !== channel) return
         const state = channel.presenceState()
         iframeRef.current?.contentWindow?.postMessage(
           { type: "SUPABASE_PRESENCE", state },
@@ -429,6 +431,7 @@ export function DoodleApp() {
         )
       })
       .subscribe((status) => {
+        if (roomChannelRef.current !== channel) return
         if (status === "SUBSCRIBED") {
           roomChannelReadyRef.current = true
           iframeRef.current?.contentWindow?.postMessage(
@@ -455,12 +458,12 @@ export function DoodleApp() {
 
     return () => {
       clearInterval(flushTimer)
-      roomChannelReadyRef.current = false
-      queue.clear()
-      if (roomChannelRef.current && supabase) {
-        supabase.removeChannel(roomChannelRef.current)
+      if (roomChannelRef.current === channel) {
+        roomChannelReadyRef.current = false
+        queue.clear()
         roomChannelRef.current = null
       }
+      void supabase?.removeChannel(channel)
     }
   }, [subscribedRoom, clientId])
 

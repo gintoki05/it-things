@@ -14,7 +14,7 @@ const context = vm.createContext({
   setInterval: () => 1, clearTimeout() {},
   Hs: class { clear() {} allow() { return true } },
   Gt: connection => connection?.close(),
-  jo: new Set(), Uo: () => true, Qt: protocol,
+  Kt: "Tester", F: {}, La: () => [], Ze() {}, jo: new Set(), Uo: () => true, Qt: protocol, e0: () => "test-session",
   window: { parent: { postMessage: packet => packets.push(packet.payload) } },
 });
 const start = source.indexOf('Fi=class{');
@@ -71,11 +71,11 @@ console.log('PASS: relayed traffic refreshes original player liveness');
 net.isHost = true; net.code = 'ROOM-1'; net.supabaseRoom = 'ROOM-1';
 let joined = false;
 net.onPeerJoin = () => { joined = true; throw new Error('accepted generation'); };
-net._onSupabaseSignal({ type: 'join_knock', room: 'ROOM', clientId: 'new', v: protocol, gens: [2] });
+net._onSupabaseSignal({ type: 'join_knock', room: 'ROOM', clientId: 'new', sessionId: 'session-new', requestId: 'request-new', joinEpoch: 1, v: protocol, gens: [2] });
 assert.equal(joined, false);
-assert.throws(() => net._onSupabaseSignal({ type: 'join_knock', room: 'ROOM', clientId: 'new', v: protocol, gens: [1] }), /accepted generation/);
+assert.throws(() => net._onSupabaseSignal({ type: 'join_knock', room: 'ROOM', clientId: 'new', sessionId: 'session-new', requestId: 'request-new', joinEpoch: 1, v: protocol, gens: [1] }), /accepted generation/);
 console.log('PASS: migration accepts base room and matching generation only');
-net._onSupabaseSignal({ type: 'game_msg', from: 'departed', to: 'host', msg: { t: 'netping' } });
+net._onSupabaseSignal({ type: 'game_msg', from: 'departed', to: 'host', room: net.code, token: net.token, hostId: net.hostId, msg: { t: 'netping' } });
 assert.equal(net.conns.has('departed'), false);
 console.log('PASS: late heartbeat cannot resurrect a departed player');
 
