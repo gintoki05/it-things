@@ -5,12 +5,24 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.72"
+export const APP_VERSION = "v2.3.73"
 export const APP_BUILD = "2026.10.01"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.73",
+    date: "01 Okt 2026",
+    codename: "DOODLE.EXE - Kostum Multiplayer & Spectator",
+    changes: [
+      "Topi, wajah, warna tinta, dan skin senjata tersinkron ke pemain lain, termasuk pemain yang baru bergabung dan setelah respawn.",
+      "Warna badan tetap mengikuti tim merah/hijau; skin senjata mengikuti pilihan kostum pemain.",
+      "Protokol multiplayer diperbarui agar semua pemain memakai versi yang mendukung sinkronisasi kostum.",
+      "Spectator Bomb Mission hanya mengikuti rekan tim, menjaga target saat pembaruan, dan berpindah sekali per klik.",
+      "Kamera spectator mengikuti dari belakang dengan transisi lebih stabil dan posisi audio mengikuti pemain yang ditonton.",
+    ],
+  },
   {
     version: "v2.3.72",
     date: "01 Okt 2026",

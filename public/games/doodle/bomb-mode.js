@@ -96,6 +96,8 @@ export class BombMode {
       targetId: null,
       candidates: [],
       candidateIndex: 0,
+      fireHeld: false,
+      cameraTargetId: null,
     };
 
     // Audio & Beep synthesizer
@@ -1285,25 +1287,28 @@ export class BombMode {
   // --- SPECTATOR SYSTEM ---
 
   enableSpectatorClient() {
+    const wasActive = this.spectator.active;
+    const previousTarget = this.spectator.targetId;
     this.spectator.active = true;
     const myId = this.game?.peer?.id;
-    const myTeam = this.teams.red.includes(myId) ? "red" : "blue";
+    const myTeam = this.teams.red.includes(myId) ? "red"
+      : this.teams.blue.includes(myId) ? "blue" : null;
 
     // 1. Prioritize alive teammates
     this.spectator.candidates = (this.teams[myTeam] || []).filter(
       (id) => id !== myId && this.alivePlayerIds.has(id)
     );
 
-    // 2. Fallback to any alive player if no teammates left (e.g. 1v1)
-    if (this.spectator.candidates.length === 0) {
-      this.spectator.candidates = Array.from(this.alivePlayerIds).filter((id) => id !== myId);
-    }
-
     if (this.spectator.candidates.length > 0) {
-      this.spectator.candidateIndex = 0;
-      this.spectator.targetId = this.spectator.candidates[0];
+      const previousIndex = this.spectator.candidates.indexOf(previousTarget);
+      this.spectator.candidateIndex = previousIndex >= 0 ? previousIndex : 0;
+      this.spectator.targetId = this.spectator.candidates[this.spectator.candidateIndex];
     } else {
       this.spectator.targetId = null;
+    }
+    if (!wasActive) {
+      this.spectator.cameraTargetId = null;
+      this.spectator.fireHeld = !!this.game?.input?.mouseBtns?.fire;
     }
   }
 
@@ -1311,6 +1316,8 @@ export class BombMode {
     this.spectator.active = false;
     this.spectator.targetId = null;
     this.spectator.candidates = [];
+    this.spectator.fireHeld = false;
+    this.spectator.cameraTargetId = null;
   }
 
   cycleSpectator(forward = true) {
@@ -1330,14 +1337,16 @@ export class BombMode {
     if (!camera) return;
 
     // Auto switch if currently watched player died
-    if (this.spectator.targetId && !this.alivePlayerIds.has(this.spectator.targetId)) {
+    if (!this.spectator.targetId || !this.alivePlayerIds.has(this.spectator.targetId)) {
       this.enableSpectatorClient();
     }
 
     // Cycle teammates on click or Space
-    if (input?.pressed?.("confirm") || input?.pressed?.("jump") || input?.mouseBtns?.fire) {
+    const fireHeld = !!input?.mouseBtns?.fire;
+    if (!this.game?.state?.menu && (input?.pressed?.("confirm") || input?.pressed?.("jump") || (fireHeld && !this.spectator.fireHeld))) {
       this.cycleSpectator(true);
     }
+    this.spectator.fireHeld = fireHeld;
 
     const targetId = this.spectator.targetId;
     const target = targetId ? this.game?.remotePlayers?.get(targetId) : null;
@@ -1345,18 +1354,22 @@ export class BombMode {
     if (target && target.root) {
       // 3rd-person follow: slightly behind and above target
       const pos = target.body?.pos || target.root.position;
-      const yaw = target.root.rotation.y || 0;
-      const behindX = pos.x - Math.sin(yaw) * 3.2;
-      const behindZ = pos.z - Math.cos(yaw) * 3.2;
+      const yaw = target.yaw || 0;
+      const behindX = pos.x + Math.sin(yaw) * 3.2;
+      const behindZ = pos.z + Math.cos(yaw) * 3.2;
       const targetCamPos = new THREE.Vector3(behindX, pos.y + 1.8, behindZ);
 
-      camera.position.lerp(targetCamPos, Math.min(1, dt * 10));
+      if (this.spectator.cameraTargetId !== targetId) camera.position.copy(targetCamPos);
+      else camera.position.lerp(targetCamPos, 1 - Math.exp(-dt * 22));
+      this.spectator.cameraTargetId = targetId;
       camera.lookAt(pos.x, pos.y + 1.2, pos.z);
+      this.game?.audio?.setListener?.(target.eye || camera.position, target.right);
     } else if (this.bomb.state === "planted") {
       // Spectate planted bomb if no teammates alive
       const bp = this.bomb.position;
       camera.position.lerp(new THREE.Vector3(bp.x + 2, bp.y + 2.5, bp.z + 2), Math.min(1, dt * 5));
       camera.lookAt(bp.x, bp.y + 0.3, bp.z);
+      this.spectator.cameraTargetId = null;
     }
   }
 
