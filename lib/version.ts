@@ -5,12 +5,22 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.70"
+export const APP_VERSION = "v2.3.71"
 export const APP_BUILD = "2026.10.01"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.71",
+    date: "01 Okt 2026",
+    codename: "DOODLE.EXE - Animasi Sliding",
+    changes: [
+      "Animasi slide C: kamera turun dan miring halus, senjata ikut bergeser, serta transisi kembali berdiri lebih mulus.",
+      "Pose slide multiplayer dengan kaki maju dan badan rendah; langkah jalan tidak lagi terbawa saat meluncur.",
+      "Perbaikan pemilihan pose senjata remote agar Dual Kriss tetap menggunakan pose senjata api setelah penambahan slot 5.",
+    ],
+  },
   {
     version: "v2.3.70",
     date: "01 Okt 2026",
