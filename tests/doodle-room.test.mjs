@@ -18,7 +18,7 @@ function create(id, isHost = false, text = source) {
     clearTimeout: key => timeouts.delete(key),
     Hs: class { clear() {} allow() { return true } },
     Gt: conn => conn?.close(), Ni: () => null,
-    jo: new Set(['lobby', 'start']), Uo: () => true,
+    jo: new Set(['lobby', 'start', 'score', 'leave']), Uo: () => true,
     F: {}, La: () => [], Ze() {},
     window: { parent: { postMessage: packet => packets.push(packet) } },
   });
@@ -57,6 +57,104 @@ assert.equal(relayedDamage.to, 'b');
 b._onSupabaseSignal(relayedDamage);
 assert.equal(damage, 1, 'targeted damage must travel from client through the host to the victim');
 console.log('PASS: targeted damage also crosses the host relay');
+
+// Use the real send/receive paths: a failed P2P send reaches only the host
+// through Realtime, so the host must still forward to the other recipients.
+for (const playerCount of [4, 6, 10]) for (const legacyHost of [false, true]) {
+  const ids = ['host', 'sender', 'direct', ...Array.from({ length: playerCount - 3 }, (_, i) => `relay-${i}`)];
+  const room = ids.map(id => create(id, id === 'host'));
+  const byId = new Map(room.map(peer => [peer.net.id, peer]));
+  const sender = byId.get('sender').net, authority = byId.get('host').net;
+  const deliveries = new Map();
+  const wire = (from, to) => ({ peer: to.id, open: true, send: packet => to._route(packet, from.id), close() {} });
+  for (const { net } of room) {
+    net.roster = ids;
+    if (net.id !== 'host') {
+      authority.conns.set(net.id, net.id === 'direct' ? wire(authority, net) : conn(net.id));
+      net.conns.set('host', conn('host'));
+    }
+    net.on('ps', (_, from) => deliveries.set(net.id, (deliveries.get(net.id) || 0) + (from === 'sender' ? 1 : 0)));
+  }
+  sender.legacyHost = legacyHost;
+  sender.conns.set('host', { peer: 'host', open: true, send() { throw new Error('P2P send failed'); } });
+  if (!legacyHost) {
+    sender.direct.set('direct', wire(sender, byId.get('direct').net));
+    byId.get('direct').net.direct.set('sender', wire(byId.get('direct').net, sender));
+  }
+  sender.sendFast('ps', [1, 2, 3, 0, 0, 0, 64, 120, 0, 0, 0]);
+  for (let pending = true, passes = 0; pending; passes++) {
+    assert.ok(passes < 10, 'relay must not loop');
+    pending = false;
+    for (const peer of room) while (peer.packets.length) {
+      pending = true;
+      const envelope = peer.packets.shift().payload;
+      for (const receiver of room) if (receiver !== peer) receiver.net._onSupabaseSignal(envelope);
+    }
+  }
+  for (const id of ids.filter(id => id !== 'sender')) {
+    assert.equal(deliveries.get(id), 1, `${playerCount} players: ${id} must receive the fallback position exactly once (legacy=${legacyHost})`);
+  }
+}
+console.log('PASS: mixed P2P/relay rooms of 4, 6 and 10 deliver fallback positions to every recipient without loops');
+
+// Delay old host snapshots in the relay while newer ones arrive over P2P.
+// Applying the old lobby or score removes players who are still connected.
+const snapshotHost = create('host', true), snapshotClient = create('viewer');
+snapshotClient.net.conns.set('host', conn('host'));
+let roster = [], scores = [];
+snapshotClient.net.on('lobby', packet => {
+  roster = packet.players.map(player => player.id);
+  snapshotClient.net.roster = roster;
+});
+snapshotClient.net.on('score', packet => { scores = packet.map(player => player.id); });
+snapshotClient.net.on('leave', packet => {
+  roster = roster.filter(id => id !== packet.id);
+  scores = scores.filter(id => id !== packet.id);
+});
+snapshotHost.net.conns.set('viewer', { peer: 'viewer', open: true, send() { throw new Error('P2P stalled'); } });
+snapshotHost.net.send('lobby', { players: ['host', 'viewer', 'other'].map(id => ({ id })) });
+snapshotHost.net.send('score', ['host', 'viewer', 'other'].map(id => ({ id })));
+snapshotHost.net.conns.set('viewer', { peer: 'viewer', open: true, send: packet => snapshotClient.net._route(packet, 'host') });
+const currentIds = ['host', 'viewer', 'other', 'new-player'];
+snapshotHost.net.send('lobby', { players: currentIds.map(id => ({ id })) });
+snapshotHost.net.send('score', currentIds.map(id => ({ id })));
+for (const packet of snapshotHost.packets.splice(0)) snapshotClient.net._onSupabaseSignal(packet.payload);
+assert.deepEqual(roster, currentIds, 'delayed lobby cannot remove the fourth player');
+assert.deepEqual(scores, currentIds, 'delayed score cannot remove the fourth player');
+snapshotHost.net.conns.set('viewer', { peer: 'viewer', open: true, send() { throw new Error('P2P stalled'); } });
+snapshotHost.net.send('leave', { id: 'new-player' });
+snapshotHost.net.conns.set('viewer', { peer: 'viewer', open: true, send: packet => snapshotClient.net._route(packet, 'host') });
+snapshotHost.net.send('lobby', { players: currentIds.map(id => ({ id })) });
+for (const packet of snapshotHost.packets.splice(0)) snapshotClient.net._onSupabaseSignal(packet.payload);
+assert.deepEqual(roster, currentIds, 'delayed leave cannot remove a player from a newer roster');
+snapshotHost.net.conns.set('viewer', { peer: 'viewer', open: true, send() { throw new Error('P2P stalled'); } });
+snapshotHost.net.send('score', currentIds.map(id => ({ id })));
+snapshotHost.net.conns.set('viewer', { peer: 'viewer', open: true, send: packet => snapshotClient.net._route(packet, 'host') });
+snapshotHost.net.send('leave', { id: 'new-player' });
+assert.deepEqual(roster, currentIds.slice(0, -1), 'a current leave still removes a departed player');
+for (const packet of snapshotHost.packets.splice(0)) snapshotClient.net._onSupabaseSignal(packet.payload);
+assert.deepEqual(scores, currentIds.slice(0, -1), 'an old score cannot resurrect a player after leave');
+console.log('PASS: stale lobby, score and leave cannot overwrite newer host state; current departures still apply');
+
+// Older hosts still work; rejoining a new host starts its ordering afresh.
+const compatible = create('compatible');
+compatible.net.conns.set('host', conn('host'));
+let acceptedSnapshots = 0;
+compatible.net.on('lobby', () => acceptedSnapshots++);
+const legacyLobby = { t: 'lobby', from: 'host', d: { players: [] } };
+compatible.net._route(legacyLobby, 'host');
+compatible.net._route(legacyLobby, 'host');
+assert.equal(acceptedSnapshots, 2, 'unversioned hosts remain compatible');
+compatible.net._route({ ...legacyLobby, revision: 20 }, 'host');
+compatible.net._route(legacyLobby, 'host');
+compatible.net._route({ ...legacyLobby, revision: 20 }, 'host');
+compatible.net._route({ ...legacyLobby, revision: -1 }, 'host');
+assert.equal(acceptedSnapshots, 3, 'duplicates and unversioned late state cannot override ordered state');
+compatible.net.leave();
+compatible.net._adopt('next-host', { peer: 'next-host', on() {} }, { v: protocol, code: 'ROOM-1', token: 'next-token' });
+compatible.net._route({ t: 'lobby', from: 'next-host', revision: 1, d: { players: [] } }, 'next-host');
+assert.equal(acceptedSnapshots, 4, 'new host revisions must not be compared with the previous host');
+console.log('PASS: old hosts stay compatible; rejoin resets ordering for the next host');
 
 host._sendSupabase(position);
 const envelope = outgoing.at(-1).payload;

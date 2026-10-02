@@ -5,12 +5,21 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.74"
-export const APP_BUILD = "2026.10.01"
+export const APP_VERSION = "v2.3.75"
+export const APP_BUILD = "2026.10.02"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.75",
+    date: "02 Okt 2026",
+    codename: "DOODLE.EXE - Stabilitas Room Multiplayer",
+    changes: [
+      "Paket posisi yang beralih dari P2P ke relay tetap diteruskan host ke pemain lain dalam room.",
+      "Pembaruan daftar pemain, skor, dan pesan keluar diberi urutan agar data lama tidak menghapus atau memunculkan kembali pemain.",
+    ],
+  },
   {
     version: "v2.3.74",
     date: "01 Okt 2026",
