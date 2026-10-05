@@ -5,12 +5,25 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.75"
-export const APP_BUILD = "2026.10.02"
+export const APP_VERSION = "v2.3.76"
+export const APP_BUILD = "2026.10.05"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.76",
+    date: "05 Okt 2026",
+    codename: "DOODLE.EXE - Mecha Ops (Rustline Mode)",
+    changes: [
+      "Mode pertempuran Mecha TPP bergaya Rustline/Armored Core dengan Spring-Arm camera dan anti-clipping collision.",
+      "Senjata primer VC-21 SQUALL Heavy Linear Autocannon dengan dual-rail cannon 3D model, recoil fisik, dan tracer proyektil cyan berkecepatan tinggi.",
+      "Senjata sekunder RP-06 STARLING 6-tube missile pod dengan homing salvo melengkung ala Macross dan jejak asap pekat.",
+      "HUD taktikal komprehensif: kompas pita derajat atas, tactical 3D radar 80m, auto-lock target bracket dengan bar HP & jarak, dan gauge energi vertikal.",
+      "Sistem bidik (RMB Zoom/ADS) bebas halangan dengan sudut pandang bahu kanan dan auto-ghosting transparansi mecha.",
+      "Slot senjata infanteri disembunyikan saat dalam mode mecha untuk menjaga kebersihan visual cockpit.",
+    ],
+  },
   {
     version: "v2.3.75",
     date: "02 Okt 2026",
