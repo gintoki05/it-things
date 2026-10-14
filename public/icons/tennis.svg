@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <!-- Background Court Radial -->
+    <radialGradient id="courtBg" cx="40%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#2563EB" />
+      <stop offset="70%" stop-color="#1D4ED8" />
+      <stop offset="100%" stop-color="#1E3A8A" />
+    </radialGradient>
+
+    <!-- Tennis Ball Shading -->
+    <radialGradient id="ballGrad" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#E2F952" />
+      <stop offset="40%" stop-color="#CCFF00" />
+      <stop offset="85%" stop-color="#84CC16" />
+      <stop offset="100%" stop-color="#4D7C0F" />
+    </radialGradient>
+
+    <!-- Racket Frame Gradient -->
+    <linearGradient id="frameGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EF4444" />
+      <stop offset="50%" stop-color="#B91C1C" />
+      <stop offset="100%" stop-color="#7F1D1D" />
+    </linearGradient>
+
+    <!-- Handle Grip Gradient -->
+    <linearGradient id="gripGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="60%" stop-color="#E2E8F0" />
+      <stop offset="100%" stop-color="#94A3B8" />
+    </linearGradient>
+  </defs>
+
+  <!-- Shadow / Drop Base -->
+  <ellipse cx="16" cy="28" rx="12" ry="3" fill="#000000" opacity="0.3" />
+
+  <!-- Tennis Racket Group (Angled 45 deg) -->
+  <g transform="rotate(-35 15 15)">
+    <!-- Racket Handle & Grip -->
+    <rect x="13.5" y="19" width="3" height="9" rx="1.5" fill="url(#gripGrad)" stroke="#475569" stroke-width="0.5" />
+    <!-- Grip wraps -->
+    <line x1="13.5" y1="21.5" x2="16.5" y2="21.5" stroke="#CBD5E1" stroke-width="0.5" />
+    <line x1="13.5" y1="24" x2="16.5" y2="24" stroke="#CBD5E1" stroke-width="0.5" />
+    <line x1="13.5" y1="26.5" x2="16.5" y2="26.5" stroke="#CBD5E1" stroke-width="0.5" />
+
+    <!-- Throat / Neck -->
+    <path d="M13.5 19 L12 14 L18 14 L16.5 19 Z" fill="url(#frameGrad)" stroke="#7F1D1D" stroke-width="0.4" />
+
+    <!-- Head Frame (Oval) -->
+    <ellipse cx="15" cy="8.5" rx="7.5" ry="9.5" fill="none" stroke="url(#frameGrad)" stroke-width="2.2" />
+
+    <!-- Mesh Strings (Translucent Grid) -->
+    <ellipse cx="15" cy="8.5" rx="6.4" ry="8.4" fill="#1E293B" opacity="0.25" />
+    <!-- Vertical strings -->
+    <line x1="12" y1="3" x2="12" y2="14" stroke="#FFFFFF" stroke-width="0.4" opacity="0.8" />
+    <line x1="13.5" y1="1.5" x2="13.5" y2="15.5" stroke="#FFFFFF" stroke-width="0.4" opacity="0.8" />
+    <line x1="15" y1="1" x2="15" y2="16" stroke="#FFFFFF" stroke-width="0.5" opacity="0.9" />
+    <line x1="16.5" y1="1.5" x2="16.5" y2="15.5" stroke="#FFFFFF" stroke-width="0.4" opacity="0.8" />
+    <line x1="18" y1="3" x2="18" y2="14" stroke="#FFFFFF" stroke-width="0.4" opacity="0.8" />
+    <!-- Horizontal strings -->
+    <line x1="10" y1="5" x2="20" y2="5" stroke="#FFFFFF" stroke-width="0.4" opacity="0.8" />
+    <line x1="9" y1="7.5" x2="21" y2="7.5" stroke="#FFFFFF" stroke-width="0.4" opacity="0.8" />
+    <line x1="9" y1="10" x2="21" y2="10" stroke="#FFFFFF" stroke-width="0.4" opacity="0.8" />
+    <line x1="10" y1="12.5" x2="20" y2="12.5" stroke="#FFFFFF" stroke-width="0.4" opacity="0.8" />
+  </g>
+
+  <!-- Tennis Ball (Bouncing in foreground) -->
+  <g transform="translate(18, 16)">
+    <!-- Ball Drop Shadow -->
+    <ellipse cx="2" cy="7.5" rx="4.5" ry="1.5" fill="#000000" opacity="0.4" />
+
+    <!-- Ball Sphere -->
+    <circle cx="2" cy="2" r="5.2" fill="url(#ballGrad)" stroke="#365314" stroke-width="0.4" />
+
+    <!-- Tennis Ball Seam Curve -->
+    <path d="M-1.8 1 C-0.5 -1.2, 2.5 -1.5, 4.2 0.5 C5.2 1.8, 5.8 3.8, 5 5.5" fill="none" stroke="#FFFFFF" stroke-width="0.9" stroke-linecap="round" />
+    <path d="M-0.5 4 C0.8 5.8, 3 6.2, 5.2 4.8" fill="none" stroke="#FFFFFF" stroke-width="0.9" stroke-linecap="round" />
+
+    <!-- Specular Highlight -->
+    <circle cx="0.5" cy="0" r="1.2" fill="#FFFFFF" opacity="0.75" />
+  </g>
+</svg>

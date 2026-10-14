@@ -5,12 +5,22 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.76"
-export const APP_BUILD = "2026.10.05"
+export const APP_VERSION = "v2.3.77"
+export const APP_BUILD = "2026.10.14"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.77",
+    date: "14 Okt 2026",
+    codename: "TENNIS98.EXE - Authentic Wii Sports 3D GLB Models & Mii Rigging",
+    changes: [
+      "Authentic Wii Sports GLB Assets: Mengintegrasikan model 3D resmi Mii Player, Mii Opponent, Raket Tenis, Stadion Lapangan Rumput, Jaring Net, Mii Crowd, dan Bola Tenis.",
+      "Mii Rigging & Vertex Tuning: Sistem deforming mesh 'smoothPantsBulge' untuk meratakan tonjolan celana, serta kalibrasi animasi ayunan forehand/backhand dan kestabilan leher/kepala tanpa geal-geol liar.",
+      "Studio Showcase & Arena Mode: Viewer 3D interaktif Three.js dengan rotasi 360°, selector animasi tes, serta integrasi jendela retro TENNIS98.EXE pada desktop Windows 98.",
+    ],
+  },
   {
     version: "v2.3.76",
     date: "05 Okt 2026",

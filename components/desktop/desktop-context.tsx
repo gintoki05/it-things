@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useAuth } from "@/lib/auth"
 
-export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "wordle" | "winamp" | "tower" | "swisstools" | "pomodoro" | "feedback" | "snipper" | "tools" | "arcade" | "billiard" | "doodle"
+export type AppId = "vote" | "wheel" | "splitbill" | "kas" | "team" | "chat" | "readme" | "pantry" | "lapak" | "iexplore" | "paintwar" | "game" | "wordle" | "winamp" | "tower" | "swisstools" | "pomodoro" | "feedback" | "snipper" | "tools" | "arcade" | "billiard" | "doodle" | "tennis"
 
 export interface WindowState {
   id: AppId
@@ -300,6 +300,21 @@ const INITIAL_WINDOWS: Record<AppId, WindowState> = {
     defaultPos: { x: 100, y: 25 },
     hideFromDesktop: true,
   },
+  tennis: {
+    id: "tennis",
+    title: "TENNIS98.EXE - Wii Sports Tennis 3D",
+    icon: "tennis",
+    filename: "tennis.exe",
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    zIndex: 14,
+    position: { x: 140, y: 30 },
+    size: { width: 920, height: 620 },
+    defaultSize: { width: 920, height: 620 },
+    defaultPos: { x: 140, y: 30 },
+    hideFromDesktop: true,
+  },
   winamp: {
     id: "winamp",
     title: "WINAMP.EXE - Winamp 2.91 Media Player",
@@ -438,6 +453,7 @@ export function DesktopProvider({ children }: { children: React.ReactNode }) {
       "billiard",
       "arcade",
       "doodle",
+      "tennis",
     ]
     const targetApp = requestedApp && validApps.includes(requestedApp) ? requestedApp : null
     const wasPomodoroOpen = typeof window !== "undefined" && localStorage.getItem("it-things_pomodoro_window_open") === "true"

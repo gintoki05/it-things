@@ -39,11 +39,13 @@ export const RETRO_ICON_NAMES = [
   "folder",
   "billiard",
   "doodle",
+  "tennis",
 ] as const
 
 export type RetroIconName = typeof RETRO_ICON_NAMES[number]
 
 export const EMOJI_TO_RETRO_ICON: Record<string, RetroIconName> = {
+  "🎾": "tennis",
   "🎱": "billiard",
   "📁": "folder",
   "📂": "folder",
@@ -149,6 +151,9 @@ export function getRetroIconSrc(
   }
   if (iconName === "doodle") {
     return "/icons/doodle.svg"
+  }
+  if (iconName === "tennis") {
+    return "/icons/tennis.svg"
   }
 
   const normalizedSize = getClosestIconSize(size)

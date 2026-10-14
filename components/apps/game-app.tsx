@@ -9,12 +9,12 @@ import { Play, Sparkles, Users, Gamepad2, Award } from "lucide-react"
 
 interface GameItem {
   id: string
-  appId?: "paintwar" | "wordle" | "tower" | "billiard" | "arcade" | "doodle"
+  appId?: "paintwar" | "wordle" | "tower" | "billiard" | "arcade" | "doodle" | "tennis"
   title: string
   filename: string
   category: string
   description: string
-  iconName: "game" | "task" | "idea" | "edit" | "tower" | "paint" | "billiard" | "doodle"
+  iconName: "game" | "task" | "idea" | "edit" | "tower" | "paint" | "billiard" | "doodle" | "tennis"
   isLive?: boolean
   isComingSoon?: boolean
 }
@@ -75,9 +75,20 @@ export function GameApp() {
       iconName: "doodle",
       isLive: true,
     },
+    {
+      id: "tennis",
+      appId: "tennis",
+      title: "Tennis 98 (Wii Sports Edition)",
+      filename: "TENNIS.EXE",
+      category: "3D Motion-Controlled Sports (Three.js)",
+      description:
+        "Game tenis 3D persis Wii Sports dengan HP sebagai Joy-Con controller gerak tangan! Ayunkan HP untuk servis, rally pukulan, dan smash bertenaga.",
+      iconName: "tennis",
+      isLive: true,
+    },
   ]
 
-  const handleLaunchGame = (appId?: "paintwar" | "wordle" | "tower" | "billiard" | "arcade" | "doodle") => {
+  const handleLaunchGame = (appId?: "paintwar" | "wordle" | "tower" | "billiard" | "arcade" | "doodle" | "tennis") => {
     if (appId) {
       openWindow(appId)
     }
