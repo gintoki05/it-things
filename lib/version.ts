@@ -5,12 +5,25 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.77"
+export const APP_VERSION = "v2.3.78"
 export const APP_BUILD = "2026.10.14"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.78",
+    date: "14 Okt 2026",
+    codename: "TENNIS98.EXE - 2-Joint Connected Arms IK, Authentic Swing & Opponent Serve",
+    changes: [
+      "2-Joint Connected Arms IK: Sistem lengan anatomis dinamis (Upper Arm, Elbow, Forearm) menghubungkan bukaan bahu baju ke kepalan tangan sehingga lengan dan tangan tidak lagi terputus/mengambang.",
+      "Grip Raket & Anatomi Celana: Kalibrasi origin grip raket terbenam pas di tengah kepalan tangan Mii, penghapusan distorsi vertex celana sehingga lutut dan postur kaki berdiri tegak natural.",
+      "Authentic Wii Sports Swings: Sumbu ayunan terkalibrasi penuh (Forehand cross-body whip, Backhand uncoil drive, Serve & Smash overhead strike dengan desingan whoosh audio).",
+      "Expressive Victory Jump: Selebrasi lompat ceria bergaya Nintendo dengan redaman lutut (squash & cushioning), happy hop melipat kaki di udara, dan fist pump memompa raket tinggi ke langit.",
+      "Opponent Serve & Hit Animation: Sinkronisasi frame-by-frame 60fps untuk bot AI lawan saat melakukan toss servis, ayunan smash overhead, serta pukulan forehand/backhand.",
+      "Dedicated Match Arena: Mengunci mode ke tampilan lapangan pertandingan ARENA MATCH 3D dan menyembunyikan tab studio untuk pengalaman bermain yang fokus dan imersif.",
+    ],
+  },
   {
     version: "v2.3.77",
     date: "14 Okt 2026",

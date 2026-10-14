@@ -2,29 +2,41 @@
 
 import * as React from "react"
 import { TennisCanvas } from "./tennis/tennis-canvas"
-import { Volume2, VolumeX, Sparkles, Smartphone, Trophy, Info } from "lucide-react"
+import { Volume2, VolumeX, Sparkles, Smartphone, Trophy, Info, RotateCcw } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function TennisApp() {
   const [muted, setMuted] = React.useState(false)
   const [infoOpen, setInfoOpen] = React.useState(false)
+  const viewMode = "court"
+  const [resetKey, setResetKey] = React.useState(0)
 
   return (
     <div className="flex flex-col h-full w-full bg-[#c0c0c0] text-black select-none font-sans overflow-hidden">
       {/* 1. Retro Menu Toolbar */}
-      <div className="flex items-center justify-between px-2 py-1 bg-[#c0c0c0] border-b-2 border-b-[#808080] text-xs">
-        <div className="flex items-center gap-1">
+      <div className="flex items-center justify-between px-2 py-1 bg-[#c0c0c0] border-b-2 border-b-[#808080] text-xs gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[#000080] text-white font-bold text-[11px] shadow-inner">
             <span>🎾</span>
-            <span>WII SPORTS 98 - TENNIS</span>
+            <span>TENNIS 98</span>
           </div>
 
-          <div className="hidden sm:flex items-center gap-1 ml-2 text-[11px] text-slate-700 font-mono">
-            <span>[Fase 1: 3D Assets & Audio Synthesizer]</span>
-          </div>
+          <span className="text-[11px] font-mono text-slate-600 font-bold ml-1">
+            WII SPORTS 3D MATCH
+          </span>
         </div>
 
         <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setResetKey((k) => k + 1)}
+            className="flex items-center gap-1 px-2 py-0.5 text-xs bg-[#c0c0c0] border-2 border-t-white border-l-white border-r-[#808080] border-b-[#808080] active:border-t-[#808080] active:border-l-[#808080] active:border-r-white active:border-b-white text-red-700 hover:bg-red-50"
+            title="Reset Skor & Pertandingan (R)"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-red-600" />
+            <span className="text-[11px] font-bold">RESET</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setMuted(!muted)}
@@ -52,10 +64,10 @@ export function TennisApp() {
           <div className="space-y-1">
             <p className="font-bold flex items-center gap-1 text-slate-900">
               <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-              <span>Tentang Aset 3D & Audio Wii Sports (Fase 1)</span>
+              <span>Gameplay Tennis 3D (Fase 2)</span>
             </p>
             <p className="text-[11px] leading-relaxed text-slate-700">
-              Semua aset 3D (lapangan tenis biru-hijau, jala net, bola bergaris kuning optic, raket bertekstur senar logo IT, dan karakter Mii) di-generate secara prosedural tanpa file eksternal berat. Audio disintesis instan via Web Audio API.
+              Pertandingan tenis 3D lengkap bergaya Wii Sports! Auto-run mengarahkan pemain ke titik jatuh bola, AI Bot membalas servis & rally, fisika balistik bola dengan gravitasi, pantulan net, out-of-bounds, serta skor otentik (Love, 15, 30, 40, Deuce, Game).
             </p>
           </div>
           <button
@@ -70,19 +82,10 @@ export function TennisApp() {
 
       {/* 2. Area Game 3D Three.js */}
       <div className="flex-1 relative w-full h-full min-h-[360px] bg-black">
-        <TennisCanvas />
-      </div>
-
-      {/* 3. Status Bar Bawah Khas Win98 */}
-      <div className="flex items-center justify-between px-2 py-0.5 bg-[#c0c0c0] border-t-2 border-t-white text-[11px] font-mono text-slate-700">
-        <div className="flex items-center gap-2">
-          <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>Three.js Engine: Active (60 FPS)</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <span>Camera: 3rd-Person Follow</span>
-          <span>Assets: 100% Procedural</span>
-        </div>
+        <TennisCanvas
+          viewMode="court"
+          resetTrigger={resetKey}
+        />
       </div>
     </div>
   )

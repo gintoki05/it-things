@@ -126,67 +126,19 @@ export function playTennisNetSound() {
 }
 
 /**
- * 4. Tepuk Tangan & Sorak Penonton (Crowd Cheer & Applause)
+ * 4. Tepuk Tangan Penonton (Dinonaktifkan sesuai permintaan)
  */
-export function playCrowdCheerSound(duration = 2.0) {
-  const ctx = getAudioContext()
-  if (!ctx) return
-
-  const now = ctx.currentTime
-  const bufferSize = ctx.sampleRate * duration
-  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
-  const data = buffer.getChannelData(0)
-
-  // Modulated noise mimicking thousands clapping
-  for (let i = 0; i < bufferSize; i++) {
-    const t = i / ctx.sampleRate
-    const envelope = Math.sin((t / duration) * Math.PI)
-    const clapFlutter = Math.sin(t * 40) * 0.3 + 0.7
-    data[i] = (Math.random() * 2 - 1) * envelope * clapFlutter
-  }
-
-  const noise = ctx.createBufferSource()
-  noise.buffer = buffer
-
-  const filter = ctx.createBiquadFilter()
-  filter.type = "bandpass"
-  filter.frequency.setValueAtTime(1200, now)
-  filter.Q.setValueAtTime(1.2, now)
-
-  const gain = ctx.createGain()
-  gain.gain.setValueAtTime(0.35, now)
-
-  noise.connect(filter)
-  filter.connect(gain)
-  gain.connect(ctx.destination)
-
-  noise.start(now)
+export function playCrowdCheerSound(_duration = 2.0) {
+  // Dinonaktifkan
+  return
 }
 
 /**
- * 5. Penonton Menahan Napas ("Ooooh" Gasp)
+ * 5. Penonton Menahan Napas (Dinonaktifkan)
  */
 export function playCrowdGaspSound() {
-  const ctx = getAudioContext()
-  if (!ctx) return
-
-  const now = ctx.currentTime
-  const osc = ctx.createOscillator()
-  const gain = ctx.createGain()
-
-  osc.type = "sine"
-  osc.frequency.setValueAtTime(320, now)
-  osc.frequency.linearRampToValueAtTime(240, now + 0.35)
-
-  gain.gain.setValueAtTime(0.01, now)
-  gain.gain.linearRampToValueAtTime(0.25, now + 0.1)
-  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4)
-
-  osc.connect(gain)
-  gain.connect(ctx.destination)
-
-  osc.start(now)
-  osc.stop(now + 0.42)
+  // Dinonaktifkan
+  return
 }
 
 /**
@@ -251,3 +203,40 @@ export function playVictoryFanfare() {
     osc.stop(now + note.time + note.dur + 0.05)
   })
 }
+
+/**
+ * 8. Desingan Angin Ayunan Raket ("SWOOSH!")
+ * Suara hembusan udara saat raket dikibaskan di udara (Wii Sports whoosh)
+ */
+export function playTennisSwingWhoosh(power = 1.0) {
+  const ctx = getAudioContext()
+  if (!ctx) return
+
+  const now = ctx.currentTime
+  const bufferSize = Math.floor(ctx.sampleRate * 0.14)
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
+  const data = buffer.getChannelData(0)
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.25))
+  }
+
+  const noise = ctx.createBufferSource()
+  noise.buffer = buffer
+
+  const filter = ctx.createBiquadFilter()
+  filter.type = "bandpass"
+  filter.frequency.setValueAtTime(800 * power, now)
+  filter.frequency.exponentialRampToValueAtTime(260, now + 0.12)
+  filter.Q.setValueAtTime(2.2, now)
+
+  const gain = ctx.createGain()
+  gain.gain.setValueAtTime(Math.min(0.55, 0.35 * power), now)
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.13)
+
+  noise.connect(filter)
+  filter.connect(gain)
+  gain.connect(ctx.destination)
+
+  noise.start(now)
+}
+

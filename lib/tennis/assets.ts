@@ -256,7 +256,7 @@ export function createTennisBall(): {
 } {
   const group = new THREE.Group()
 
-  const radius = 0.24
+  const radius = 0.115 // Proporsi presisi tenis (diameter 23cm, pas dengan kepala raket)
   const ballGeo = new THREE.SphereGeometry(radius, 32, 32)
   const ballTexture = createTennisBallTexture()
   const ballMat = new THREE.MeshStandardMaterial({
@@ -268,11 +268,25 @@ export function createTennisBall(): {
   ballMesh.castShadow = true
   group.add(ballMesh)
 
-  const shadowGeo = new THREE.PlaneGeometry(radius * 2.6, radius * 2.6)
+  // Bayangan Bulat Lembut di Rumput (Drop Shadow Melingkar Khas Wii Sports)
+  const shadowCanvas = document.createElement("canvas")
+  shadowCanvas.width = 64
+  shadowCanvas.height = 64
+  const shadowCtx = shadowCanvas.getContext("2d")
+  if (shadowCtx) {
+    const grad = shadowCtx.createRadialGradient(32, 32, 0, 32, 32, 32)
+    grad.addColorStop(0, "rgba(0, 0, 0, 0.6)")
+    grad.addColorStop(0.5, "rgba(0, 0, 0, 0.28)")
+    grad.addColorStop(1, "rgba(0, 0, 0, 0)")
+    shadowCtx.fillStyle = grad
+    shadowCtx.fillRect(0, 0, 64, 64)
+  }
+  const shadowTexture = new THREE.CanvasTexture(shadowCanvas)
+  const shadowGeo = new THREE.PlaneGeometry(radius * 3.2, radius * 3.2)
   const shadowMat = new THREE.MeshBasicMaterial({
-    color: 0x000000,
+    map: shadowTexture,
     transparent: true,
-    opacity: 0.45,
+    opacity: 0.55,
     depthWrite: false,
   })
   const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat)
@@ -558,23 +572,11 @@ export function createMiiCharacter(config: PlayerVisualConfig): MiiAvatarObject 
   rightHand.add(racket)
   group.add(rightHand)
 
-  // Bayangan Lembut di Lantai
-  const shadowGeo = new THREE.PlaneGeometry(0.9, 0.9)
-  const shadowMat = new THREE.MeshBasicMaterial({
-    color: 0x000000,
-    transparent: true,
-    opacity: 0.38,
-    depthWrite: false,
-  })
-  const shadow = new THREE.Mesh(shadowGeo, shadowMat)
-  shadow.rotation.x = -Math.PI / 2
-  shadow.position.y = 0.015
-  group.add(shadow)
-
   // ==========================================
   // F. SISTEM ANIMASI AYUNAN & BERLARI
   // ==========================================
-  const setSwingAnimation = (progress: number, isForehand: boolean) => {
+  const setSwingAnimation = (progress: number, swingType?: "forehand" | "backhand" | "serve" | boolean) => {
+    const isForehand = typeof swingType === "boolean" ? swingType : swingType !== "backhand"
     const sideSign = isForehand ? 1 : -1
     if (progress <= 0 || progress >= 1) {
       resetPose()

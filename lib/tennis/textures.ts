@@ -279,24 +279,40 @@ export function createRacketStringsTexture(): THREE.CanvasTexture {
 }
 
 /**
- * 5. Logo Plakat Stadion
+ * 5. Logo Plakat Stadion Resmi IT-THINGS 98
  */
 export function createStadiumLogoTexture(): THREE.CanvasTexture {
-  return createProceduralTexture(512, 128, (ctx, w, h) => {
-    ctx.clearRect(0, 0, w, h)
+  return createProceduralTexture(768, 192, (ctx, w, h) => {
+    // Background Plakat Hijau Stadion Solid (Menutup sempurna teks GLB di baliknya)
+    ctx.fillStyle = "#1e4726"
+    ctx.fillRect(0, 0, w, h)
 
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.75)"
-    ctx.lineWidth = 6
-    const radius = h * 0.38
+    // Border Emas Retro
+    ctx.strokeStyle = "#f59e0b"
+    ctx.lineWidth = 10
+    ctx.strokeRect(6, 6, w - 12, h - 12)
+
+    // Inner Border Putih Halus
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.85)"
+    ctx.lineWidth = 3
     ctx.beginPath()
-    ctx.roundRect(16, 16, w - 32, h - 32, radius)
+    ctx.roundRect(18, 18, w - 36, h - 36, 18)
     ctx.stroke()
 
+    // Teks Logo
     ctx.fillStyle = "#ffffff"
-    ctx.font = "bold 44px 'Segoe UI', Tahoma, sans-serif"
+    ctx.font = "bold 56px 'Segoe UI', Tahoma, sans-serif"
     ctx.textAlign = "center"
     ctx.textBaseline = "middle"
-    ctx.fillText("IT THINGS", w / 2, h / 2)
+    ctx.shadowColor = "rgba(0, 0, 0, 0.7)"
+    ctx.shadowBlur = 8
+    ctx.fillText("IT-THINGS 98  TENNIS", w / 2, h / 2 - 4)
+
+    // Subtitle
+    ctx.shadowBlur = 0
+    ctx.fillStyle = "#facc15"
+    ctx.font = "bold 20px 'Segoe UI', Tahoma, sans-serif"
+    ctx.fillText("★ GRAND SLAM TOURNAMENT ★", w / 2, h / 2 + 42)
   })
 }
 

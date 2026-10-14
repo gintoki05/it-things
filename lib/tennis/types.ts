@@ -43,7 +43,8 @@ export interface MiiAvatarObject {
   rightHand: THREE.Group
   leftHand: THREE.Mesh
   racket: THREE.Group
-  setSwingAnimation: (progress: number, isForehand: boolean) => void
+  setSwingAnimation: (progress: number, swingType: "forehand" | "backhand" | "serve" | boolean) => void
   setRunningAnimation: (time: number, isMoving: boolean) => void
+  setVictoryAnimation?: (time: number) => void
   resetPose: () => void
 }
