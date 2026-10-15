@@ -240,3 +240,45 @@ test("M4-07: Mobile touch swipe classifier differentiates upward, downward, and 
   assert.equal(tap.type, "tap")
   assert.equal(tap.action, "handleAction")
 })
+
+test("M4-08: Android Chrome null acceleration correctly falls back to accelerationIncludingGravity", async () => {
+  const { TennisGestureClassifier } = await import("../lib/tennis/motion-detector.ts")
+  const classifier = new TennisGestureClassifier()
+
+  // Seed with 1 stationary sample
+  classifier.processSample({
+    timestamp: 1000,
+    acceleration: null,
+    accelerationIncludingGravity: { x: 0, y: 9.8, z: 0 },
+  })
+
+  // Android Chrome pattern: acceleration is { x: null, y: null, z: null } or { x: 0, y: 0, z: 0 }
+  // but accelerationIncludingGravity contains the physical motion
+  const androidSample = {
+    timestamp: 1200,
+    acceleration: { x: null, y: null, z: null },
+    accelerationIncludingGravity: { x: 18.0, y: 9.8, z: 0 },
+  }
+
+  const result = classifier.processSample(androidSample)
+  assert.ok(result !== null, "Should detect physical swing using gravity fallback")
+  assert.equal(result.type, "forehand")
+  assert.ok(result.peakAcceleration > 14.0)
+})
+
+test("M4-09: Idle serve auto-toss on any remote swing action", () => {
+  const engine = new TennisPhysicsEngine()
+  engine.resetToServe("player")
+  assert.equal(engine.state, "idle_serve")
+
+  // Simulate executeRemoteSwing logic in idle_serve
+  let tossTriggered = false
+  if (engine.state === "idle_serve" && engine.score.server === "player") {
+    tossTriggered = engine.triggerServeToss()
+  }
+
+  assert.equal(tossTriggered, true)
+  assert.equal(engine.state, "serving_toss")
+  assert.ok(engine.ballVel.y > 5.0, "Ball should be tossed upward")
+})
+

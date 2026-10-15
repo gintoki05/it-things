@@ -133,7 +133,12 @@ export function TennisRemoteController({
       return
     }
 
-    const classifier = new TennisGestureClassifier({ handedness })
+    const classifier = new TennisGestureClassifier({
+      handedness,
+      swingThreshold: 8.5,
+      tossThreshold: 7.0,
+      maxPowerThreshold: 28.0,
+    })
     classifierRef.current = classifier
 
     const listener = new BrowserMotionListener({
@@ -144,6 +149,21 @@ export function TennisRemoteController({
         setLastGesture({
           type: gesture.type,
           power: gesture.powerMultiplier,
+          time: Date.now(),
+        })
+
+        const gestureLabel =
+          gesture.type === "toss"
+            ? "TOSS SERVIS ⬆️"
+            : gesture.type === "smash"
+            ? "SMASH / ROCKET 💥"
+            : gesture.type === "forehand"
+            ? "FOREHAND 🎾"
+            : "BACKHAND 🏸"
+
+        setEventFeedback({
+          text: `${gestureLabel} (${Math.round(gesture.powerMultiplier * 100)}%)`,
+          color: gesture.type === "smash" ? "orange" : gesture.type === "toss" ? "emerald" : "blue",
           time: Date.now(),
         })
 
@@ -311,6 +331,11 @@ export function TennisRemoteController({
 
   // Tactile button actions with 200ms debounce
   const handleButtonAction = (action: "toss" | "swing" | "reset") => {
+    // Ensure listener starts on user interaction if suspended by mobile browser
+    if (listenerRef.current && !listenerRef.current.getIsListening()) {
+      listenerRef.current.start()
+    }
+
     const now = Date.now()
     if (now - lastButtonTimeRef.current < 200) {
       return

@@ -293,6 +293,30 @@ export const TennisCanvas = React.forwardRef<TennisCanvasHandle, TennisCanvasPro
     },
     executeRemoteSwing: (type: "forehand" | "backhand" | "serve" | "smash", powerMultiplier = 1.0) => {
       if (viewModeRef.current !== "court") return
+      const eng = engineRef.current
+      if (eng) {
+        // 1. Jika masih menunggu servis (idle_serve) dan servis milik player:
+        // Setiap ayunan atau gerakan remote otomatis melemparkan bola (toss)!
+        if (eng.state === "idle_serve" && eng.score.server === "player") {
+          eng.triggerServeToss()
+          return
+        }
+        // 2. Jika bola sedang melambung di udara (serving_toss) dan servis milik player:
+        // Ayunan remote otomatis memukul servis/smash!
+        if (eng.state === "serving_toss" && eng.score.server === "player") {
+          executeSwing("serve", powerMultiplier)
+          return
+        }
+        // 3. Jika sedang in_play:
+        // Otomatis tentukan forehand/backhand sesuai posisi bola bila tipe generic
+        if (eng.state === "in_play") {
+          const isForehand = eng.ballPos.x >= eng.playerCurrentX
+          const resolvedType =
+            type === "smash" ? "smash" : type === "serve" ? (isForehand ? "forehand" : "backhand") : type
+          executeSwing(resolvedType, powerMultiplier)
+          return
+        }
+      }
       executeSwing(type, powerMultiplier)
     },
     restartMatch: () => {

@@ -5,12 +5,22 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.79"
+export const APP_VERSION = "v2.3.80"
 export const APP_BUILD = "2026.10.15"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.80",
+    date: "15 Okt 2026",
+    codename: "TENNIS98.EXE - Fix Android Chrome Sensor Fallback & Auto-Toss Remote Swing",
+    changes: [
+      "Fix Android Chrome Motion Sensor: Memperbaiki deteksi linear acceleration yang bernilai null pada Chrome Android agar otomatis menggunakan sensor akselerometer gravitasi (accelerationIncludingGravity) dengan filter EMA.",
+      "Auto-Toss on Remote Swing: Ayunan HP pertama saat giliran servis pemain kini otomatis melempar bola ke atas (toss), dan ayunan kedua memukul servis/smash.",
+      "Tuned Sensitivity & Feedback: Menyesuaikan threshold ayunan ke 8.5 m/s² dan toss ke 7.0 m/s² untuk ayunan tangan yang lebih alami, serta menampilkan nama pukulan di LCD remote HP.",
+    ],
+  },
   {
     version: "v2.3.79",
     date: "15 Okt 2026",

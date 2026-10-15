@@ -169,12 +169,20 @@ export class TennisGestureClassifier {
     let az: number | null = null
 
     const rawLinear = sample.acceleration
-    if (
-      rawLinear &&
+    const isLinearValid =
+      rawLinear != null &&
       typeof rawLinear.x === "number" &&
+      rawLinear.x !== null &&
       typeof rawLinear.y === "number" &&
-      typeof rawLinear.z === "number"
-    ) {
+      rawLinear.y !== null &&
+      typeof rawLinear.z === "number" &&
+      rawLinear.z !== null &&
+      (rawLinear.x !== 0 ||
+       rawLinear.y !== 0 ||
+       rawLinear.z !== 0 ||
+       !sample.accelerationIncludingGravity)
+
+    if (isLinearValid && rawLinear) {
       ax = rawLinear.x
       ay = rawLinear.y
       az = rawLinear.z
@@ -184,8 +192,11 @@ export class TennisGestureClassifier {
       if (
         !rawG ||
         typeof rawG.x !== "number" ||
+        rawG.x === null ||
         typeof rawG.y !== "number" ||
-        typeof rawG.z !== "number"
+        rawG.y === null ||
+        typeof rawG.z !== "number" ||
+        rawG.z === null
       ) {
         return null
       }
@@ -376,20 +387,50 @@ export class BrowserMotionListener {
   }
 
   private handleDeviceMotion(event: DeviceMotionEvent): void {
+    const rawAcc = event.acceleration
+    const hasLinear =
+      rawAcc != null &&
+      typeof rawAcc.x === "number" &&
+      rawAcc.x !== null &&
+      !isNaN(rawAcc.x) &&
+      typeof rawAcc.y === "number" &&
+      rawAcc.y !== null &&
+      !isNaN(rawAcc.y) &&
+      typeof rawAcc.z === "number" &&
+      rawAcc.z !== null &&
+      !isNaN(rawAcc.z) &&
+      (Math.abs(rawAcc.x) > 0.001 ||
+       Math.abs(rawAcc.y) > 0.001 ||
+       Math.abs(rawAcc.z) > 0.001 ||
+       !event.accelerationIncludingGravity)
+
+    const rawG = event.accelerationIncludingGravity
+    const hasG =
+      rawG != null &&
+      typeof rawG.x === "number" &&
+      rawG.x !== null &&
+      !isNaN(rawG.x) &&
+      typeof rawG.y === "number" &&
+      rawG.y !== null &&
+      !isNaN(rawG.y) &&
+      typeof rawG.z === "number" &&
+      rawG.z !== null &&
+      !isNaN(rawG.z)
+
     const sample: MotionSample = {
       timestamp: event.timeStamp || Date.now(),
-      acceleration: event.acceleration
+      acceleration: hasLinear && rawAcc
         ? {
-            x: event.acceleration.x ?? 0,
-            y: event.acceleration.y ?? 0,
-            z: event.acceleration.z ?? 0,
+            x: rawAcc.x ?? 0,
+            y: rawAcc.y ?? 0,
+            z: rawAcc.z ?? 0,
           }
         : null,
-      accelerationIncludingGravity: event.accelerationIncludingGravity
+      accelerationIncludingGravity: hasG && rawG
         ? {
-            x: event.accelerationIncludingGravity.x ?? 0,
-            y: event.accelerationIncludingGravity.y ?? 0,
-            z: event.accelerationIncludingGravity.z ?? 0,
+            x: rawG.x ?? 0,
+            y: rawG.y ?? 0,
+            z: rawG.z ?? 0,
           }
         : null,
       rotationRate: event.rotationRate
@@ -401,10 +442,16 @@ export class BrowserMotionListener {
         : null,
     }
 
-    const ax = sample.acceleration?.x ?? (sample.accelerationIncludingGravity?.x ?? 0)
-    const ay = sample.acceleration?.y ?? (sample.accelerationIncludingGravity?.y ?? 0)
-    const az = sample.acceleration?.z ?? (sample.accelerationIncludingGravity?.z ?? 0)
-    const mag = Math.sqrt(ax * ax + ay * ay + az * az)
+    let mag = 0
+    if (sample.acceleration) {
+      const { x, y, z } = sample.acceleration
+      mag = Math.sqrt(x * x + y * y + z * z)
+    } else if (sample.accelerationIncludingGravity) {
+      const { x, y, z } = sample.accelerationIncludingGravity
+      const totalG = Math.sqrt(x * x + y * y + z * z)
+      // Deviation from Earth gravity (9.80665 m/s^2) reflects dynamic physical swing
+      mag = Math.max(0, Math.abs(totalG - 9.80665))
+    }
 
     if (this.onRawSample) {
       this.onRawSample(sample, mag)
