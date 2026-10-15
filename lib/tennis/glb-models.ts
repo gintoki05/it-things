@@ -533,57 +533,90 @@ export async function loadMiiPlayerGLB(isOpponent = false): Promise<LoadedMiiAct
     }
 
     // =============================================================
-    // 3. OVERHEAD SERVE & SMASH (Tarik tinggi ke belakang kepala, hantam ke DEPAN bawah)
+    // 3. OVERHEAD SERVE & SMASH (Trophy Pose -> Head Look Up -> Strike -> Follow Through)
     // =============================================================
     if (isServe) {
-      if (progress < 0.38) {
-        // A. Trophy Pose: Tangan kanan naik tinggi ke belakang kepala (-Z), raket drop di belakang
-        const t = progress / 0.38
-        parts.torso.rotation.x = -t * 0.22
-        parts.torso.position.y = basePos.torso.y + t * 0.05
-        parts.handR.position.set(
-          basePos.handR.x + t * 0.05,
-          basePos.handR.y + t * 0.65,
-          basePos.handR.z - t * 0.28  // Ditarik ke belakang kepala (-Z)!
-        )
-        parts.handR.rotation.set(-t * 1.8, t * 0.3, -t * 0.3)
+      if (progress < 0.40) {
+        // A. Trophy Pose: Tangan naik tinggi, raket jatuh ke belakang kepala, KEPALA MENDONGAH KE ATAS MELIHAT BOLA
+        const t = progress / 0.40
+        // Easing cubic smooth untuk gerakan persiapan
+        const smoothT = t * t * (3 - 2 * t)
 
-        // Tangan kiri menunjuk bola ke atas
+        parts.torso.rotation.x = -smoothT * 0.28
+        parts.torso.rotation.y = smoothT * 0.15
+        parts.torso.position.y = basePos.torso.y + smoothT * 0.06
+
+        // KEPALA MENGHADAP KE ATAS (Look Up at Tossed Ball Khas Wii Sports)
+        parts.head.rotation.x = -smoothT * 0.75 // Kepala mendongak tajam ke atas langit
+        parts.head.rotation.y = smoothT * 0.12
+        parts.head.position.y = basePos.head.y + smoothT * 0.05
+        parts.head.position.z = basePos.head.z - smoothT * 0.04
+
+        // Raket ditarik jauh ke belakang kepala & jatuh ke bawah (Back scratch position)
+        parts.handR.position.set(
+          basePos.handR.x + smoothT * 0.08,
+          basePos.handR.y + smoothT * 0.62,
+          basePos.handR.z - smoothT * 0.38
+        )
+        parts.handR.rotation.set(-smoothT * 2.1, smoothT * 0.4, -smoothT * 0.45)
+
+        // Tangan non-raket menunjuk bola tinggi di angkasa (Toss guide hand)
         if (parts.handL) {
           parts.handL.position.set(
-            basePos.handL.x + t * 0.08,
-            basePos.handL.y + t * 0.52,
-            basePos.handL.z + t * 0.12
+            basePos.handL.x - smoothT * 0.04,
+            basePos.handL.y + smoothT * 0.68,
+            basePos.handL.z + smoothT * 0.20
           )
+          parts.handL.rotation.set(smoothT * 0.4, -smoothT * 0.3, smoothT * 0.2)
         }
-      } else if (progress < 0.62) {
-        // B. Overhead Pronation Strike: Melesat menghantam bola di puncak jangkauan (+Z)
-        const t = (progress - 0.38) / 0.24
-        parts.torso.rotation.x = -0.22 + t * 0.44
-        const startX = basePos.handR.x + 0.05
-        const startY = basePos.handR.y + 0.65
-        const startZ = basePos.handR.z - 0.28
-        const endX = basePos.handR.x - 0.08
-        const endY = basePos.handR.y + 0.15
-        const endZ = basePos.handR.z + 0.42   // Menghantam ke DEPAN (+Z)!
-        parts.handR.position.set(
-          startX + t * (endX - startX),
-          startY + t * (endY - startY),
-          startZ + t * (endZ - startZ)
-        )
-        parts.handR.rotation.set(-1.8 + t * 2.8, 0.3 - t * 0.6, -0.3 + t * 0.5)
+      } else if (progress < 0.64) {
+        // B. Overhead Pronation Strike: Melesat menghantam bola di apex tertinggi
+        const t = (progress - 0.40) / 0.24
+        const smoothT = t * t * (3 - 2 * t)
 
-        if (parts.handL) parts.handL.position.lerp(basePos.handL, t)
+        parts.torso.rotation.x = -0.28 + smoothT * 0.52
+        parts.torso.rotation.y = 0.15 - smoothT * 0.35
+
+        // Kepala transisi dari mendongak ke melotot ke depan mengikuti jalur bola
+        parts.head.rotation.x = -0.75 + smoothT * 0.70
+        parts.head.rotation.y = 0.12 - smoothT * 0.25
+
+        const startX = basePos.handR.x + 0.08
+        const startY = basePos.handR.y + 0.62
+        const startZ = basePos.handR.z - 0.38
+        const endX = basePos.handR.x - 0.10
+        const endY = basePos.handR.y + 0.22
+        const endZ = basePos.handR.z + 0.46 // Melesat maju menembus bola
+        parts.handR.position.set(
+          startX + smoothT * (endX - startX),
+          startY + smoothT * (endY - startY),
+          startZ + smoothT * (endZ - startZ)
+        )
+        parts.handR.rotation.set(-2.1 + smoothT * 3.3, 0.4 - smoothT * 0.8, -0.45 + smoothT * 0.7)
+
+        if (parts.handL) parts.handL.position.lerp(basePos.handL, smoothT)
       } else {
-        // C. Follow-Through: Menyapu ke bawah melintasi pinggul kiri
-        const t = (progress - 0.62) / 0.38
-        parts.torso.rotation.x = 0.22 * (1 - t)
-        parts.handR.position.lerp(basePos.handR, t)
-        parts.handR.rotation.set(0.85 * (1 - t), -0.4 * (1 - t), 0.2 * (1 - t))
-        if (parts.handL) parts.handL.position.lerp(basePos.handL, t)
+        // C. Follow-Through: Mengayun ke bawah melewati pinggul kiri dengan redaman halus
+        const t = (progress - 0.64) / 0.36
+        const smoothT = t * t * (3 - 2 * t)
+
+        parts.torso.rotation.x = 0.24 * (1 - smoothT)
+        parts.torso.rotation.y = -0.20 * (1 - smoothT)
+        parts.head.rotation.x = -0.05 * (1 - smoothT)
+        parts.head.rotation.y = -0.13 * (1 - smoothT)
+
+        parts.handR.position.lerp(basePos.handR, smoothT)
+        parts.handR.rotation.set(0.95 * (1 - smoothT), -0.45 * (1 - smoothT), 0.25 * (1 - smoothT))
+        if (parts.handL) parts.handL.position.lerp(basePos.handL, smoothT)
       }
     }
     updateAllArms()
+  }
+
+  // Live Racket Motion Tracking (Menyelaraskan pose raket & kepala dengan kemiringan HP real-time)
+  let livePoseData: { beta: number; gamma: number; alpha?: number } | null = null
+  const setRacketLivePose = (pose: { beta: number; gamma: number; alpha?: number } | null) => {
+    livePoseData = pose
   }
 
   const setRunningAnimation = (time: number, isMoving: boolean) => {
@@ -596,16 +629,54 @@ export async function loadMiiPlayerGLB(isOpponent = false): Promise<LoadedMiiAct
       const torsoTilt = swayPulse * 0.05 // Rotasi kemiringan dada kiri-kanan
       const torsoTwist = swayPulse * 0.035 // Putaran dada tipis menghadap bola
 
+      // Integrasi Live Remote Orientation (Raket & Badan Mengikuti Remote HP Persis Wii Sports)
+      // Beta: Pitch / Sudut tegak HP (derajat, 0 = datar meja, 90 = tegak, <40 = miring ke belakang)
+      // Gamma: Roll / Sudut putar samping HP (-90 s.d. +90)
+      let liveTorsoX = 0
+      let liveTorsoY = 0
+      let liveHandX = 0
+      let liveHandY = 0
+      let liveHandZ = 0
+      let liveRotX = 0
+      let liveRotY = 0
+      let liveRotZ = 0
+      let liveHeadLookUp = 0
+
+      if (livePoseData) {
+        // Normalisasi sudut pitch HP (beta): netral ~55° saat digenggam tangan
+        const pitchDelta = THREE.MathUtils.clamp((livePoseData.beta - 55) * (Math.PI / 180), -1.1, 1.1)
+        // Normalisasi roll HP (gamma): netral ~0°
+        const rollDelta = THREE.MathUtils.clamp(livePoseData.gamma * (Math.PI / 180), -1.2, 1.2)
+
+        // Raket mundur ke belakang saat HP dimiringkan ke belakang (pitchDelta < 0)
+        // atau maju saat HP didorong ke depan
+        liveHandZ = pitchDelta * 0.28
+        liveHandY = -pitchDelta * 0.15
+        liveHandX = rollDelta * 0.22
+
+        liveRotX = -pitchDelta * 0.85
+        liveRotY = rollDelta * 1.1
+        liveRotZ = rollDelta * 0.45
+
+        liveTorsoY = rollDelta * 0.18
+        liveTorsoX = -pitchDelta * 0.12
+
+        // Jika HP diangkat tinggi (persiapan smash/servis), kepala mendongak sedikit
+        if (pitchDelta > 0.4) {
+          liveHeadLookUp = (pitchDelta - 0.4) * 0.6
+        }
+      }
+
       if (parts.torso) {
         // Posisi X celana TETAP solid di tengah menancap di atas kedua kaki!
         parts.torso.position.set(basePos.torso.x, basePos.torso.y - kneeBounce, basePos.torso.z)
-        // Condong atletis ke depan (rotation.x = 0.06) + goyangan dada kanan-kiri
-        parts.torso.rotation.set(0.06, torsoTwist, torsoTilt)
+        // Condong atletis ke depan (rotation.x = 0.06) + goyangan dada + kemiringan remote live
+        parts.torso.rotation.set(0.06 + liveTorsoX, torsoTwist + liveTorsoY, torsoTilt)
       }
       if (parts.head) {
-        // Kepala stabil di atas torso, tetap menatap lurus ke net & lawan
+        // Kepala stabil di atas torso, mendongak ke atas saat remote HP mengarah ke atas
         parts.head.position.set(basePos.head.x, basePos.head.y - kneeBounce, basePos.head.z)
-        parts.head.rotation.set(-0.04, -torsoTwist * 0.5, -torsoTilt * 0.4)
+        parts.head.rotation.set(-0.04 - liveHeadLookUp, -torsoTwist * 0.5 - liveTorsoY * 0.5, -torsoTilt * 0.4)
       }
       if (parts.handL) {
         // Tangan kiri rileks seirama dada
@@ -613,9 +684,17 @@ export async function loadMiiPlayerGLB(isOpponent = false): Promise<LoadedMiiAct
         parts.handL.rotation.set(0.04, torsoTwist * 0.8, torsoTilt * 0.6)
       }
       if (parts.handR) {
-        // Tangan kanan memegang raket di depan badan, siap menyambut bola
-        parts.handR.position.set(basePos.handR.x, basePos.handR.y - kneeBounce * 0.8, basePos.handR.z)
-        parts.handR.rotation.set(0.04, torsoTwist * 0.8, torsoTilt * 0.6)
+        // Tangan kanan memegang raket: mengikuti posisi & rotasi remote HP secara presisi dan mulus
+        parts.handR.position.set(
+          basePos.handR.x + liveHandX,
+          basePos.handR.y - kneeBounce * 0.8 + liveHandY,
+          basePos.handR.z + liveHandZ
+        )
+        parts.handR.rotation.set(
+          0.04 + liveRotX,
+          torsoTwist * 0.8 + liveRotY,
+          torsoTilt * 0.6 + liveRotZ
+        )
       }
       // Kaki MENAPAK MANTAP DI TANAH: 100% diam, tidak ada pergeseran sama sekali
       if (parts.footL) {

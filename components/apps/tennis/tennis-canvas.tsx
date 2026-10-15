@@ -20,6 +20,7 @@ export interface TennisCanvasHandle {
   executeRemoteSwing: (type: "forehand" | "backhand" | "serve" | "smash", powerMultiplier?: number) => void
   restartMatch: () => void
   setHandedness: (handedness: "right" | "left") => void
+  setLiveRemotePose: (pose: { beta: number; gamma: number; alpha?: number } | null) => void
 }
 
 export interface TennisCanvasProps {
@@ -237,6 +238,7 @@ export const TennisCanvas = React.forwardRef<TennisCanvasHandle, TennisCanvasPro
   }, [onBallContact, onBallHit, onScoreChange])
 
   const handednessRef = React.useRef<"right" | "left">("right")
+  const liveRemotePoseRef = React.useRef<{ beta: number; gamma: number; alpha?: number } | null>(null)
 
   // Helper: petakan sisi layar ke tipe pukulan sesuai tangan dominan
   // Untuk tangan kanan (default): sisi kanan = forehand, sisi kiri = backhand.
@@ -365,6 +367,9 @@ export const TennisCanvas = React.forwardRef<TennisCanvasHandle, TennisCanvasPro
       if (playerRef.current) {
         playerRef.current.setHandedness(h)
       }
+    },
+    setLiveRemotePose: (pose: { beta: number; gamma: number; alpha?: number } | null) => {
+      liveRemotePoseRef.current = pose
     },
   }))
 
@@ -702,6 +707,7 @@ export const TennisCanvas = React.forwardRef<TennisCanvasHandle, TennisCanvasPro
 
         // Animasi studio player
         if (playerRef.current && swingProgressRef.current === 0) {
+          playerRef.current.setRacketLivePose?.(liveRemotePoseRef.current)
           if (activeAnimRef.current === "run") {
             playerRef.current.group.position.y = 0
             playerRef.current.setRunningAnimation(time, true)
@@ -714,6 +720,8 @@ export const TennisCanvas = React.forwardRef<TennisCanvasHandle, TennisCanvasPro
             playerRef.current.group.position.y = 0
             playerRef.current.setRunningAnimation(time, false)
           }
+        } else if (playerRef.current) {
+          playerRef.current.setRacketLivePose?.(null)
         }
       } else {
         // Mode Arena Match Tennis
@@ -765,7 +773,10 @@ export const TennisCanvas = React.forwardRef<TennisCanvasHandle, TennisCanvasPro
             // Kaki melangkah lari HANYA jika posisi karakter memang sedang bergeser nyata di lapangan (> 0.08 m/s)
             if (!swingStateRef.current.active) {
               const isPlayerMoving = playerSpeed > 0.08
+              playerRef.current.setRacketLivePose?.(liveRemotePoseRef.current)
               playerRef.current.setRunningAnimation(time, isPlayerMoving)
+            } else {
+              playerRef.current.setRacketLivePose?.(null)
             }
           }
 

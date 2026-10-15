@@ -5,12 +5,22 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.83"
+export const APP_VERSION = "v2.3.84"
 export const APP_BUILD = "2026.10.15"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.84",
+    date: "15 Okt 2026",
+    codename: "TENNIS98.EXE - Authentic Wii Sports Serve Animation & Real-Time Remote Tracking",
+    changes: [
+      "Animasi Servis Otentik Wii Sports: Kepala karakter Mii mendongak tajam ke atas menatap bola lambung saat servis, raket ditarik jauh ke belakang kepala (trophy pose/back-scratch), dan tangan pemandu toss menunjuk ke langit dengan kurva cubic easing yang mulus.",
+      "Sinkronisasi Orientasi Remote HP Real-Time (Live Racket Tracking): Orientasi fisik HP (pitch, roll, yaw) dikirimkan secara periodik via Supabase Realtime broadcast sehingga raket, dada, dan kepala karakter Mii mengikuti gerak-gerik remote HP secara live di ready stance.",
+      "Penyesuaian Handedness Dua Arah: Pemilihan tangan kanan/kiri di HP otomatis disinkronkan ke desktop host begitu terkoneksi, memastikan posisi raket dan mekanik pukulan di lapangan persis sesuai tangan dominan pemain.",
+    ],
+  },
   {
     version: "v2.3.83",
     date: "15 Okt 2026",

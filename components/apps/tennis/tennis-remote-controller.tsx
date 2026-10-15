@@ -148,6 +148,7 @@ export function TennisRemoteController({
 
   // Debounce reference for tactile buttons (Tier 2 [R2-B03]: 200ms debounce)
   const lastButtonTimeRef = React.useRef(0)
+  const lastOrientationSentRef = React.useRef(0)
 
   // Classifier & Listener reference
   const classifierRef = React.useRef<TennisGestureClassifier | null>(null)
@@ -252,7 +253,36 @@ export function TennisRemoteController({
     listenerRef.current = listener
     listener.start()
 
+    // 2b. Live Device Orientation Listener (Menyelaraskan orientasi raket Wii Sports real-time)
+    const handleOrientation = (e: DeviceOrientationEvent) => {
+      if (e.beta == null || e.gamma == null) return
+      const now = Date.now()
+      // Throttle ~35ms (~28-30 fps) agar bandwidth realtime Supabase super efisien dan gerakan 100% mulus
+      if (now - lastOrientationSentRef.current < 35) return
+      lastOrientationSentRef.current = now
+
+      if (channelRef.current) {
+        channelRef.current.send({
+          type: "broadcast",
+          event: "remote_orientation",
+          payload: {
+            beta: e.beta,
+            gamma: e.gamma,
+            alpha: e.alpha ?? 0,
+            timestamp: now,
+          },
+        })
+      }
+    }
+
+    if (typeof window !== "undefined" && "DeviceOrientationEvent" in window) {
+      window.addEventListener("deviceorientation", handleOrientation, { passive: true })
+    }
+
     return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("deviceorientation", handleOrientation)
+      }
       listener.stop()
       listenerRef.current = null
       classifierRef.current = null
@@ -301,6 +331,15 @@ export function TennisRemoteController({
         for (const p of newPresences || []) {
           if (p.role === "desktop_host") {
             setIsHostConnected(true)
+            // Kirim handedness aktif segera setelah host terdeteksi
+            channel.send({
+              type: "broadcast",
+              event: "remote_settings",
+              payload: {
+                handedness,
+                timestamp: Date.now(),
+              },
+            })
           }
         }
       })
@@ -361,6 +400,14 @@ export function TennisRemoteController({
             device: "smartphone",
             handedness,
             connectedAt: new Date().toISOString(),
+          })
+          channel.send({
+            type: "broadcast",
+            event: "remote_settings",
+            payload: {
+              handedness,
+              timestamp: Date.now(),
+            },
           })
         }
       })

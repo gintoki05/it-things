@@ -90,6 +90,10 @@ export function TennisApp() {
           }
         }
       })
+      .on("broadcast", { event: "remote_orientation" }, ({ payload }) => {
+        if (!payload) return
+        canvasRef.current?.setLiveRemotePose?.(payload)
+      })
       .on("broadcast", { event: "remote_action" }, ({ payload }) => {
         if (!payload) return
         if (payload.action === "toss") {

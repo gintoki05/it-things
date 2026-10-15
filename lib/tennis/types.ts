@@ -45,6 +45,7 @@ export interface MiiAvatarObject {
   racket: THREE.Group
   setSwingAnimation: (progress: number, swingType: "forehand" | "backhand" | "serve" | boolean) => void
   setRunningAnimation: (time: number, isMoving: boolean) => void
+  setRacketLivePose?: (pose: { beta: number; gamma: number; alpha?: number } | null) => void
   setVictoryAnimation?: (time: number) => void
   resetPose: () => void
 }
