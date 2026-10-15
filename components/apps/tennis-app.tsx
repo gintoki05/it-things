@@ -46,6 +46,9 @@ export function TennisApp() {
           if (p.role === "mobile_controller") {
             foundMobile = true
             if (p.device) device = p.device
+            if (p.handedness === "right" || p.handedness === "left") {
+              canvasRef.current?.setHandedness(p.handedness)
+            }
           }
         }
       }
@@ -62,11 +65,20 @@ export function TennisApp() {
           if (p.role === "mobile_controller") {
             setIsMobileConnected(true)
             if (p.device) setConnectedDevice(p.device)
+            if (p.handedness === "right" || p.handedness === "left") {
+              canvasRef.current?.setHandedness(p.handedness)
+            }
           }
         }
       })
       .on("presence", { event: "leave" }, () => {
         checkMobilePresence(channel.presenceState())
+      })
+      .on("broadcast", { event: "remote_settings" }, ({ payload }) => {
+        if (!payload) return
+        if (payload.handedness === "right" || payload.handedness === "left") {
+          canvasRef.current?.setHandedness(payload.handedness)
+        }
       })
       .on("broadcast", { event: "remote_motion" }, ({ payload }) => {
         if (!payload) return

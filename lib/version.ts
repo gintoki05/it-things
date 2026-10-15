@@ -5,12 +5,22 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.82"
+export const APP_VERSION = "v2.3.83"
 export const APP_BUILD = "2026.10.15"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.83",
+    date: "15 Okt 2026",
+    codename: "TENNIS98.EXE - Authentic Anatomical Leg Rig & Mobile Handedness Sync",
+    changes: [
+      "Rig Kaki Anatomis & Lutut Natural: Memotong segmen celana dari torso mesh menjadi rig kaki independen (pangkal paha ke pergelangan kaki). Mengeliminasi distorsi tekukan lutut terbalik saat karakter Mii condong ke depan dalam stance atletis.",
+      "Sinkronisasi Handedness Mobile (Kanan / Kidal): Pemilihan tangan dominan di HP (/tennis-remote) kini langsung tersinkronisasi dua arah ke desktop host, membalik orientasi raket pemain, sisi siap servis, serta deteksi pukulan forehand/backhand secara real-time.",
+      "Otentisitas Mekanik Swing Wii Sports: Penentuan pukulan forehand vs backhand otomatis mengikuti posisi bola terhadap tangan raket pemain, serta mapping ayunan menyilang (cross-court) vs lurus (down-the-line) yang akurat.",
+    ],
+  },
   {
     version: "v2.3.82",
     date: "15 Okt 2026",
