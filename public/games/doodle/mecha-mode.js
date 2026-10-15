@@ -38,6 +38,366 @@ function getPlayerInk() {
   return 0;
 }
 
+export function createMechModel({
+  inkColor = 0,
+  createMaterial = null,
+  isRemote = false,
+} = {}) {
+  const root = new THREE.Group();
+  root.name = isRemote ? "mecha_remote" : "mecha_player_local";
+
+  const isCustomShader = typeof createMaterial === "function";
+
+  const makeMat = (inkIndex, hexFallback, fill = true, doubleSide = false) => {
+    if (isCustomShader) {
+      return createMaterial({
+        ink: inkIndex,
+        fill: fill,
+        side: doubleSide ? THREE.DoubleSide : THREE.FrontSide,
+      });
+    }
+    return new THREE.MeshBasicMaterial({
+      color: hexFallback,
+      wireframe: !fill,
+      side: doubleSide ? THREE.DoubleSide : THREE.FrontSide,
+    });
+  };
+
+  const bodyInkIndex = (typeof inkColor === "number" && inkColor >= 0 && inkColor <= 5) ? inkColor : 0;
+  const bodyHex = (typeof inkColor === "number" && inkColor > 5) ? inkColor : 0x1a31c2;
+
+  const matBody = makeMat(bodyInkIndex, bodyHex, true);
+  const matFrame = makeMat(2, 0x18181b, true); // k.BLACK = 2
+  const matVisor = makeMat(3, 0xd9651e, true); // k.ORANGE = 3
+  const matAccent = makeMat(3, 0xd9651e, true); // k.ORANGE = 3
+  const matCyan = makeMat(0, 0x00f0ff, true); // k.BLUE = 0
+
+  // 1. Pelvis & Waist Core
+  const hips = new THREE.Group();
+  hips.position.y = 0.88;
+  root.add(hips);
+
+  const hipCore = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.18, 0.28), matFrame);
+  hips.add(hipCore);
+
+  // Front Skirt Armor
+  const frontSkirt = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.22, 0.08), matBody);
+  frontSkirt.position.set(0, -0.06, -0.15);
+  frontSkirt.rotation.x = -0.25;
+  hips.add(frontSkirt);
+
+  // Side Skirt Thrusters
+  const sideSkirtL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.24, 0.2), matBody);
+  sideSkirtL.position.set(-0.22, -0.06, 0);
+  sideSkirtL.rotation.z = -0.15;
+  hips.add(sideSkirtL);
+
+  const sideSkirtR = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.24, 0.2), matBody);
+  sideSkirtR.position.set(0.22, -0.06, 0);
+  sideSkirtR.rotation.z = 0.15;
+  hips.add(sideSkirtR);
+
+  // 2. Reverse-Joint High-Mobility Legs
+  const buildLeg = (side) => {
+    const legG = new THREE.Group();
+    legG.position.set(side * 0.22, -0.05, 0);
+
+    // Thigh (angled forward)
+    const thigh = new THREE.Group();
+    legG.add(thigh);
+    const thighMesh = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.38, 0.18), matBody);
+    thighMesh.position.set(0, -0.16, 0.05);
+    thighMesh.rotation.x = -0.22;
+    thigh.add(thighMesh);
+
+    // Knee Armor Cowl (sharp protruding angle)
+    const knee = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.24), matAccent);
+    knee.position.set(0, -0.32, -0.12);
+    knee.rotation.x = 0.4;
+    thigh.add(knee);
+
+    // Shin (angled backward - reverse joint feel)
+    const shin = new THREE.Group();
+    shin.position.set(0, -0.35, -0.05);
+    thigh.add(shin);
+
+    const shinMesh = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.44, 0.18), matFrame);
+    shinMesh.position.set(0, -0.22, 0.06);
+    shinMesh.rotation.x = 0.35;
+    shin.add(shinMesh);
+
+    // Calf Thruster
+    const calfThruster = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.18, 0.12), matBody);
+    calfThruster.position.set(side * 0.08, -0.22, 0.16);
+    shin.add(calfThruster);
+
+    // Ankle & Claw Foot (broad tripod stance)
+    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.09, 0.36), matBody);
+    foot.position.set(0, -0.48, -0.04);
+    shin.add(foot);
+
+    return { legG, thigh, shin, foot };
+  };
+
+  const leftLeg = buildLeg(-1);
+  hips.add(leftLeg.legG);
+  const rightLeg = buildLeg(1);
+  hips.add(rightLeg.legG);
+
+  // 3. Torso & Chiseled Chestplate
+  const torso = new THREE.Group();
+  torso.position.y = 0.2;
+  hips.add(torso);
+
+  // Abdomen segment
+  const abdomen = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.18, 0.22), matFrame);
+  abdomen.position.y = 0.08;
+  torso.add(abdomen);
+
+  // Main Chest Block
+  const chest = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.48, 0.4), matBody);
+  chest.position.y = 0.32;
+  torso.add(chest);
+
+  // Angular Front Armor Plate (chiseled wedge)
+  const chestPlate = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.3, 0.16), matFrame);
+  chestPlate.position.set(0, 0.34, -0.22);
+  chestPlate.rotation.x = -0.18;
+  torso.add(chestPlate);
+
+  // Reactor Intake Grills (Left & Right)
+  const intakeL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, 0.05), matAccent);
+  intakeL.position.set(-0.18, 0.26, -0.24);
+  torso.add(intakeL);
+
+  const intakeR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, 0.05), matAccent);
+  intakeR.position.set(0.18, 0.26, -0.24);
+  torso.add(intakeR);
+
+  // Sensor Head Unit
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.16, 0.24), matFrame);
+  head.position.set(0, 0.58, -0.08);
+  torso.add(head);
+
+  // Optical Sensor Visor (Glowing Amber Line)
+  const visor = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.05, 0.08), matVisor);
+  visor.position.set(0, 0.58, -0.2);
+  torso.add(visor);
+
+  // V-Fin Blade Antennas
+  const finGeom = new THREE.BoxGeometry(0.02, 0.28, 0.08);
+  const finL = new THREE.Mesh(finGeom, matAccent);
+  finL.position.set(-0.12, 0.72, -0.05);
+  finL.rotation.z = -0.35;
+  finL.rotation.x = 0.2;
+  torso.add(finL);
+
+  const finR = new THREE.Mesh(finGeom, matAccent);
+  finR.position.set(0.12, 0.72, -0.05);
+  finR.rotation.z = 0.35;
+  finR.rotation.x = 0.2;
+  torso.add(finR);
+
+  // 4. Overboost Backpack with Wing Binders & 4x Thrusters
+  const backpack = new THREE.Group();
+  backpack.position.set(0, 0.32, 0.22);
+  torso.add(backpack);
+
+  const packCore = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.44, 0.22), matFrame);
+  backpack.add(packCore);
+
+  // Left Thruster Binder Wing
+  const binderL = new THREE.Group();
+  binderL.position.set(-0.28, 0.1, 0.05);
+  binderL.rotation.z = 0.22;
+  binderL.rotation.y = -0.15;
+  backpack.add(binderL);
+
+  const binderMeshL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.48, 0.22), matBody);
+  binderL.add(binderMeshL);
+
+  // Right Thruster Binder Wing
+  const binderR = new THREE.Group();
+  binderR.position.set(0.28, 0.1, 0.05);
+  binderR.rotation.z = -0.22;
+  binderR.rotation.y = 0.15;
+  backpack.add(binderR);
+
+  const binderMeshR = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.48, 0.22), matBody);
+  binderR.add(binderMeshR);
+
+  // 4x Exhaust Nozzles & Plasma Flames
+  const nozzleGeom = new THREE.CylinderGeometry(0.05, 0.08, 0.14, 6);
+  nozzleGeom.rotateX(Math.PI / 2);
+  const flameGeom = new THREE.ConeGeometry(0.065, 0.45, 6);
+  flameGeom.rotateX(-Math.PI / 2);
+
+  const makeNozzle = (parent, x, y, z) => {
+    const noz = new THREE.Mesh(nozzleGeom, matFrame);
+    noz.position.set(x, y, z);
+    parent.add(noz);
+
+    const flm = new THREE.Mesh(flameGeom, matCyan);
+    flm.position.set(x, y, z + 0.22);
+    flm.visible = false;
+    parent.add(flm);
+    return { noz, flm };
+  };
+
+  const thrusterL1 = makeNozzle(binderL, 0, 0.12, 0.14);
+  const thrusterL2 = makeNozzle(binderL, 0, -0.12, 0.14);
+  const thrusterR1 = makeNozzle(binderR, 0, 0.12, 0.14);
+  const thrusterR2 = makeNozzle(binderR, 0, -0.12, 0.14);
+  const thrusterCalfL = makeNozzle(leftLeg.shin, -0.08, -0.22, 0.22);
+  const thrusterCalfR = makeNozzle(rightLeg.shin, 0.08, -0.22, 0.22);
+
+  const allFlames = [
+    thrusterL1.flm, thrusterL2.flm, thrusterR1.flm, thrusterR2.flm,
+    thrusterCalfL.flm, thrusterCalfR.flm
+  ];
+
+  // 5. Shoulder Missile Launchers (RP-06 STARLING - 6-Tube Box Pod)
+  const buildShoulderPod = (side) => {
+    const sh = new THREE.Group();
+    sh.position.set(side * 0.44, 0.45, 0);
+
+    // Pauldron
+    const pauldron = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.24, 0.32), matBody);
+    sh.add(pauldron);
+
+    // Missile Box Pod
+    const pod = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.22, 0.42), matFrame);
+    pod.position.set(0, 0.18, -0.04);
+    sh.add(pod);
+
+    // 6 Missile Launcher Tubes (2 rows of 3 tubes matching RUSTLINE RP-06 Starling)
+    const tubeGeom = new THREE.CylinderGeometry(0.024, 0.024, 0.09, 6);
+    tubeGeom.rotateX(Math.PI / 2);
+    const tubeOffsets = [
+      [-0.065, 0.05], [0, 0.05], [0.065, 0.05],
+      [-0.065, -0.05], [0, -0.05], [0.065, -0.05]
+    ];
+    for (const [tx, ty] of tubeOffsets) {
+      const tube = new THREE.Mesh(tubeGeom, matAccent);
+      tube.position.set(tx, 0.18 + ty, -0.25);
+      sh.add(tube);
+    }
+
+    return sh;
+  };
+
+  const shoulderL = buildShoulderPod(-1);
+  torso.add(shoulderL);
+  const shoulderR = buildShoulderPod(1);
+  torso.add(shoulderR);
+
+  // 6. Left Arm: Tactical Shield Gauntlet
+  const armL = new THREE.Group();
+  armL.position.set(-0.46, 0.34, 0);
+  torso.add(armL);
+
+  const upperArmL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.26, 0.12), matFrame);
+  upperArmL.position.y = -0.13;
+  armL.add(upperArmL);
+
+  const forearmL = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.3, 0.14), matBody);
+  forearmL.position.set(0, -0.38, -0.08);
+  armL.add(forearmL);
+
+  // Strike Shield
+  const shield = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.48, 0.28), matAccent);
+  shield.position.set(-0.1, -0.38, -0.08);
+  shield.rotation.y = -0.1;
+  armL.add(shield);
+
+  // 7. Right Arm: Dual-Rail Heavy Linear Cannon (VC-21 SQUALL / HC-46 TIDEGLASS)
+  const armR = new THREE.Group();
+  armR.position.set(0.46, 0.34, 0);
+  torso.add(armR);
+
+  const upperArmR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.26, 0.12), matFrame);
+  upperArmR.position.y = -0.13;
+  armR.add(upperArmR);
+
+  const forearmR = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.3, 0.14), matBody);
+  forearmR.position.set(0, -0.38, -0.08);
+  armR.add(forearmR);
+
+  // Heavy Cannon Body Assembly
+  const cannon = new THREE.Group();
+  cannon.position.set(0, -0.38, -0.24);
+  armR.add(cannon);
+
+  // Breech Receiver Box
+  const cannonBreech = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.24, 0.52), matFrame);
+  cannon.add(cannonBreech);
+
+  // Side Ammo Capacitor Drum
+  const ammoDrum = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.18, 0.22), matAccent);
+  ammoDrum.position.set(0.14, -0.02, 0.08);
+  cannon.add(ammoDrum);
+
+  // Top Linear Rail
+  const railGeom = new THREE.BoxGeometry(0.045, 0.065, 1.05);
+  const topRail = new THREE.Mesh(railGeom, matBody);
+  topRail.position.set(0, 0.065, -0.58);
+  cannon.add(topRail);
+
+  // Bottom Linear Rail
+  const btmRail = new THREE.Mesh(railGeom, matBody);
+  btmRail.position.set(0, -0.065, -0.58);
+  cannon.add(btmRail);
+
+  // Glowing Cyan Inner Energy Conduit
+  const conduitGeom = new THREE.BoxGeometry(0.02, 0.038, 0.95);
+  const cyanConduit = new THREE.Mesh(conduitGeom, matCyan);
+  cyanConduit.position.set(0, 0, -0.55);
+  cannon.add(cyanConduit);
+
+  // Rail Cross Braces
+  for (const bz of [-0.35, -0.7, -0.98]) {
+    const brace = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.17, 0.05), matAccent);
+    brace.position.set(0, 0, bz);
+    cannon.add(brace);
+  }
+
+  // World Muzzle Marker at cannon tip
+  const cannonMuzzle = new THREE.Object3D();
+  cannonMuzzle.position.set(0, 0, -1.12);
+  cannon.add(cannonMuzzle);
+
+  // Muzzle Flash Mesh
+  const flashGeom = new THREE.ConeGeometry(0.14, 0.55, 6);
+  flashGeom.rotateX(-Math.PI / 2);
+  const muzzleFlashMesh = new THREE.Mesh(flashGeom, matCyan);
+  muzzleFlashMesh.position.set(0, 0, -1.35);
+  muzzleFlashMesh.visible = false;
+  cannon.add(muzzleFlashMesh);
+
+  return {
+    root,
+    hips,
+    torso,
+    head,
+    visor,
+    chest,
+    leftLeg,
+    rightLeg,
+    armL,
+    armR,
+    cannon,
+    cannonMuzzle,
+    muzzleFlashMesh,
+    shoulderL,
+    shoulderR,
+    backpack,
+    allFlames,
+    flameL: allFlames[0],
+    flameR: allFlames[2],
+    matBody,
+  };
+}
+
 export class MechaMode {
   constructor(gameCtx) {
     this.game = gameCtx; // { scene, camera, world, level, audio, peer, hud, player, remotePlayers, input, state, lobby, effects, enemies }
@@ -55,6 +415,8 @@ export class MechaMode {
     this.mechModel = null;
     this.mechParts = null;
     this.walkPhase = 0;
+    // Remote Player Mechas (multiplayer sync)
+    this.remoteMechs = new Map();
     if (this.game && this.game.scene) {
       this.buildLocalMechModel();
     }
@@ -125,6 +487,14 @@ export class MechaMode {
     if (this.game?.player?.rig) {
       this.game.player.rig.visible = false;
     }
+
+    // Build and attach 3D Mecha models for all online remote players
+    if (this.game?.remotePlayers) {
+      for (const [id, rp] of this.game.remotePlayers.entries()) {
+        this.ensureRemoteMech(id, rp);
+      }
+    }
+
     this.showAlert("SYSTEM ONLINE: MECHA MODE ACTIVE [TPP]", "info", 3.0);
   }
 
@@ -143,6 +513,15 @@ export class MechaMode {
     if (this.game && this.game.hud && this.game.hud.hide) {
       this.game.hud.hide();
     }
+
+    // Clean up all remote player mechas and restore humanoid stickmen
+    for (const [id, rm] of this.remoteMechs.entries()) {
+      if (rm.root && rm.root.parent) {
+        rm.root.parent.remove(rm.root);
+      }
+      this.restoreRemoteHumanoid(rm.rp);
+    }
+    this.remoteMechs.clear();
   }
 
   showAlert(msg, type = "info", duration = 2.5) {
@@ -164,6 +543,9 @@ export class MechaMode {
   // --- Main Update Loop ---
   update(dt, timestamp) {
     if (!this.enabled || !this.game || !this.game.player) return;
+
+    // 0. Update all remote online players so enemies/allies render as 3D Mechas!
+    this.updateRemoteMechs(dt);
 
     const player = this.game.player;
     const input = this.game.input;
@@ -326,7 +708,7 @@ export class MechaMode {
     this.updateTppCamera(dt, player);
   }
 
-  // --- 3D Procedural Local Mech Model (Rustline / Armored Core Blueprint Style) ---
+  // --- 3D Procedural Mech Model Construction (Rustline / Armored Core Blueprint Style) ---
   buildLocalMechModel() {
     if (!this.game || !this.game.scene) return;
 
@@ -335,345 +717,291 @@ export class MechaMode {
       this.mechModel.parent.remove(this.mechModel);
     }
 
-    const root = new THREE.Group();
-    root.name = "mecha_player_local";
-    root.visible = this.enabled;
+    const inkColor = getPlayerInk() != null ? getPlayerInk() : 0;
+    const modelData = createMechModel({
+      inkColor,
+      createMaterial: this.game.createMaterial,
+      isRemote: false,
+    });
 
-    // Shader materials using Doodle War pencil shader if available
-    const inkColor = getPlayerInk() || 0x1a31c2;
-    const makeMat = (col, fill = true, doubleSide = false) => {
-      if (typeof this.game?.createMaterial === "function") {
-        return this.game.createMaterial({
-          ink: col,
-          fill: fill,
-          side: doubleSide ? THREE.DoubleSide : THREE.FrontSide,
-        });
+    modelData.root.visible = this.enabled;
+    this.game.scene.add(modelData.root);
+    this.mechModel = modelData.root;
+    this.mechParts = modelData;
+    this.walkPhase = 0;
+  }
+
+  ensureRemoteMech(id, rp) {
+    if (!this.game?.scene || !rp) return null;
+    let rm = this.remoteMechs.get(id);
+    if (rm) return rm;
+
+    const inkColor = rp.ink != null ? rp.ink : (getPlayerInk() != null ? getPlayerInk() : 0);
+    const modelData = createMechModel({
+      inkColor,
+      createMaterial: this.game.createMaterial,
+      isRemote: true,
+    });
+
+    modelData.root.visible = this.enabled && !!rp.alive;
+    this.game.scene.add(modelData.root);
+
+    this.hideRemoteHumanoid(rp);
+
+    rm = {
+      id,
+      rp,
+      root: modelData.root,
+      parts: modelData,
+      walkPhase: 0,
+      flashTimer: 0,
+    };
+    this.remoteMechs.set(id, rm);
+    return rm;
+  }
+
+  hideRemoteHumanoid(rp) {
+    if (!rp || !rp.root) return;
+    if (rp.root.children) {
+      for (const child of rp.root.children) {
+        if (child !== rp.tagG) {
+          child.visible = false;
+        }
       }
-      return new THREE.MeshBasicMaterial({
-        color: col,
-        wireframe: !fill,
-        side: doubleSide ? THREE.DoubleSide : THREE.FrontSide,
-      });
-    };
+    }
+    if (rp.tagG) {
+      rp.tagG.visible = true;
+      rp.tagG.position.y = 2.75;
+    }
+  }
 
-    const matBody = makeMat(inkColor, true);
-    const matFrame = makeMat(0x18181b, true); // Dark graphite chassis
-    const matVisor = makeMat(0xd9651e, true); // Amber glowing visor
-    const matAccent = makeMat(0xd9651e, true); // Orange markings
-    const matCyan = makeMat(0x00f0ff, true); // Thruster plasma
+  restoreRemoteHumanoid(rp) {
+    if (!rp || !rp.root) return;
+    if (rp.root.children) {
+      for (const child of rp.root.children) {
+        child.visible = true;
+      }
+    }
+    if (rp.tagG) {
+      rp.tagG.position.y = 2.25;
+    }
+  }
 
-    // 1. Pelvis & Waist Core
-    const hips = new THREE.Group();
-    hips.position.y = 0.88;
-    root.add(hips);
+  removeRemoteMech(id) {
+    const rm = this.remoteMechs.get(id);
+    if (!rm) return;
+    if (rm.root && rm.root.parent) {
+      rm.root.parent.remove(rm.root);
+    }
+    this.restoreRemoteHumanoid(rm.rp);
+    this.remoteMechs.delete(id);
+  }
 
-    const hipCore = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.18, 0.28), matFrame);
-    hips.add(hipCore);
+  updateRemoteMechs(dt) {
+    if (!this.enabled || !this.game?.remotePlayers) return;
 
-    // Front Skirt Armor
-    const frontSkirt = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.22, 0.08), matBody);
-    frontSkirt.position.set(0, -0.06, -0.15);
-    frontSkirt.rotation.x = -0.25;
-    hips.add(frontSkirt);
+    const activeIds = new Set();
+    for (const [id, rp] of this.game.remotePlayers.entries()) {
+      activeIds.add(id);
+      let rm = this.remoteMechs.get(id);
+      if (!rm) {
+        rm = this.ensureRemoteMech(id, rp);
+      }
+      if (!rm) continue;
 
-    // Side Skirt Thrusters
-    const sideSkirtL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.24, 0.2), matBody);
-    sideSkirtL.position.set(-0.22, -0.06, 0);
-    sideSkirtL.rotation.z = -0.15;
-    hips.add(sideSkirtL);
+      this.hideRemoteHumanoid(rp);
 
-    const sideSkirtR = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.24, 0.2), matBody);
-    sideSkirtR.position.set(0.22, -0.06, 0);
-    sideSkirtR.rotation.z = 0.15;
-    hips.add(sideSkirtR);
-
-    // 2. Reverse-Joint High-Mobility Legs
-    const buildLeg = (side) => {
-      const legG = new THREE.Group();
-      legG.position.set(side * 0.22, -0.05, 0);
-
-      // Thigh (angled forward)
-      const thigh = new THREE.Group();
-      legG.add(thigh);
-      const thighMesh = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.38, 0.18), matBody);
-      thighMesh.position.set(0, -0.16, 0.05);
-      thighMesh.rotation.x = -0.22;
-      thigh.add(thighMesh);
-
-      // Knee Armor Cowl (sharp protruding angle)
-      const knee = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.24), matAccent);
-      knee.position.set(0, -0.32, -0.12);
-      knee.rotation.x = 0.4;
-      thigh.add(knee);
-
-      // Shin (angled backward - reverse joint feel)
-      const shin = new THREE.Group();
-      shin.position.set(0, -0.35, -0.05);
-      thigh.add(shin);
-
-      const shinMesh = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.44, 0.18), matFrame);
-      shinMesh.position.set(0, -0.22, 0.06);
-      shinMesh.rotation.x = 0.35;
-      shin.add(shinMesh);
-
-      // Calf Thruster
-      const calfThruster = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.18, 0.12), matBody);
-      calfThruster.position.set(side * 0.08, -0.22, 0.16);
-      shin.add(calfThruster);
-
-      // Ankle & Claw Foot (broad tripod stance)
-      const foot = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.09, 0.36), matBody);
-      foot.position.set(0, -0.48, -0.04);
-      shin.add(foot);
-
-      return { legG, thigh, shin, foot };
-    };
-
-    const leftLeg = buildLeg(-1);
-    hips.add(leftLeg.legG);
-    const rightLeg = buildLeg(1);
-    hips.add(rightLeg.legG);
-
-    // 3. Torso & Chiseled Chestplate
-    const torso = new THREE.Group();
-    torso.position.y = 0.2;
-    hips.add(torso);
-
-    // Abdomen segment
-    const abdomen = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.18, 0.22), matFrame);
-    abdomen.position.y = 0.08;
-    torso.add(abdomen);
-
-    // Main Chest Block
-    const chest = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.48, 0.4), matBody);
-    chest.position.y = 0.32;
-    torso.add(chest);
-
-    // Angular Front Armor Plate (chiseled wedge)
-    const chestPlate = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.3, 0.16), matFrame);
-    chestPlate.position.set(0, 0.34, -0.22);
-    chestPlate.rotation.x = -0.18;
-    torso.add(chestPlate);
-
-    // Reactor Intake Grills (Left & Right)
-    const intakeL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, 0.05), matAccent);
-    intakeL.position.set(-0.18, 0.26, -0.24);
-    torso.add(intakeL);
-
-    const intakeR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, 0.05), matAccent);
-    intakeR.position.set(0.18, 0.26, -0.24);
-    torso.add(intakeR);
-
-    // Sensor Head Unit
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.16, 0.24), matFrame);
-    head.position.set(0, 0.58, -0.08);
-    torso.add(head);
-
-    // Optical Sensor Visor (Glowing Amber Line)
-    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.05, 0.08), matVisor);
-    visor.position.set(0, 0.58, -0.2);
-    torso.add(visor);
-
-    // V-Fin Blade Antennas
-    const finGeom = new THREE.BoxGeometry(0.02, 0.28, 0.08);
-    const finL = new THREE.Mesh(finGeom, matAccent);
-    finL.position.set(-0.12, 0.72, -0.05);
-    finL.rotation.z = -0.35;
-    finL.rotation.x = 0.2;
-    torso.add(finL);
-
-    const finR = new THREE.Mesh(finGeom, matAccent);
-    finR.position.set(0.12, 0.72, -0.05);
-    finR.rotation.z = 0.35;
-    finR.rotation.x = 0.2;
-    torso.add(finR);
-
-    // 4. Overboost Backpack with Wing Binders & 4x Thrusters
-    const backpack = new THREE.Group();
-    backpack.position.set(0, 0.32, 0.22);
-    torso.add(backpack);
-
-    const packCore = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.44, 0.22), matFrame);
-    backpack.add(packCore);
-
-    // Left Thruster Binder Wing
-    const binderL = new THREE.Group();
-    binderL.position.set(-0.28, 0.1, 0.05);
-    binderL.rotation.z = 0.22;
-    binderL.rotation.y = -0.15;
-    backpack.add(binderL);
-
-    const binderMeshL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.48, 0.22), matBody);
-    binderL.add(binderMeshL);
-
-    // Right Thruster Binder Wing
-    const binderR = new THREE.Group();
-    binderR.position.set(0.28, 0.1, 0.05);
-    binderR.rotation.z = -0.22;
-    binderR.rotation.y = 0.15;
-    backpack.add(binderR);
-
-    const binderMeshR = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.48, 0.22), matBody);
-    binderR.add(binderMeshR);
-
-    // 4x Exhaust Nozzles & Plasma Flames
-    const nozzleGeom = new THREE.CylinderGeometry(0.05, 0.08, 0.14, 6);
-    nozzleGeom.rotateX(Math.PI / 2);
-    const flameGeom = new THREE.ConeGeometry(0.065, 0.45, 6);
-    flameGeom.rotateX(-Math.PI / 2);
-
-    const makeNozzle = (parent, x, y, z) => {
-      const noz = new THREE.Mesh(nozzleGeom, matFrame);
-      noz.position.set(x, y, z);
-      parent.add(noz);
-
-      const flm = new THREE.Mesh(flameGeom, matCyan);
-      flm.position.set(x, y, z + 0.22);
-      flm.visible = false;
-      parent.add(flm);
-      return { noz, flm };
-    };
-
-    const thrusterL1 = makeNozzle(binderL, 0, 0.12, 0.14);
-    const thrusterL2 = makeNozzle(binderL, 0, -0.12, 0.14);
-    const thrusterR1 = makeNozzle(binderR, 0, 0.12, 0.14);
-    const thrusterR2 = makeNozzle(binderR, 0, -0.12, 0.14);
-    const thrusterCalfL = makeNozzle(leftLeg.shin, -0.08, -0.22, 0.22);
-    const thrusterCalfR = makeNozzle(rightLeg.shin, 0.08, -0.22, 0.22);
-
-    const allFlames = [
-      thrusterL1.flm, thrusterL2.flm, thrusterR1.flm, thrusterR2.flm,
-      thrusterCalfL.flm, thrusterCalfR.flm
-    ];
-
-    // 5. Shoulder Missile Launchers (RP-06 STARLING - 6-Tube Box Pod)
-    const buildShoulderPod = (side) => {
-      const sh = new THREE.Group();
-      sh.position.set(side * 0.44, 0.45, 0);
-
-      // Pauldron
-      const pauldron = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.24, 0.32), matBody);
-      sh.add(pauldron);
-
-      // Missile Box Pod
-      const pod = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.22, 0.42), matFrame);
-      pod.position.set(0, 0.18, -0.04);
-      sh.add(pod);
-
-      // 6 Missile Launcher Tubes (2 rows of 3 tubes matching RUSTLINE RP-06 Starling)
-      const tubeGeom = new THREE.CylinderGeometry(0.024, 0.024, 0.09, 6);
-      tubeGeom.rotateX(Math.PI / 2);
-      const tubeOffsets = [
-        [-0.065, 0.05], [0, 0.05], [0.065, 0.05],
-        [-0.065, -0.05], [0, -0.05], [0.065, -0.05]
-      ];
-      for (const [tx, ty] of tubeOffsets) {
-        const tube = new THREE.Mesh(tubeGeom, matAccent);
-        tube.position.set(tx, 0.18 + ty, -0.25);
-        sh.add(tube);
+      if (!rp.alive) {
+        rm.root.visible = false;
+        continue;
       }
 
-      return sh;
-    };
+      rm.root.visible = true;
 
-    const shoulderL = buildShoulderPod(-1);
-    torso.add(shoulderL);
-    const shoulderR = buildShoulderPod(1);
-    torso.add(shoulderR);
+      // Sync ink color if changed
+      if (rp.ink != null && rm.parts?.matBody) {
+        if (rm.parts.matBody.uniforms?.uInk) {
+          rm.parts.matBody.uniforms.uInk.value = rp.ink;
+        } else if (rm.parts.matBody.color) {
+          rm.parts.matBody.color.set(rp.ink);
+        }
+      }
 
-    // 6. Left Arm: Tactical Shield Gauntlet
-    const armL = new THREE.Group();
-    armL.position.set(-0.46, 0.34, 0);
-    torso.add(armL);
+      // Position & Yaw
+      if (rp.body?.pos) {
+        rm.root.position.copy(rp.body.pos);
+      }
+      if (typeof rp.yaw === "number") {
+        rm.root.rotation.y = rp.yaw;
+      }
 
-    const upperArmL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.26, 0.12), matFrame);
-    upperArmL.position.y = -0.13;
-    armL.add(upperArmL);
+      // Torso Pitch (aim angle)
+      if (typeof rp.pitch === "number" && rm.parts.torso) {
+        rm.parts.torso.rotation.x = -rp.pitch * 0.6;
+      }
 
-    const forearmL = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.3, 0.14), matBody);
-    forearmL.position.set(0, -0.38, -0.08);
-    armL.add(forearmL);
+      // Velocity & Speed
+      const velX = rp.body?.vel ? rp.body.vel.x : 0;
+      const velY = rp.body?.vel ? rp.body.vel.y : 0;
+      const velZ = rp.body?.vel ? rp.body.vel.z : 0;
+      const horizSpeed = Math.hypot(velX, velZ);
+      const isAirborne = !rp.body?.onGround || Math.abs(velY) > 0.8;
+      const isFastMove = horizSpeed > 6.0;
 
-    // Strike Shield
-    const shield = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.48, 0.28), matAccent);
-    shield.position.set(-0.1, -0.38, -0.08);
-    shield.rotation.y = -0.1;
-    armL.add(shield);
+      // Walking Leg Cycle
+      if (!isAirborne && horizSpeed > 0.3) {
+        rm.walkPhase = (rm.walkPhase + dt * Math.min(12, horizSpeed * 2.5)) % (Math.PI * 2);
+        const legSwing = Math.sin(rm.walkPhase) * 0.45;
+        rm.parts.leftLeg.thigh.rotation.x = legSwing;
+        rm.parts.rightLeg.thigh.rotation.x = -legSwing;
+        rm.parts.leftLeg.shin.rotation.x = 0.35 + Math.max(0, -legSwing * 0.3);
+        rm.parts.rightLeg.shin.rotation.x = 0.35 + Math.max(0, legSwing * 0.3);
+      } else {
+        rm.parts.leftLeg.thigh.rotation.x *= 0.85;
+        rm.parts.rightLeg.thigh.rotation.x *= 0.85;
+        rm.parts.leftLeg.shin.rotation.x = THREE.MathUtils.lerp(rm.parts.leftLeg.shin.rotation.x, 0.35, dt * 10);
+        rm.parts.rightLeg.shin.rotation.x = THREE.MathUtils.lerp(rm.parts.rightLeg.shin.rotation.x, 0.35, dt * 10);
+      }
 
-    // 7. Right Arm: Dual-Rail Heavy Linear Cannon (VC-21 SQUALL / HC-46 TIDEGLASS)
-    const armR = new THREE.Group();
-    armR.position.set(0.46, 0.34, 0);
-    torso.add(armR);
+      // Thrusters
+      const thrustersActive = isAirborne || isFastMove;
+      for (const flm of rm.parts.allFlames) {
+        flm.visible = thrustersActive;
+        if (thrustersActive) {
+          flm.scale.set(1, 0.8 + Math.random() * 0.5, 1);
+        }
+      }
 
-    const upperArmR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.26, 0.12), matFrame);
-    upperArmR.position.y = -0.13;
-    armR.add(upperArmR);
+      if (thrustersActive && Math.random() < 0.25) {
+        if (this.game.effects && typeof this.game.effects.strokeBurst === "function") {
+          const exhaustOrigin = rp.body.pos.clone().add(new THREE.Vector3(0, 1.2, 0));
+          this.game.effects.strokeBurst(exhaustOrigin, 0x00f0ff, 2, 4, { life: 0.2, size: 0.035 });
+        }
+      }
 
-    const forearmR = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.3, 0.14), matBody);
-    forearmR.position.set(0, -0.38, -0.08);
-    armR.add(forearmR);
-
-    // Heavy Cannon Body Assembly
-    const cannon = new THREE.Group();
-    cannon.position.set(0, -0.38, -0.24);
-    armR.add(cannon);
-
-    // Breech Receiver Box
-    const cannonBreech = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.24, 0.52), matFrame);
-    cannon.add(cannonBreech);
-
-    // Side Ammo Capacitor Drum
-    const ammoDrum = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.18, 0.22), matAccent);
-    ammoDrum.position.set(0.14, -0.02, 0.08);
-    cannon.add(ammoDrum);
-
-    // Top Linear Rail
-    const railGeom = new THREE.BoxGeometry(0.045, 0.065, 1.05);
-    const topRail = new THREE.Mesh(railGeom, matBody);
-    topRail.position.set(0, 0.065, -0.58);
-    cannon.add(topRail);
-
-    // Bottom Linear Rail
-    const btmRail = new THREE.Mesh(railGeom, matBody);
-    btmRail.position.set(0, -0.065, -0.58);
-    cannon.add(btmRail);
-
-    // Glowing Cyan Inner Energy Conduit
-    const conduitGeom = new THREE.BoxGeometry(0.02, 0.038, 0.95);
-    const cyanConduit = new THREE.Mesh(conduitGeom, matCyan);
-    cyanConduit.position.set(0, 0, -0.55);
-    cannon.add(cyanConduit);
-
-    // Rail Cross Braces
-    for (const bz of [-0.35, -0.7, -0.98]) {
-      const brace = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.17, 0.05), matAccent);
-      brace.position.set(0, 0, bz);
-      cannon.add(brace);
+      // Muzzle flash timer
+      if (rm.flashTimer > 0) {
+        rm.flashTimer -= dt;
+        rm.parts.muzzleFlashMesh.visible = (rm.flashTimer > 0);
+      }
     }
 
-    // World Muzzle Marker at cannon tip
-    const cannonMuzzle = new THREE.Object3D();
-    cannonMuzzle.position.set(0, 0, -1.12);
-    cannon.add(cannonMuzzle);
+    // Disconnected cleanup
+    for (const [id, rm] of this.remoteMechs.entries()) {
+      if (!activeIds.has(id)) {
+        this.removeRemoteMech(id);
+      }
+    }
+  }
 
-    // Muzzle Flash Mesh
-    const flashGeom = new THREE.ConeGeometry(0.14, 0.55, 6);
-    flashGeom.rotateX(-Math.PI / 2);
-    const muzzleFlashMesh = new THREE.Mesh(flashGeom, matCyan);
-    muzzleFlashMesh.position.set(0, 0, -1.35);
-    muzzleFlashMesh.visible = false;
-    cannon.add(muzzleFlashMesh);
+  onRemoteShot(id, shotData) {
+    if (!this.enabled) return;
+    const rm = this.remoteMechs.get(id);
+    if (!rm || !rm.rp?.alive) return;
 
-    this.game.scene.add(root);
-    this.mechModel = root;
-    this.mechParts = {
-      root, hips, torso, chest, leftLeg, rightLeg, armL, armR, cannon,
-      cannonMuzzle, muzzleFlashMesh,
-      legL: leftLeg.legG, legR: rightLeg.legG,
-      flameL: allFlames[0], flameR: allFlames[2],
-      allFlames, matBody
-    };
-    this.walkPhase = 0;
+    rm.flashTimer = 0.09;
+    rm.parts.muzzleFlashMesh.visible = true;
+
+    const muzzlePos = new THREE.Vector3();
+    rm.parts.cannonMuzzle.getWorldPosition(muzzlePos);
+
+    const targets = shotData?.e || [];
+    for (let o = 0; o + 2 < targets.length; o += 3) {
+      const hitPoint = new THREE.Vector3(targets[o], targets[o + 1], targets[o + 2]);
+      this.spawnHeavyTracer(muzzlePos, hitPoint);
+    }
+
+    this.playMechaCannonSound();
+  }
+
+  onRemoteMissileSalvo(id, data) {
+    if (!this.enabled) return;
+    const rm = this.remoteMechs.get(id);
+    if (!rm || !rm.rp?.alive) return;
+
+    if (this.game.audio && this.game.audio.shot) {
+      this.game.audio.shot("rocket");
+    }
+
+    const scene = this.game.scene;
+    if (!scene) return;
+
+    let target = null;
+    if (data?.targetId === this.game.peer?.id) {
+      target = {
+        id: this.game.player.id || "local",
+        name: this.game.player.name || "YOU",
+        center: this.game.player.eye ? this.game.player.eye.clone() : new THREE.Vector3(),
+        body: this.game.player.body,
+        entity: this.game.player,
+        isBot: false,
+      };
+    } else if (data?.targetId && this.game.remotePlayers?.has(data.targetId)) {
+      const rp = this.game.remotePlayers.get(data.targetId);
+      target = {
+        id: data.targetId,
+        name: rp.name,
+        center: rp.center,
+        body: rp.body,
+        entity: rp,
+        isBot: false,
+      };
+    }
+
+    const count = data?.count || MECHA_CONFIG.MISSILE_COUNT;
+    const rp = rm.rp;
+    const forward = rp.forward || new THREE.Vector3(0, 0, -1);
+    const right = rp.right || new THREE.Vector3(1, 0, 0);
+
+    for (let i = 0; i < count; i++) {
+      const side = (i % 2 === 0 ? -1 : 1);
+      const origin = rp.body.pos.clone();
+      origin.y += 1.8;
+      origin.addScaledVector(right, side * 0.5);
+
+      const launchDir = forward.clone()
+        .addScaledVector(right, side * 0.6)
+        .addScaledVector(new THREE.Vector3(0, 1, 0), 0.4)
+        .normalize();
+
+      const mesh = new THREE.Mesh(this.missileGeom, this.missileMat);
+      mesh.position.copy(origin);
+      mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), launchDir);
+      scene.add(mesh);
+
+      const missile = {
+        pos: origin.clone(),
+        vel: launchDir.clone().multiplyScalar(MECHA_CONFIG.MISSILE_SPEED * 0.7),
+        target: target,
+        life: 0,
+        maxLife: 3.5,
+        mesh: mesh,
+        swirlPhase: Math.random() * Math.PI * 2,
+        lastTrail: 0,
+        ownerId: id,
+      };
+      this.activeMissiles.push(missile);
+    }
+  }
+
+  onRemoteDeath(id, data) {
+    const rm = this.remoteMechs.get(id);
+    if (!rm) return;
+    rm.root.visible = false;
+    const pos = rm.root.position.clone();
+    pos.y += 1.0;
+
+    const effects = this.game?.effects;
+    if (effects && typeof effects.strokeBurst === "function") {
+      effects.strokeBurst(pos, 0xd9651e, 16, 12, { life: 0.6, size: 0.08 });
+      effects.strokeBurst(pos, 0x00f0ff, 12, 8, { life: 0.45, size: 0.06 });
+    }
+    if (effects && typeof effects.smoke === "function") {
+      effects.smoke(pos, 8);
+    }
+    if (this.game?.audio && typeof this.game.audio.explode === "function") {
+      this.game.audio.explode(pos);
+    }
   }
 
   updateLocalMechModel(dt, player) {
@@ -1011,6 +1339,7 @@ export class MechaMode {
 
     const eye = player.eye;
     const fwd = player.forward;
+    if (!eye || !fwd) return null;
     const diff = new THREE.Vector3();
 
     for (const c of candidates) {
@@ -1050,7 +1379,7 @@ export class MechaMode {
       this.game.audio.shot("rocket");
     }
 
-    // Queue 4 staggered missiles (left, right, left, right shoulder hardpoints)
+    // Queue 6 staggered missiles (left, right, left, right shoulder hardpoints)
     const target = this.currentLockTarget;
     for (let i = 0; i < MECHA_CONFIG.MISSILE_COUNT; i++) {
       this.pendingSalvo.push({
@@ -1058,6 +1387,16 @@ export class MechaMode {
         target: target,
         hardpointSide: i % 2 === 0 ? -1 : 1,
       });
+    }
+
+    // Multiplayer sync missile salvo
+    if (this.game.peer && this.game.peer.active) {
+      const targetId = target ? (target.entity?.id || target.id || null) : null;
+      if (typeof this.game.peer.sendFast === "function") {
+        this.game.peer.sendFast("mecha_missile", { targetId });
+      } else if (typeof this.game.peer.send === "function") {
+        this.game.peer.send("mecha_missile", { targetId });
+      }
     }
   }
 
@@ -1235,6 +1574,18 @@ export class MechaMode {
         }
       }
     }
+
+    // Splash damage to local player from enemy missiles
+    if (this.game.player && this.game.player.alive && (!directTarget || this.game.player !== directTarget.entity)) {
+      const pos = this.game.player.eye || this.game.player.body?.pos;
+      if (pos) {
+        const dist = pos.distanceTo(impactPoint);
+        if (dist <= radius) {
+          const splashDmg = Math.round(MECHA_CONFIG.MISSILE_DAMAGE * (1 - dist / radius));
+          this.applyDamage(this.game.player, splashDmg, impactPoint);
+        }
+      }
+    }
   }
 
   applyDamage(entity, amount, impactPoint) {
@@ -1409,14 +1760,21 @@ export class MechaMode {
       }
     }
 
-    // Multiplayer sync shot
-    if (this.game.peer && typeof this.game.peer.send === "function" && this.game.peer.active) {
-      this.game.peer.send("shot", {
-        k: "rifle",
-        o: muzzlePos.toArray(),
-        d: camDir.toArray(),
-        ink: 0x00f0ff,
-      });
+    // Multiplayer sync shot: sendFast("shots", ...) so remote peers render tracer & muzzle flash!
+    if (this.game.peer && this.game.peer.active) {
+      if (typeof this.game.peer.sendFast === "function") {
+        this.game.peer.sendFast("shots", {
+          k: "rifle",
+          e: [targetPoint.x, targetPoint.y, targetPoint.z],
+          ink: 0x00f0ff,
+        });
+      } else if (typeof this.game.peer.send === "function") {
+        this.game.peer.send("shots", {
+          k: "rifle",
+          e: [targetPoint.x, targetPoint.y, targetPoint.z],
+          ink: 0x00f0ff,
+        });
+      }
     }
   }
 

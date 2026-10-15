@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { MechaMode, MECHA_CONFIG } from '../public/games/doodle/mecha-mode.js';
+import { MechaMode, MECHA_CONFIG, createMechModel } from '../public/games/doodle/mecha-mode.js';
 
 test('MechaMode initialization and lifecycle', () => {
   const mecha = new MechaMode({ player: { body: { vel: new THREE.Vector3() }, alive: true } });
@@ -436,5 +436,210 @@ test('MechaMode primary heavy linear cannon fires with high-visibility tracer, r
   assert.equal(scene.children.includes(mecha.activeTracers[0].mesh), true);
 });
 
+test('createMechModel procedural structure & shader mapping', () => {
+  // Test fallback material
+  const fallbackModel = createMechModel({ inkColor: 0x1a31c2, isRemote: true });
+  assert.equal(fallbackModel.root.name, 'mecha_remote');
+  assert.ok(fallbackModel.cannon);
+  assert.ok(fallbackModel.cannonMuzzle);
+  assert.ok(fallbackModel.shoulderL);
+  assert.ok(fallbackModel.shoulderR);
+  assert.equal(fallbackModel.allFlames.length, 6);
 
+  // Test custom shader factory (Doodle District deferred pipeline)
+  const createdInks = [];
+  const customShaderFactory = ({ ink, fill, side }) => {
+    createdInks.push(ink);
+    return new THREE.MeshBasicMaterial();
+  };
 
+  const shaderModel = createMechModel({
+    inkColor: 1, // Red team
+    createMaterial: customShaderFactory,
+    isRemote: false,
+  });
+
+  assert.equal(shaderModel.root.name, 'mecha_player_local');
+  // Should have mapped ink palette indices properly: 1 (body red), 2 (frame black), 3 (visor/accent orange), 0 (cyan thruster)
+  assert.ok(createdInks.includes(1));
+  assert.ok(createdInks.includes(2));
+  assert.ok(createdInks.includes(3));
+  assert.ok(createdInks.includes(0));
+});
+
+test('Multiplayer: remote players transform into 3D Mechas and doodle stickmen are hidden', () => {
+  const scene = new THREE.Scene();
+  const remoteTag = new THREE.Group();
+  const remoteBodyPart = new THREE.Mesh();
+  const remoteRoot = new THREE.Group();
+  remoteRoot.add(remoteBodyPart);
+  remoteRoot.add(remoteTag);
+
+  const remotePlayer = {
+    id: 'peer-enemy-1',
+    name: 'Opponent',
+    alive: true,
+    root: remoteRoot,
+    tagG: remoteTag,
+    ink: 1, // Red
+    body: { pos: new THREE.Vector3(10, 0, 5), vel: new THREE.Vector3(0, 0, 0), onGround: true },
+    yaw: 1.57,
+    pitch: 0.2,
+  };
+
+  const remotePlayers = new Map([['peer-enemy-1', remotePlayer]]);
+  const mecha = new MechaMode({ scene, remotePlayers, player: { body: { vel: new THREE.Vector3() }, alive: true } });
+
+  // Before enabling, remote mech does not exist
+  assert.equal(mecha.remoteMechs.size, 0);
+
+  // When MechaMode is enabled, remote player is transformed into 3D mecha
+  mecha.enable();
+  assert.equal(mecha.remoteMechs.size, 1);
+  const rm = mecha.remoteMechs.get('peer-enemy-1');
+  assert.ok(rm);
+  assert.equal(rm.root.visible, true);
+  assert.equal(scene.children.includes(rm.root), true);
+
+  // Original doodle stickman parts must be hidden while keeping tagG visible and elevated
+  assert.equal(remoteBodyPart.visible, false);
+  assert.equal(remoteTag.visible, true);
+  assert.equal(remoteTag.position.y, 2.75);
+});
+
+test('Multiplayer: remote mecha updates follow transform, leg animations, and thruster flames', () => {
+  const scene = new THREE.Scene();
+  const remoteTag = new THREE.Group();
+  const remoteBodyPart = new THREE.Mesh();
+  const remoteRoot = new THREE.Group();
+  remoteRoot.add(remoteBodyPart);
+  remoteRoot.add(remoteTag);
+
+  const remotePlayer = {
+    id: 'peer-enemy-2',
+    name: 'FlyingEnemy',
+    alive: true,
+    root: remoteRoot,
+    tagG: remoteTag,
+    ink: 4, // Green
+    body: { pos: new THREE.Vector3(15, 8, 20), vel: new THREE.Vector3(8, 5, 0), onGround: false },
+    yaw: 3.14,
+    pitch: -0.4,
+  };
+
+  const remotePlayers = new Map([['peer-enemy-2', remotePlayer]]);
+  const mecha = new MechaMode({ scene, remotePlayers, player: { body: { vel: new THREE.Vector3() }, alive: true } });
+  mecha.enable();
+
+  const rm = mecha.remoteMechs.get('peer-enemy-2');
+
+  // Update frame
+  mecha.update(0.05, 100);
+
+  // Position, yaw, and torso pitch should match remote player
+  assert.equal(rm.root.position.x, 15);
+  assert.equal(rm.root.position.y, 8);
+  assert.equal(rm.root.position.z, 20);
+  assert.equal(rm.root.rotation.y, 3.14);
+  assert.ok(rm.parts.torso.rotation.x !== 0);
+
+  // Since airborne and moving fast, thruster flames must be visible
+  for (const flame of rm.parts.allFlames) {
+    assert.equal(flame.visible, true);
+  }
+});
+
+test('Multiplayer: remote cannon shot and homing missile salvo synchronization', () => {
+  const scene = new THREE.Scene();
+  const remoteTag = new THREE.Group();
+  const remoteRoot = new THREE.Group();
+  remoteRoot.add(new THREE.Mesh());
+  remoteRoot.add(remoteTag);
+
+  const remotePlayer = {
+    id: 'peer-enemy-3',
+    name: 'GundamMaster',
+    alive: true,
+    root: remoteRoot,
+    tagG: remoteTag,
+    ink: 1,
+    body: { pos: new THREE.Vector3(0, 0, 10), vel: new THREE.Vector3() },
+    forward: new THREE.Vector3(0, 0, -1),
+    right: new THREE.Vector3(1, 0, 0),
+  };
+
+  let tracerSpawned = false;
+  const effects = {
+    tracer: () => { tracerSpawned = true; },
+    strokeBurst: () => {},
+  };
+  let soundPlayed = false;
+  const audio = {
+    shot: () => { soundPlayed = true; },
+  };
+
+  const remotePlayers = new Map([['peer-enemy-3', remotePlayer]]);
+  const localPlayer = { id: 'local-me', body: { pos: new THREE.Vector3(0, 0, 0), vel: new THREE.Vector3() }, eye: new THREE.Vector3(0, 1.6, 0), alive: true };
+  const mecha = new MechaMode({ scene, remotePlayers, player: localPlayer, effects, audio, peer: { id: 'local-me' } });
+  mecha.enable();
+
+  const rm = mecha.remoteMechs.get('peer-enemy-3');
+
+  // 1. Remote Shot
+  mecha.onRemoteShot('peer-enemy-3', { k: 'rifle', e: [0, 1.6, 0] });
+  assert.equal(rm.parts.muzzleFlashMesh.visible, true);
+  assert.equal(tracerSpawned, true);
+
+  // 2. Remote Missile Salvo
+  mecha.onRemoteMissileSalvo('peer-enemy-3', { targetId: 'local-me', count: 6 });
+  assert.equal(mecha.activeMissiles.length, 6);
+  assert.equal(soundPlayed, true);
+  assert.equal(mecha.activeMissiles[0].target.id, 'local-me');
+});
+
+test('Multiplayer: remote death explosion and cleanup on disable', () => {
+  const scene = new THREE.Scene();
+  const remoteTag = new THREE.Group();
+  const remoteBodyPart = new THREE.Mesh();
+  const remoteRoot = new THREE.Group();
+  remoteRoot.add(remoteBodyPart);
+  remoteRoot.add(remoteTag);
+
+  const remotePlayer = {
+    id: 'peer-enemy-4',
+    name: 'DoomedMech',
+    alive: true,
+    root: remoteRoot,
+    tagG: remoteTag,
+    ink: 1,
+    body: { pos: new THREE.Vector3(5, 0, 5), vel: new THREE.Vector3() },
+  };
+
+  let burstCount = 0;
+  let explodedSound = false;
+  const effects = {
+    strokeBurst: () => { burstCount++; },
+    smoke: () => {},
+  };
+  const audio = {
+    explode: () => { explodedSound = true; },
+  };
+
+  const remotePlayers = new Map([['peer-enemy-4', remotePlayer]]);
+  const mecha = new MechaMode({ scene, remotePlayers, player: { body: { vel: new THREE.Vector3() }, alive: true }, effects, audio });
+  mecha.enable();
+
+  const rm = mecha.remoteMechs.get('peer-enemy-4');
+
+  // Trigger remote death
+  mecha.onRemoteDeath('peer-enemy-4', {});
+  assert.equal(rm.root.visible, false);
+  assert.ok(burstCount >= 2);
+  assert.equal(explodedSound, true);
+
+  // On disable, humanoid is restored and remote mechs are cleared
+  mecha.disable();
+  assert.equal(remoteBodyPart.visible, true);
+  assert.equal(remoteTag.position.y, 2.25);
+  assert.equal(mecha.remoteMechs.size, 0);
+});

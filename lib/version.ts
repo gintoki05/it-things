@@ -5,12 +5,25 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.78"
-export const APP_BUILD = "2026.10.14"
+export const APP_VERSION = "v2.3.79"
+export const APP_BUILD = "2026.10.15"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.79",
+    date: "15 Okt 2026",
+    codename: "TENNIS98.EXE - Wireless Joy-Con Mobile Motion Controls & QR Pairing",
+    changes: [
+      "Wireless Joy-Con Mobile Motion: Mengubah smartphone menjadi controller gerak nirkabel bergaya Wii Remote / Joy-Con memanfaatkan akselerometer & giroskop (DeviceMotionEvent) untuk pukulan Forehand, Backhand, Toss Servis, dan Overhead Smash.",
+      "Dedicated Mobile Controller UI (/tennis-remote): Halaman web controller mandiri dengan sasis Joy-Con retro, VU meter G-force live 5-segmen, lampu LED indikator P1, toggle kidal/kanan, dan tombol sentuh fisik cadangan.",
+      "Realtime Haptic Rumble: Umpan balik getaran fisik (navigator.vibrate) di HP saat raket mengenai bola atau mencetak skor melalui saluran Supabase Realtime Broadcast berlatensi rendah (<40ms).",
+      "Instant QR Pairing (REMOTE_CONNECT.EXE): Dialog pairing retro Windows 98 dengan generator SVG QR Code murni (zero-dependency) dan kode room unik untuk koneksi instan kamera HP.",
+      "Direct Mobile Touch Swipe: Dukungan gesture usapan jari langsung pada kanvas jika game dimainkan dari browser HP tanpa remote (swipe atas untuk toss, swipe kiri/kanan untuk drive bola).",
+      "DOODLE.EXE Mecha Ops Multiplayer Sync: Sinkronisasi 3D mecha model untuk remote players, animasi thruster, dan tembakan salvo rudal pada mode multiplayer Doodle War.",
+    ],
+  },
   {
     version: "v2.3.78",
     date: "14 Okt 2026",

@@ -42,6 +42,8 @@ export interface ScoreState {
   matchWinner: "player" | "opponent" | null
 }
 
+export type TennisScore = ScoreState
+
 export class TennisPhysicsEngine {
   // Posisi & Kecepatan Bola 3D
   public ballPos = new THREE.Vector3(0, 0.9, 9.2)
@@ -101,15 +103,22 @@ export class TennisPhysicsEngine {
   private opponentServeTossed = false
 
   // Callback listeners
-  private onScoreUpdate?: (score: ScoreState) => void
-  private onFeedback?: (text: string, color: string) => void
+  public onScoreUpdate?: (score: ScoreState) => void
+  public onScoreChange?: (score: ScoreState, winner?: "player" | "opponent") => void
+  public onFeedback?: (text: string, color: string) => void
+  public onBallContact?: (details: { hitter: "player" | "opponent"; isSmash: boolean; speed: number; quality: string }) => void
+  public onBallHit?: (details: { hitter: "player" | "opponent"; isSmash: boolean; speed: number; quality: string }) => void
 
   constructor(
     onScoreUpdate?: (score: ScoreState) => void,
-    onFeedback?: (text: string, color: string) => void
+    onFeedback?: (text: string, color: string) => void,
+    onBallContact?: (details: { hitter: "player" | "opponent"; isSmash: boolean; speed: number; quality: string }) => void,
+    onScoreChange?: (score: ScoreState, winner?: "player" | "opponent") => void
   ) {
     this.onScoreUpdate = onScoreUpdate
     this.onFeedback = onFeedback
+    this.onBallContact = onBallContact
+    this.onScoreChange = onScoreChange
     this.resetToServe(this.score.server)
   }
 
@@ -168,15 +177,18 @@ export class TennisPhysicsEngine {
   }
 
   /**
-   * Eksekusi Pukulan Pemain (Forehand / Backhand / Serve)
+   * Eksekusi Pukulan Pemain (Forehand / Backhand / Serve / Smash)
    */
-  public handlePlayerSwing(swingType?: "forehand" | "backhand" | "smash"): ShotQuality {
+  public handlePlayerSwing(
+    swingType?: "forehand" | "backhand" | "serve" | "smash",
+    powerMultiplier = 1.0
+  ): ShotQuality {
     // 1. Jika dalam mode lempar bola servis (Serving Toss)
     if (this.state === "serving_toss" && this.score.server === "player") {
       // Strike window servis overhead saat bola melayang di udara tinggi
       if (this.ballPos.y > 1.6 && this.ballPos.y < 3.4) {
-        // Deteksi ROCKET SERVE: Jika dipukul tepat di apex toss (y >= 2.85m atau vy hampir 0)
-        const isApexHit = this.ballPos.y >= 2.85 || Math.abs(this.ballVel.y) < 2.0
+        // Deteksi ROCKET SERVE: Jika dipukul tepat di apex toss (y >= 2.85m atau vy hampir 0) atau tipe pukulan smash
+        const isApexHit = this.ballPos.y >= 2.85 || Math.abs(this.ballVel.y) < 2.0 || swingType === "smash"
         this.isRocketServe = isApexHit
         this.isSmashShot = false
 
@@ -186,7 +198,18 @@ export class TennisPhysicsEngine {
           Math.min(3.1, Math.max(2.1, this.ballPos.y)),
           this.playerZ - 0.35
         )
-        this.executeServe("player", isApexHit)
+        this.executeServe("player", isApexHit, powerMultiplier)
+
+        const hitSpeed = Math.hypot(this.ballVel.x, this.ballVel.y, this.ballVel.z)
+        const contactDetails = {
+          hitter: "player" as const,
+          isSmash: isApexHit,
+          speed: hitSpeed,
+          quality: isApexHit ? "rocket" : "good",
+        }
+        this.onBallContact?.(contactDetails)
+        this.onBallHit?.(contactDetails)
+
         return isApexHit ? "perfect" : "early"
       } else {
         // Servis miss
@@ -209,8 +232,8 @@ export class TennisPhysicsEngine {
         let targetX = 0
         let targetZ = -6.8
 
-        const isForehand = this.ballPos.x >= this.playerCurrentX
-        const isSmash = this.ballPos.y > 2.0
+        const isForehand = swingType === "forehand" ? true : swingType === "backhand" ? false : this.ballPos.x >= this.playerCurrentX
+        const isSmash = this.ballPos.y > 2.0 || swingType === "smash"
         this.isSmashShot = isSmash
         this.isRocketServe = false
 
@@ -253,6 +276,9 @@ export class TennisPhysicsEngine {
           targetZ = -6.0 - Math.random() * 1.4 // Smash tajam menukik ke mid-court
         }
 
+        // Terapkan pengali daya ayunan (power multiplier dari gesture / controller)
+        speedMult = speedMult * (powerMultiplier ?? 1.0)
+
         // MAGNETISASI BOLA KE SWEET SPOT MESH RAKET (Presisi Kontak Visual & Fisika)
         if (isSmash) {
           this.ballPos.set(
@@ -283,6 +309,17 @@ export class TennisPhysicsEngine {
         this.score.rallyCount++
         playTennisHitSound(speedMult, isSmash)
 
+        const hitSpeed = Math.hypot(this.ballVel.x, this.ballVel.y, this.ballVel.z)
+        const qualityStr = isSmash ? "smash" : quality === "perfect" ? "great" : "good"
+        const contactDetails = {
+          hitter: "player" as const,
+          isSmash,
+          speed: hitSpeed,
+          quality: qualityStr,
+        }
+        this.onBallContact?.(contactDetails)
+        this.onBallHit?.(contactDetails)
+
         return quality
       }
     }
@@ -293,7 +330,7 @@ export class TennisPhysicsEngine {
   /**
    * Eksekusi Pukulan Servis
    */
-  public executeServe(server: "player" | "opponent", isRocket = false) {
+  public executeServe(server: "player" | "opponent", isRocket = false, powerMultiplier = 1.0) {
     this.state = "in_play"
     this.lastHitter = server
     this.bounceCountThisSide = 0
@@ -301,7 +338,7 @@ export class TennisPhysicsEngine {
 
     if (server === "player") {
       // Kecepatan servis normal 17.5 m/s, jika Rocket Serve melonjak ke 24.5 m/s!
-      const speed = isRocket ? 24.5 : 17.5
+      const speed = (isRocket ? 24.5 : 17.5) * (powerMultiplier ?? 1.0)
       const minNet = isRocket ? 0.22 : 0.35
       const targetX = (Math.random() - 0.5) * 3.4
       const targetZ = isRocket ? -5.8 : -4.8 - Math.random() * 1.4
@@ -314,6 +351,16 @@ export class TennisPhysicsEngine {
       const targetZ = 4.8 + Math.random() * 1.4
       this.calculateTrajectory(this.ballPos, new THREE.Vector3(targetX, 0.15, targetZ), 16.0, 0.35)
       playTennisHitSound(1.1, true)
+
+      const hitSpeed = Math.hypot(this.ballVel.x, this.ballVel.y, this.ballVel.z)
+      const contactDetails = {
+        hitter: "opponent" as const,
+        isSmash: false,
+        speed: hitSpeed,
+        quality: "good",
+      }
+      this.onBallContact?.(contactDetails)
+      this.onBallHit?.(contactDetails)
     }
 
     this.predictFutureLanding()
@@ -357,6 +404,16 @@ export class TennisPhysicsEngine {
     this.bounceCountThisSide = 0
     this.score.rallyCount++
     playTennisHitSound(speedMult, false)
+
+    const hitSpeed = Math.hypot(this.ballVel.x, this.ballVel.y, this.ballVel.z)
+    const contactDetails = {
+      hitter: "opponent" as const,
+      isSmash: false,
+      speed: hitSpeed,
+      quality: "good",
+    }
+    this.onBallContact?.(contactDetails)
+    this.onBallHit?.(contactDetails)
   }
 
   /**
@@ -715,7 +772,7 @@ export class TennisPhysicsEngine {
       this.showFeedback("MATCH OVER - OPPONENT WINS", "#94a3b8")
     }
 
-    this.notifyScore()
+    this.notifyScore(winner)
   }
 
   public showFeedback(text: string, color = "#ffffff") {
@@ -723,9 +780,12 @@ export class TennisPhysicsEngine {
     if (this.onFeedback) this.onFeedback(text, color)
   }
 
-  private notifyScore() {
+  private notifyScore(winner?: "player" | "opponent") {
     if (this.onScoreUpdate) {
       this.onScoreUpdate({ ...this.score })
+    }
+    if (this.onScoreChange) {
+      this.onScoreChange({ ...this.score }, winner)
     }
   }
 

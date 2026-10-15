@@ -15,15 +15,73 @@ import {
 } from "@/lib/tennis/audio"
 import { cn } from "@/lib/utils"
 
+export interface TennisCanvasHandle {
+  triggerServeToss: () => boolean
+  executeRemoteSwing: (type: "forehand" | "backhand" | "serve" | "smash", powerMultiplier?: number) => void
+  restartMatch: () => void
+}
+
 export interface TennisCanvasProps {
   viewMode?: "court" | "studio"
   onViewModeChange?: (mode: "court" | "studio") => void
   onBallHit?: () => void
+  onBallContact?: (details: { hitter: "player" | "opponent"; isSmash: boolean; speed: number; quality: string }) => void
+  onScoreChange?: (score: ScoreState, winner?: "player" | "opponent") => void
   className?: string
   resetTrigger?: number
 }
 
-export function TennisCanvas({ viewMode: propViewMode, onViewModeChange, className, resetTrigger }: TennisCanvasProps) {
+export function classifyCanvasTouchSwipe(
+  start: { x: number; y: number; time: number },
+  end: { x: number; y: number; time: number },
+  minSwipe = 20,
+  maxTap = 15
+) {
+  const dx = end.x - start.x
+  const dy = end.y - start.y
+  const dt = end.time - start.time
+  const dist = Math.hypot(dx, dy)
+
+  if (dist < maxTap) {
+    return { type: "tap" as const, action: "handleAction", dist, dt }
+  }
+
+  if (dist >= minSwipe) {
+    if (Math.abs(dy) >= Math.abs(dx)) {
+      return {
+        type: "swipe" as const,
+        direction: dy < 0 ? ("up" as const) : ("down" as const),
+        action: dy < 0 ? "toss" : "smash",
+        dist,
+        dt,
+      }
+    } else {
+      return {
+        type: "swipe" as const,
+        direction: dx > 0 ? ("right" as const) : ("left" as const),
+        action: dx > 0 ? "forehand" : "backhand",
+        dist,
+        dt,
+      }
+    }
+  }
+
+  return { type: "ambiguous" as const, dist, dt }
+}
+
+export const TennisCanvas = React.forwardRef<TennisCanvasHandle, TennisCanvasProps>(
+  function TennisCanvas(
+    {
+      viewMode: propViewMode,
+      onViewModeChange,
+      className,
+      resetTrigger,
+      onBallHit,
+      onBallContact,
+      onScoreChange,
+    }: TennisCanvasProps,
+    ref
+  ) {
   const containerRef = React.useRef<HTMLDivElement>(null)
   const animFrameRef = React.useRef<number | null>(null)
 
@@ -73,12 +131,14 @@ export function TennisCanvas({ viewMode: propViewMode, onViewModeChange, classNa
   const swingStateRef = React.useRef<{
     active: boolean
     progress: number
-    type: "forehand" | "backhand" | "serve"
+    type: "forehand" | "backhand" | "serve" | "smash"
+    powerMultiplier: number
     hitEvaluated: boolean
   }>({
     active: false,
     progress: 0,
     type: "forehand",
+    powerMultiplier: 1.0,
     hitEvaluated: false,
   })
 
@@ -135,33 +195,75 @@ export function TennisCanvas({ viewMode: propViewMode, onViewModeChange, classNa
     requestAnimationFrame(animateSpark)
   }
 
+  // Ref tracking untuk callbacks props
+  const onScoreChangeRef = React.useRef(onScoreChange)
+  onScoreChangeRef.current = onScoreChange
+  const onBallContactRef = React.useRef(onBallContact)
+  onBallContactRef.current = onBallContact
+  const onBallHitRef = React.useRef(onBallHit)
+  onBallHitRef.current = onBallHit
+
   // Tennis Physics Engine Instance
   const engineRef = React.useRef<TennisPhysicsEngine | null>(null)
   if (!engineRef.current) {
     engineRef.current = new TennisPhysicsEngine(
       (newScore) => setScoreState({ ...newScore }),
-      (text, color) => showToast(text, color)
+      (text, color) => showToast(text, color),
+      (details) => {
+        onBallContactRef.current?.(details)
+        onBallHitRef.current?.()
+      },
+      (newScore, winner) => {
+        onScoreChangeRef.current?.(newScore, winner)
+      }
     )
   }
 
-  // Eksekusi Ayunan Raket (Forehand / Backhand / Serve)
-  const executeSwing = (swingType: "forehand" | "backhand" | "serve" | boolean = "forehand") => {
+  React.useEffect(() => {
+    if (engineRef.current) {
+      engineRef.current.onBallContact = (details) => {
+        onBallContactRef.current?.(details)
+        onBallHitRef.current?.()
+      }
+      engineRef.current.onBallHit = (details) => {
+        onBallContactRef.current?.(details)
+        onBallHitRef.current?.()
+      }
+      engineRef.current.onScoreChange = (score, winner) => {
+        onScoreChangeRef.current?.(score, winner)
+      }
+    }
+  }, [onBallContact, onBallHit, onScoreChange])
+
+  // Eksekusi Ayunan Raket (Forehand / Backhand / Serve / Smash)
+  const executeSwing = (
+    swingType: "forehand" | "backhand" | "serve" | "smash" | boolean = "forehand",
+    powerMultiplier = 1.0
+  ) => {
     if (swingStateRef.current.active) return
 
-    const type: "forehand" | "backhand" | "serve" =
+    let type: "forehand" | "backhand" | "serve" | "smash" =
       typeof swingType === "boolean"
         ? swingType ? "forehand" : "backhand"
         : swingType
+
+    const eng = engineRef.current
+    if (eng) {
+      if (eng.state === "serving_toss" && (type === "forehand" || type === "backhand")) {
+        type = "serve"
+      }
+    }
 
     playerIsSwingingRef.current = true
     swingStateRef.current = {
       active: true,
       progress: 0,
       type,
+      powerMultiplier: powerMultiplier ?? 1.0,
       hitEvaluated: false,
     }
     setActiveAnim(type === "forehand" ? "swing_fh" : type === "backhand" ? "swing_bh" : "swing_fh")
-    playTennisSwingWhoosh(type === "serve" ? 1.3 : 1.0)
+    playTennisSwingWhoosh(type === "serve" || type === "smash" ? 1.3 : 1.0)
   }
 
   // Handle Tombol Servis atau Ayunan Universal (Spacebar / Click)
@@ -182,6 +284,21 @@ export function TennisCanvas({ viewMode: propViewMode, onViewModeChange, classNa
       executeSwing(isForehand ? "forehand" : "backhand")
     }
   }
+
+  // Expose Imperative Controls via React Ref
+  React.useImperativeHandle(ref, () => ({
+    triggerServeToss: () => {
+      if (!engineRef.current || viewModeRef.current !== "court") return false
+      return engineRef.current.triggerServeToss()
+    },
+    executeRemoteSwing: (type: "forehand" | "backhand" | "serve" | "smash", powerMultiplier = 1.0) => {
+      if (viewModeRef.current !== "court") return
+      executeSwing(type, powerMultiplier)
+    },
+    restartMatch: () => {
+      if (engineRef.current) engineRef.current.restartMatch()
+    },
+  }))
 
   // Setup Three.js Scene & Load Authentic GLB Models
   React.useEffect(() => {
@@ -475,13 +592,14 @@ export function TennisCanvas({ viewMode: propViewMode, onViewModeChange, classNa
         swingProgressRef.current = sw.progress
 
         if (playerRef.current) {
-          playerRef.current.setSwingAnimation(sw.progress, sw.type)
+          const animType = (sw.type === "serve" || sw.type === "smash") ? "serve" : sw.type
+          playerRef.current.setSwingAnimation(sw.progress, animType)
         }
 
         if (!sw.hitEvaluated && sw.progress >= 0.42) {
           sw.hitEvaluated = true
           if (engine && viewModeRef.current === "court") {
-            const shotQuality = engine.handlePlayerSwing(sw.type === "serve" ? "smash" : sw.type)
+            const shotQuality = engine.handlePlayerSwing(sw.type, sw.powerMultiplier)
             if (shotQuality !== "miss") {
               const isSuperHit = engine.isRocketServe || engine.isSmashShot
               cameraRecoilRef.current = engine.isRocketServe ? 0.32 : engine.isSmashShot ? 0.2 : 0.06
@@ -708,15 +826,64 @@ export function TennisCanvas({ viewMode: propViewMode, onViewModeChange, classNa
     }
   }, [resetTrigger])
 
-  // Pointer Handlers untuk Drag 360° di Studio Mode
+  // Touch swipe gesture tracking (Direct Canvas Mobile Motion)
+  const touchStartRef = React.useRef<{ x: number; y: number; time: number } | null>(null)
+
+  const handleSwipeAction = (dx: number, dy: number) => {
+    if (!engineRef.current || viewModeRef.current !== "court") return
+    const eng = engineRef.current
+
+    if (Math.abs(dy) >= Math.abs(dx)) {
+      if (dy < -20) {
+        // Upward (dy < -20): toss ball if in idle_serve, or smash if in serving_toss
+        if (eng.state === "idle_serve" && eng.score.server === "player") {
+          eng.triggerServeToss()
+        } else if (eng.state === "serving_toss" && eng.score.server === "player") {
+          executeSwing("serve")
+        } else {
+          const isForehand = eng.ballPos.x >= eng.playerCurrentX
+          executeSwing(isForehand ? "forehand" : "backhand")
+        }
+      } else if (dy > 20) {
+        // Downward (dy > 20): smash in serving_toss or drop shot / smash in rally
+        if (eng.state === "serving_toss" && eng.score.server === "player") {
+          executeSwing("serve")
+        } else if (eng.state === "in_play") {
+          executeSwing("smash")
+        } else {
+          handleAction()
+        }
+      }
+    } else {
+      if (dx > 20) {
+        // Rightward (dx > 20): forehand drive
+        executeSwing("forehand")
+      } else if (dx < -20) {
+        // Leftward (dx < -20): backhand drive
+        executeSwing("backhand")
+      }
+    }
+  }
+
+  // Pointer Handlers untuk Drag 360° di Studio Mode dan Touch Swipe / Mouse di Court Mode
   const handlePointerDown = (e: React.PointerEvent) => {
     if (viewMode === "studio") {
       isDraggingRef.current = true
       lastMousePosRef.current = { x: e.clientX, y: e.clientY }
-      ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+      try {
+        ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+      } catch {}
     } else {
-      // Di court mode, klik layar memicu ayunan raket / servis
-      handleAction()
+      if (e.pointerType === "touch") {
+        touchStartRef.current = {
+          x: e.clientX,
+          y: e.clientY,
+          time: performance.now(),
+        }
+      } else {
+        // Di court mode dengan mouse, klik layar langsung memicu ayunan raket / servis
+        handleAction()
+      }
     }
   }
 
@@ -734,6 +901,24 @@ export function TennisCanvas({ viewMode: propViewMode, onViewModeChange, classNa
       const deltaX = e.clientX - lastMousePosRef.current.x
       lastMousePosRef.current = { x: e.clientX, y: e.clientY }
       characterRotationYRef.current += deltaX * 0.015
+      return
+    }
+
+    // Touch swipe gesture differentiation on move
+    if (e.pointerType === "touch" && touchStartRef.current) {
+      const start = touchStartRef.current
+      const now = performance.now()
+      const dt = now - start.time
+      if (dt <= 350) {
+        const dx = e.clientX - start.x
+        const dy = e.clientY - start.y
+        const dist = Math.hypot(dx, dy)
+        if (dist >= 20) {
+          touchStartRef.current = null
+          handleSwipeAction(dx, dy)
+          return
+        }
+      }
       return
     }
 
@@ -814,10 +999,30 @@ export function TennisCanvas({ viewMode: propViewMode, onViewModeChange, classNa
   }
 
   const handlePointerUp = (e: React.PointerEvent) => {
-    isDraggingRef.current = false
-    try {
-      ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
-    } catch {}
+    if (viewMode === "studio") {
+      isDraggingRef.current = false
+      try {
+        ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
+      } catch {}
+      return
+    }
+
+    if (e.pointerType === "touch" && touchStartRef.current) {
+      const start = touchStartRef.current
+      touchStartRef.current = null
+      const now = performance.now()
+      const dt = now - start.time
+      const dx = e.clientX - start.x
+      const dy = e.clientY - start.y
+      const dist = Math.hypot(dx, dy)
+
+      if (dist >= 20 && dt <= 350) {
+        handleSwipeAction(dx, dy)
+      } else if (dist < 15) {
+        // Fallback tap
+        handleAction()
+      }
+    }
   }
 
   // Helper tampilan skor tenis (0 -> Love, 15, 30, 40, Ad)
@@ -1031,4 +1236,5 @@ export function TennisCanvas({ viewMode: propViewMode, onViewModeChange, classNa
       )}
     </div>
   )
-}
+})
+TennisCanvas.displayName = "TennisCanvas"
