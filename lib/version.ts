@@ -5,12 +5,22 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.81"
+export const APP_VERSION = "v2.3.82"
 export const APP_BUILD = "2026.10.15"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.82",
+    date: "15 Okt 2026",
+    codename: "TENNIS98.EXE - Safe Casual Swing Sensitivity & Effortless Wrist Flick",
+    changes: [
+      "Safe Casual Swing (Mode Ringan Default): Threshold ayunan raket diturunkan dari 8.5 m/s² ke 4.5 m/s² dan filter EMA gravitasi dioptimalkan (alpha 0.95). Pemain cukup melakukan kibasan santai pergelangan tangan (wrist flick) layaknya stik Wii Remote asli tanpa perlu menghempas HP dengan kencang yang berisiko terlepas.",
+      "3-Level Sensitivity Switcher: Tombol [⚡ RINGAN] / [⚡ SEDANG] / [⚡ KUAT] di mobile controller untuk memilih tingkat kepekaan ayunan sesuai ruang bermain, tersimpan otomatis di localStorage.",
+      "Safety Guidance Banner: Badge panduan visual di layar HP yang mengonfirmasi bahwa cukup ayunan santai tanpa perlu dihempas.",
+    ],
+  },
   {
     version: "v2.3.81",
     date: "15 Okt 2026",

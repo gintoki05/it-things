@@ -19,6 +19,7 @@ export interface TennisCanvasHandle {
   triggerServeToss: () => boolean
   executeRemoteSwing: (type: "forehand" | "backhand" | "serve" | "smash", powerMultiplier?: number) => void
   restartMatch: () => void
+  setHandedness: (handedness: "right" | "left") => void
 }
 
 export interface TennisCanvasProps {
@@ -235,6 +236,20 @@ export const TennisCanvas = React.forwardRef<TennisCanvasHandle, TennisCanvasPro
     }
   }, [onBallContact, onBallHit, onScoreChange])
 
+  const handednessRef = React.useRef<"right" | "left">("right")
+
+  // Helper: petakan sisi layar ke tipe pukulan sesuai tangan dominan
+  // Untuk tangan kanan (default): sisi kanan = forehand, sisi kiri = backhand.
+  // Untuk kidal: sisi kiri = forehand, sisi kanan = backhand.
+  const strokeForScreenSide = (side: "left" | "right"): "forehand" | "backhand" => {
+    const isRightHanded = handednessRef.current === "right"
+    if (side === "right") {
+      return isRightHanded ? "forehand" : "backhand"
+    } else {
+      return isRightHanded ? "backhand" : "forehand"
+    }
+  }
+
   // Eksekusi Ayunan Raket (Forehand / Backhand / Serve / Smash)
   const executeSwing = (
     swingType: "forehand" | "backhand" | "serve" | "smash" | boolean = "forehand",
@@ -280,7 +295,7 @@ export const TennisCanvas = React.forwardRef<TennisCanvasHandle, TennisCanvasPro
       executeSwing("serve")
     } else {
       // Auto pilih forehand jika bola di kanan pemain, backhand jika di kiri
-      const isForehand = eng.ballPos.x >= eng.playerCurrentX
+      const isForehand = eng.isBallOnPlayerForehandSide()
       executeSwing(isForehand ? "forehand" : "backhand")
     }
   }
@@ -330,7 +345,7 @@ export const TennisCanvas = React.forwardRef<TennisCanvasHandle, TennisCanvasPro
         // 3. Jika sedang in_play:
         // Otomatis tentukan forehand/backhand sesuai posisi bola bila tipe generic
         if (eng.state === "in_play") {
-          const isForehand = eng.ballPos.x >= eng.playerCurrentX
+          const isForehand = eng.isBallOnPlayerForehandSide()
           const resolvedType =
             type === "smash" ? "smash" : type === "serve" ? (isForehand ? "forehand" : "backhand") : type
           executeSwing(resolvedType, powerMultiplier)
@@ -341,6 +356,15 @@ export const TennisCanvas = React.forwardRef<TennisCanvasHandle, TennisCanvasPro
     },
     restartMatch: () => {
       if (engineRef.current) engineRef.current.restartMatch()
+    },
+    setHandedness: (h: "right" | "left") => {
+      handednessRef.current = h
+      if (engineRef.current) {
+        engineRef.current.setPlayerHandedness(h)
+      }
+      if (playerRef.current) {
+        playerRef.current.setHandedness(h)
+      }
     },
   }))
 
@@ -485,6 +509,10 @@ export const TennisCanvas = React.forwardRef<TennisCanvasHandle, TennisCanvasPro
         setLoadingMsg("Memuat model 3D Mii Player...")
         const playerActor = await loadMiiPlayerGLB(false)
         if (isCancelled) return
+        playerActor.setHandedness(handednessRef.current)
+        if (engineRef.current) {
+          engineRef.current.setPlayerHandedness(handednessRef.current)
+        }
         scene.add(playerActor.group)
         playerRef.current = playerActor
 
@@ -530,9 +558,9 @@ export const TennisCanvas = React.forwardRef<TennisCanvasHandle, TennisCanvasPro
         e.preventDefault()
         handleAction()
       } else if (e.code === "KeyZ" || e.code === "ArrowLeft") {
-        executeSwing("backhand")
+        executeSwing(strokeForScreenSide("left"))
       } else if (e.code === "KeyX" || e.code === "ArrowRight") {
-        executeSwing("forehand")
+        executeSwing(strokeForScreenSide("right"))
       } else if (e.code === "KeyR") {
         if (engineRef.current) engineRef.current.restartMatch()
       }
@@ -591,13 +619,13 @@ export const TennisCanvas = React.forwardRef<TennisCanvasHandle, TennisCanvasPro
         }
 
         if (dx > 14) {
-          executeSwing("forehand")
+          executeSwing(strokeForScreenSide("right"))
           lastMouseSwingTimeRef.current = now
         } else if (dx < -14) {
-          executeSwing("backhand")
+          executeSwing(strokeForScreenSide("left"))
           lastMouseSwingTimeRef.current = now
         } else if (Math.abs(dy) > 16) {
-          const isForehand = eng.ballPos.x >= eng.playerCurrentX
+          const isForehand = eng.isBallOnPlayerForehandSide()
           executeSwing(isForehand ? "forehand" : "backhand")
           lastMouseSwingTimeRef.current = now
         }
@@ -885,7 +913,7 @@ export const TennisCanvas = React.forwardRef<TennisCanvasHandle, TennisCanvasPro
         } else if (eng.state === "serving_toss" && eng.score.server === "player") {
           executeSwing("serve")
         } else {
-          const isForehand = eng.ballPos.x >= eng.playerCurrentX
+          const isForehand = eng.isBallOnPlayerForehandSide()
           executeSwing(isForehand ? "forehand" : "backhand")
         }
       } else if (dy > 20) {
@@ -901,10 +929,10 @@ export const TennisCanvas = React.forwardRef<TennisCanvasHandle, TennisCanvasPro
     } else {
       if (dx > 20) {
         // Rightward (dx > 20): forehand drive
-        executeSwing("forehand")
+        executeSwing(strokeForScreenSide("right"))
       } else if (dx < -20) {
         // Leftward (dx < -20): backhand drive
-        executeSwing("backhand")
+        executeSwing(strokeForScreenSide("left"))
       }
     }
   }
@@ -1028,14 +1056,14 @@ export const TennisCanvas = React.forwardRef<TennisCanvasHandle, TennisCanvasPro
       // Kibas ke KANAN -> Forehand Drive!
       // Kibas ke KIRI -> Backhand Drive!
       if (dx > 16) {
-        executeSwing("forehand")
+        executeSwing(strokeForScreenSide("right"))
         lastMouseSwingTimeRef.current = now
       } else if (dx < -16) {
-        executeSwing("backhand")
+        executeSwing(strokeForScreenSide("left"))
         lastMouseSwingTimeRef.current = now
       } else if (Math.abs(dy) > 18) {
         // Sentakan vertikal cepat: pilih otomatis forehand/backhand sesuai posisi bola
-        const isForehand = eng.ballPos.x >= eng.playerCurrentX
+        const isForehand = eng.isBallOnPlayerForehandSide()
         executeSwing(isForehand ? "forehand" : "backhand")
         lastMouseSwingTimeRef.current = now
       }

@@ -57,6 +57,8 @@ export interface ClassifierConfig {
   handedness?: "right" | "left"
   /** Explicit X-axis flip override (default: false) */
   invertX?: boolean
+  /** Low-pass EMA filter factor for gravity tracking (default: 0.85). Higher values (0.92-0.96) preserve slower human swings */
+  gravityAlpha?: number
 }
 
 export const DEFAULT_CLASSIFIER_CONFIG: ClassifierConfig = {
@@ -66,6 +68,7 @@ export const DEFAULT_CLASSIFIER_CONFIG: ClassifierConfig = {
   maxPowerThreshold: 32.0,
   handedness: "right",
   invertX: false,
+  gravityAlpha: 0.85,
 }
 
 /**
@@ -99,6 +102,7 @@ export class TennisGestureClassifier {
 
   constructor(config: Partial<ClassifierConfig> = {}) {
     this.config = { ...DEFAULT_CLASSIFIER_CONFIG, ...config }
+    this.gravityAlpha = this.config.gravityAlpha ?? 0.85
   }
 
   /**
@@ -139,6 +143,9 @@ export class TennisGestureClassifier {
    */
   public updateConfig(newConfig: Partial<ClassifierConfig>): void {
     this.config = { ...this.config, ...newConfig }
+    if (newConfig.gravityAlpha !== undefined) {
+      this.gravityAlpha = newConfig.gravityAlpha
+    }
   }
 
   /**

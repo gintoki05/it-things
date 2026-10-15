@@ -15,6 +15,8 @@ export interface LoadedMiiActor extends MiiAvatarObject {
     footL?: THREE.Object3D
     footR?: THREE.Object3D
   }
+  /** Mirror rig agar raket di tangan kanan/kiri anatomis pemain */
+  setHandedness: (h: "right" | "left") => void
 }
 
 /**
@@ -204,8 +206,122 @@ export async function loadMiiPlayerGLB(isOpponent = false): Promise<LoadedMiiAct
     orientCylinderSegment(arm.forearm, elbowPos, handPos)
   }
 
+  // Sistem Kaki Terpisah (Hip → Ankle)
+  // Kaki celana bawaan GLB menyatu dengan mesh Torso, sehingga saat torso condong ke depan
+  // ujung kaki terayun ke belakang menjauhi sepatu (terlihat seperti lutut menekuk terbalik).
+  // Solusi: potong segitiga kaki dari Torso, jadikan segmen sendiri yang selalu menghubungkan
+  // pangkal paha (ikut torso) ke pergelangan kaki (ikut sepatu).
+  const LEG_CUT_Y = -0.12 // Batas pangkal paha (koordinat local Torso)
+  const ANKLE_OFFSET_Y = -0.025 // Ujung kaki tertanam sedikit di dalam sepatu
+  type LegRig = {
+    group: THREE.Group
+    hipLocal: THREE.Vector3
+    restDir: THREE.Vector3
+    restLen: number
+    foot?: THREE.Object3D
+    footRest: THREE.Vector3
+  }
+  const legRigs: LegRig[] = []
+
+  if (parts.torso) {
+    const torsoNode = parts.torso
+    const hipLocalL = new THREE.Vector3(-0.102, LEG_CUT_Y, 0)
+    const hipLocalR = new THREE.Vector3(0.102, LEG_CUT_Y, 0)
+    const legGroupL = new THREE.Group()
+    const legGroupR = new THREE.Group()
+
+    const buildGeometry = (src: THREE.BufferGeometry, tris: number[], offset?: THREE.Vector3) => {
+      const g = new THREE.BufferGeometry()
+      for (const name of Object.keys(src.attributes)) {
+        const attr = src.getAttribute(name)
+        const size = attr.itemSize
+        const arr = new Float32Array(tris.length * 3 * size)
+        let k = 0
+        for (const t of tris) {
+          for (let v = 0; v < 3; v++) {
+            const idx = t + v
+            arr[k++] = attr.getX(idx)
+            if (size > 1) arr[k++] = attr.getY(idx)
+            if (size > 2) arr[k++] = attr.getZ(idx)
+            if (size > 3) arr[k++] = attr.getW(idx)
+          }
+        }
+        g.setAttribute(name, new THREE.BufferAttribute(arr, size))
+      }
+      if (offset) g.translate(-offset.x, -offset.y, -offset.z)
+      g.computeBoundingSphere()
+      return g
+    }
+
+    const torsoMeshes: THREE.Mesh[] = []
+    torsoNode.traverse((c) => {
+      if ((c as THREE.Mesh).isMesh) torsoMeshes.push(c as THREE.Mesh)
+    })
+
+    for (const mesh of torsoMeshes) {
+      const src = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry
+      const pos = src.getAttribute("position")
+      const keep: number[] = []
+      const left: number[] = []
+      const right: number[] = []
+      for (let t = 0; t + 2 < pos.count; t += 3) {
+        const cy = (pos.getY(t) + pos.getY(t + 1) + pos.getY(t + 2)) / 3
+        const cx = (pos.getX(t) + pos.getX(t + 1) + pos.getX(t + 2)) / 3
+        if (cy >= LEG_CUT_Y) keep.push(t)
+        else if (cx < 0) left.push(t)
+        else right.push(t)
+      }
+      if (!left.length && !right.length) continue
+
+      mesh.geometry = buildGeometry(src, keep)
+      const addLegMesh = (tris: number[], hip: THREE.Vector3, target: THREE.Group) => {
+        if (!tris.length) return
+        const legMesh = new THREE.Mesh(buildGeometry(src, tris, hip), mesh.material)
+        legMesh.castShadow = true
+        legMesh.receiveShadow = true
+        target.add(legMesh)
+      }
+      addLegMesh(left, hipLocalL, legGroupL)
+      addLegMesh(right, hipLocalR, legGroupR)
+    }
+
+    const registerLeg = (group: THREE.Group, hipLocal: THREE.Vector3, foot: THREE.Object3D | undefined, footRest: THREE.Vector3) => {
+      if (!group.children.length) return
+      miiScene.add(group)
+      const hipRest = hipLocal.clone().add(basePos.torso)
+      const ankleRest = new THREE.Vector3(footRest.x, footRest.y + ANKLE_OFFSET_Y, footRest.z)
+      const restVec = ankleRest.sub(hipRest)
+      legRigs.push({
+        group,
+        hipLocal,
+        restDir: restVec.clone().normalize(),
+        restLen: restVec.length(),
+        foot,
+        footRest,
+      })
+    }
+    registerLeg(legGroupL, hipLocalL, parts.footL, basePos.footL)
+    registerLeg(legGroupR, hipLocalR, parts.footR, basePos.footR)
+  }
+
+  const updateLegs = () => {
+    if (!parts.torso) return
+    for (const rig of legRigs) {
+      const hip = rig.hipLocal.clone().applyEuler(parts.torso.rotation).add(parts.torso.position)
+      const footPos = rig.foot ? rig.foot.position : rig.footRest
+      const dir = new THREE.Vector3(footPos.x, footPos.y + ANKLE_OFFSET_Y, footPos.z).sub(hip)
+      const len = dir.length()
+      if (len < 0.01) continue
+      dir.divideScalar(len)
+      rig.group.position.copy(hip)
+      rig.group.quaternion.setFromUnitVectors(rig.restDir, dir)
+      rig.group.scale.set(1, len / rig.restLen, 1)
+    }
+  }
+
   const updateAllArms = () => {
     if (!parts.torso) return
+    updateLegs()
 
     const sR = shoulderLocalR.clone()
       .applyEuler(parts.torso.rotation)
@@ -241,7 +357,15 @@ export async function loadMiiPlayerGLB(isOpponent = false): Promise<LoadedMiiAct
   }
 
   // Skala Mii agar proporsional di arena
-  miiScene.scale.setScalar(1.16)
+  // CATATAN: Di GLB, node Hand_R berada di +X sementara wajah menghadap +Z, artinya secara anatomis
+  // itu adalah tangan KIRI Mii. Untuk pemain tangan kanan, rig di-mirror (scale.x negatif) sehingga
+  // raket benar-benar di tangan kanan. Three.js otomatis membalik winding face untuk skala negatif.
+  const MII_SCALE = 1.16
+  const setHandedness = (h: "right" | "left") => {
+    miiScene.scale.set(h === "right" ? -MII_SCALE : MII_SCALE, MII_SCALE, MII_SCALE)
+  }
+  // Opponent tetap rig asli (raket di +X dunia) agar sinkron dengan offset fisika bot
+  setHandedness(isOpponent ? "left" : "right")
   rootGroup.add(miiScene)
 
   // Inisialisasi lengan awal
@@ -329,6 +453,7 @@ export async function loadMiiPlayerGLB(isOpponent = false): Promise<LoadedMiiAct
         if (parts.handL) parts.handL.position.lerp(basePos.handL, t)
         parts.head.rotation.y = -0.15 * (1 - t)
       }
+      updateAllArms()
       return
     }
 
@@ -688,6 +813,7 @@ export async function loadMiiPlayerGLB(isOpponent = false): Promise<LoadedMiiAct
     setRunningAnimation,
     setVictoryAnimation,
     resetPose,
+    setHandedness,
   }
 }
 

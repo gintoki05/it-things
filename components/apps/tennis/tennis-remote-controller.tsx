@@ -50,13 +50,60 @@ export function calculateVuMeterLevel(
   if (typeof magnitude !== "number" || isNaN(magnitude) || magnitude <= 0) {
     return 0
   }
-  if (magnitude < 8.0) return 0
+  const lowFloor = swingThreshold === 12.0 ? 8.0 : Math.max(1.5, swingThreshold * 0.6)
+  if (magnitude < lowFloor) return 0
   if (magnitude < swingThreshold) return 1
   const ratio = (magnitude - swingThreshold) / Math.max(1, maxThreshold - swingThreshold)
   if (ratio < 0.25) return 2
   if (ratio < 0.55) return 3
   if (ratio < 0.85) return 4
   return 5
+}
+
+export type SensitivityLevel = "light" | "medium" | "hard"
+
+export interface SensitivityPreset {
+  level: SensitivityLevel
+  label: string
+  shortLabel: string
+  description: string
+  swingThreshold: number
+  tossThreshold: number
+  maxPowerThreshold: number
+  gravityAlpha: number
+}
+
+export const SENSITIVITY_PRESETS: Record<SensitivityLevel, SensitivityPreset> = {
+  light: {
+    level: "light",
+    label: "Ringan (Aman & Santai)",
+    shortLabel: "RINGAN",
+    description: "Cukup kibasan pergelangan tangan santai. Sangat aman di dalam ruangan.",
+    swingThreshold: 4.5,
+    tossThreshold: 3.8,
+    maxPowerThreshold: 16.0,
+    gravityAlpha: 0.95,
+  },
+  medium: {
+    level: "medium",
+    label: "Sedang (Wii Standard)",
+    shortLabel: "SEDANG",
+    description: "Ayunan tangan wajar ala Wii Remote.",
+    swingThreshold: 6.8,
+    tossThreshold: 5.5,
+    maxPowerThreshold: 22.0,
+    gravityAlpha: 0.92,
+  },
+  hard: {
+    level: "hard",
+    label: "Kuat (Olahraga)",
+    shortLabel: "KUAT",
+    description: "Membutuhkan ayunan lengan bertenaga lebih kuat.",
+    swingThreshold: 9.5,
+    tossThreshold: 7.5,
+    maxPowerThreshold: 28.0,
+    gravityAlpha: 0.88,
+  },
 }
 
 export interface TennisRemoteControllerProps {
@@ -90,6 +137,7 @@ export function TennisRemoteController({
   // Motion Detection State
   const [permissionState, setPermissionState] = React.useState<MotionPermissionState | "prompt">("granted")
   const [handedness, setHandedness] = React.useState<"right" | "left">("right")
+  const [sensitivity, setSensitivity] = React.useState<SensitivityLevel>("light")
   const [liveMagnitude, setLiveMagnitude] = React.useState(0)
   const [lastGesture, setLastGesture] = React.useState<LastGestureInfo | null>(null)
   const [eventFeedback, setEventFeedback] = React.useState<EventFeedbackInfo | null>(null)
@@ -121,6 +169,18 @@ export function TennisRemoteController({
     } else {
       setPermissionState("granted")
     }
+
+    // Restore persisted sensitivity and handedness preferences
+    try {
+      const savedSens = localStorage.getItem("tennis_remote_sensitivity") as SensitivityLevel
+      if (savedSens && SENSITIVITY_PRESETS[savedSens]) {
+        setSensitivity(savedSens)
+      }
+      const savedHand = localStorage.getItem("tennis_remote_handedness") as "right" | "left"
+      if (savedHand === "right" || savedHand === "left") {
+        setHandedness(savedHand)
+      }
+    } catch {}
   }, [])
 
   // 2. Initialize and manage BrowserMotionListener lifecycle
@@ -133,11 +193,13 @@ export function TennisRemoteController({
       return
     }
 
+    const preset = SENSITIVITY_PRESETS[sensitivity]
     const classifier = new TennisGestureClassifier({
       handedness,
-      swingThreshold: 8.5,
-      tossThreshold: 7.0,
-      maxPowerThreshold: 28.0,
+      swingThreshold: preset.swingThreshold,
+      tossThreshold: preset.tossThreshold,
+      maxPowerThreshold: preset.maxPowerThreshold,
+      gravityAlpha: preset.gravityAlpha,
     })
     classifierRef.current = classifier
 
@@ -195,7 +257,7 @@ export function TennisRemoteController({
       listenerRef.current = null
       classifierRef.current = null
     }
-  }, [permissionState, handedness])
+  }, [permissionState, handedness, sensitivity])
 
   // 3. Smooth analog VU meter decay timer
   React.useEffect(() => {
@@ -297,6 +359,7 @@ export function TennisRemoteController({
           await channel.track({
             role: "mobile_controller",
             device: "smartphone",
+            handedness,
             connectedAt: new Date().toISOString(),
           })
         }
@@ -323,10 +386,56 @@ export function TennisRemoteController({
   const handleToggleHandedness = () => {
     const nextHandedness = handedness === "right" ? "left" : "right"
     setHandedness(nextHandedness)
+    try {
+      localStorage.setItem("tennis_remote_handedness", nextHandedness)
+    } catch {}
     if (classifierRef.current) {
       classifierRef.current.updateConfig({ handedness: nextHandedness })
     }
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: "broadcast",
+        event: "remote_settings",
+        payload: {
+          handedness: nextHandedness,
+          timestamp: Date.now(),
+        },
+      })
+      channelRef.current.track({
+        role: "mobile_controller",
+        device: "smartphone",
+        handedness: nextHandedness,
+        connectedAt: new Date().toISOString(),
+      })
+    }
     triggerHaptic("swing")
+  }
+
+  // Toggle Motion Sensitivity Preset (Light -> Medium -> Hard -> Light)
+  const handleToggleSensitivity = () => {
+    const order: SensitivityLevel[] = ["light", "medium", "hard"]
+    const nextIdx = (order.indexOf(sensitivity) + 1) % order.length
+    const nextSens = order[nextIdx]
+    setSensitivity(nextSens)
+    try {
+      localStorage.setItem("tennis_remote_sensitivity", nextSens)
+    } catch {}
+
+    const preset = SENSITIVITY_PRESETS[nextSens]
+    if (classifierRef.current) {
+      classifierRef.current.updateConfig({
+        swingThreshold: preset.swingThreshold,
+        tossThreshold: preset.tossThreshold,
+        maxPowerThreshold: preset.maxPowerThreshold,
+        gravityAlpha: preset.gravityAlpha,
+      })
+    }
+    triggerHaptic("swing")
+    setEventFeedback({
+      text: `KEPEKAAN: ${preset.shortLabel} ⚡`,
+      color: "emerald",
+      time: Date.now(),
+    })
   }
 
   // Tactile button actions with 200ms debounce
@@ -364,8 +473,13 @@ export function TennisRemoteController({
     }
   }
 
-  // Compute 0-5 VU meter level
-  const vuLevel = calculateVuMeterLevel(liveMagnitude)
+  // Compute 0-5 VU meter level using active sensitivity preset
+  const activePreset = SENSITIVITY_PRESETS[sensitivity]
+  const vuLevel = calculateVuMeterLevel(
+    liveMagnitude,
+    activePreset.swingThreshold,
+    activePreset.maxPowerThreshold
+  )
 
   return (
     <div className="relative min-h-[100dvh] w-full bg-[#141e2e] flex flex-col items-center justify-between p-2 sm:p-4 select-none touch-manipulation font-sans overflow-x-hidden">
@@ -585,16 +699,54 @@ export function TennisRemoteController({
               <span className="text-slate-400 italic">Ayunkan HP untuk memukul</span>
             )}
 
-            <button
-              type="button"
-              onClick={handleToggleHandedness}
-              className="ml-auto flex items-center gap-1 text-[10px] font-mono text-slate-300 hover:text-white bg-white/10 hover:bg-white/20 px-1.5 py-0.5 rounded cursor-pointer border border-white/20"
-              title="Ganti Tangan Dominan (Kanan / Kiri)"
-            >
-              <Hand className="size-2.5" />
-              <span>{handedness === "right" ? "KANAN" : "KIRI"}</span>
-            </button>
+            <div className="ml-auto flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={handleToggleSensitivity}
+                className={cn(
+                  "flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded cursor-pointer border transition-colors",
+                  sensitivity === "light"
+                    ? "bg-emerald-950/80 text-emerald-300 border-emerald-500/60 hover:bg-emerald-900"
+                    : sensitivity === "medium"
+                    ? "bg-amber-950/80 text-amber-300 border-amber-500/60 hover:bg-amber-900"
+                    : "bg-rose-950/80 text-rose-300 border-rose-500/60 hover:bg-rose-900"
+                )}
+                title={`Kepekaan Gerak (Aktif: ${activePreset.label}) - Klik untuk ganti`}
+              >
+                <Zap className="size-2.5" />
+                <span>{activePreset.shortLabel}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleToggleHandedness}
+                className="flex items-center gap-1 text-[10px] font-mono text-slate-300 hover:text-white bg-white/10 hover:bg-white/20 px-1.5 py-0.5 rounded cursor-pointer border border-white/20"
+                title="Ganti Tangan Dominan (Kanan / Kiri)"
+              >
+                <Hand className="size-2.5" />
+                <span>{handedness === "right" ? "KANAN" : "KIRI"}</span>
+              </button>
+            </div>
           </div>
+        </div>
+
+        {/* Safe Swing Mode Helper Note */}
+        <div className="w-full text-center text-[10px] font-mono py-1 px-2 rounded mb-1 bg-black/5 border border-black/10 select-none">
+          {sensitivity === "light" && (
+            <span className="text-emerald-800 font-bold">
+              🟢 Cukup kibas santai pergelangan tangan — tidak perlu dihempas
+            </span>
+          )}
+          {sensitivity === "medium" && (
+            <span className="text-amber-800 font-bold">
+              🟡 Ayunan tangan wajar standar Wii Sports
+            </span>
+          )}
+          {sensitivity === "hard" && (
+            <span className="text-rose-800 font-bold">
+              🔴 Ayunan bertenaga kencang
+            </span>
+          )}
         </div>
 
         {/* Center Speaker Grill (Retro Wii Remote style) */}

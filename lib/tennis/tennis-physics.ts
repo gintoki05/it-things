@@ -63,6 +63,23 @@ export class TennisPhysicsEngine {
   public playerCurrentX = 0
   public playerZ = 9.2
 
+  // Tangan dominan pemain (dipilih dari HP). Kanan = raket di sisi +X dunia (pemain menghadap -Z).
+  public playerHandedness: "right" | "left" = "right"
+
+  /** +1 untuk tangan kanan, -1 untuk kidal (mirror semua offset sisi raket) */
+  public get playerHandSign(): number {
+    return this.playerHandedness === "left" ? -1 : 1
+  }
+
+  public setPlayerHandedness(h: "right" | "left") {
+    this.playerHandedness = h === "left" ? "left" : "right"
+  }
+
+  /** Bola ada di sisi raket (forehand) pemain? Persis seperti Wii Sports: stroke dipilih dari posisi bola. */
+  public isBallOnPlayerForehandSide(): boolean {
+    return (this.ballPos.x - this.playerCurrentX) * this.playerHandSign >= 0
+  }
+
   public opponentTargetX = 0
   public opponentCurrentX = 0
   public opponentZ = -9.2
@@ -194,7 +211,7 @@ export class TennisPhysicsEngine {
 
         // Snap bola ke sweet spot raket servis di atas kepala
         this.ballPos.set(
-          this.playerCurrentX + 0.35,
+          this.playerCurrentX + 0.35 * this.playerHandSign,
           Math.min(3.1, Math.max(2.1, this.ballPos.y)),
           this.playerZ - 0.35
         )
@@ -232,12 +249,14 @@ export class TennisPhysicsEngine {
         let targetX = 0
         let targetZ = -6.8
 
-        const isForehand = swingType === "forehand" ? true : swingType === "backhand" ? false : this.ballPos.x >= this.playerCurrentX
+        const hand = this.playerHandSign
+        const isForehand =
+          swingType === "forehand" ? true : swingType === "backhand" ? false : this.isBallOnPlayerForehandSide()
         const isSmash = this.ballPos.y > 2.0 || swingType === "smash"
         this.isSmashShot = isSmash
         this.isRocketServe = false
 
-        // TIMING MEKANIK WII SPORTS:
+        // TIMING MEKANIK WII SPORTS (nilai X di bawah untuk tangan kanan, dikali `hand` agar kidal mirror):
         // Forehand:
         // Early (Z < 8.6) -> Cross-Court ke KIRI (-X)
         // Sweet spot (8.6 <= Z <= 9.6) -> Center Drive lurus bertenaga
@@ -252,13 +271,13 @@ export class TennisPhysicsEngine {
           // EARLY SWING: Pukul lebih awal -> Tarik sudut silang tajam (Cross-court)
           quality = "early"
           speedMult = 1.05
-          targetX = isForehand ? -3.4 - Math.random() * 0.8 : 3.4 + Math.random() * 0.8
+          targetX = (isForehand ? -3.4 - Math.random() * 0.8 : 3.4 + Math.random() * 0.8) * hand
           targetZ = -5.4 - Math.random() * 1.2 // Jatuh pendek sudut sempit
         } else if (this.ballPos.z > 9.6) {
           // LATE SWING: Pukul agak telat -> Terdorong lurus ke samping (Down-the-line)
           quality = "late"
           speedMult = 0.92
-          targetX = isForehand ? 2.8 + Math.random() * 0.8 : -2.8 - Math.random() * 0.8
+          targetX = (isForehand ? 2.8 + Math.random() * 0.8 : -2.8 - Math.random() * 0.8) * hand
           targetZ = -6.2 - Math.random() * 1.2 // Kedalaman sedang
         } else {
           // ON-TIME / SWEET SPOT: Pukulan tepat di samping badan
@@ -282,21 +301,21 @@ export class TennisPhysicsEngine {
         // MAGNETISASI BOLA KE SWEET SPOT MESH RAKET (Presisi Kontak Visual & Fisika)
         if (isSmash) {
           this.ballPos.set(
-            this.playerCurrentX + 0.35,
+            this.playerCurrentX + 0.35 * hand,
             Math.min(2.35, Math.max(1.8, this.ballPos.y)),
             this.playerZ - 0.35
           )
         } else if (!isForehand) {
-          // Raket Backhand menyapu di sisi kiri badan pemain
+          // Raket Backhand menyapu di sisi non-dominan badan pemain
           this.ballPos.set(
-            this.playerCurrentX - 0.52,
+            this.playerCurrentX - 0.52 * hand,
             Math.max(0.65, Math.min(1.25, this.ballPos.y)),
             this.playerZ - 0.45
           )
         } else {
-          // Raket Forehand menyapu di sisi kanan badan pemain
+          // Raket Forehand menyapu di sisi tangan dominan pemain
           this.ballPos.set(
-            this.playerCurrentX + 0.52,
+            this.playerCurrentX + 0.52 * hand,
             Math.max(0.65, Math.min(1.25, this.ballPos.y)),
             this.playerZ - 0.45
           )
@@ -529,7 +548,8 @@ export class TennisPhysicsEngine {
     // 0. Jika sedang menunggu servis, posisikan bola di samping tangan server
     if (this.state === "idle_serve") {
       if (this.score.server === "player") {
-        this.ballPos.set(this.playerCurrentX + 0.36, 0.96, this.playerZ - 0.22)
+        // Bola dipegang tangan non-raket (sisi berlawanan dari tangan dominan)
+        this.ballPos.set(this.playerCurrentX - 0.36 * this.playerHandSign, 0.96, this.playerZ - 0.22)
       } else {
         this.ballPos.set(this.opponentCurrentX - 0.36, 0.96, this.opponentZ + 0.22)
       }
