@@ -227,8 +227,8 @@ export function TennisRemoteModal({
                     )}
                   >
                     {isMobileConnected
-                      ? "🟢 HP Terhubung (Joy-Con Aktif)"
-                      : "🟡 Menunggu HP terhubung..."}
+                      ? "HP Terhubung (Joy-Con Aktif)"
+                      : "Menunggu HP terhubung..."}
                   </span>
                 </div>
 
