@@ -292,7 +292,27 @@ export const TennisCanvas = React.forwardRef<TennisCanvasHandle, TennisCanvasPro
       return engineRef.current.triggerServeToss()
     },
     executeRemoteSwing: (type: "forehand" | "backhand" | "serve" | "smash", powerMultiplier = 1.0) => {
-      if (viewModeRef.current !== "court") return
+      // 0. Jika dalam mode studio (Warm-up / Latihan Ayunan):
+      // Langsung peragakan animasi ayunan Mii, bersuara, tampilkan banner feedback, dan picu getaran di HP!
+      if (viewModeRef.current === "studio") {
+        executeSwing(type, powerMultiplier)
+        const toastText =
+          type === "forehand"
+            ? "BAGUS! AYUNAN FOREHAND 🏸"
+            : type === "backhand"
+            ? "BAGUS! AYUNAN BACKHAND 🏸"
+            : type === "serve"
+            ? "BAGUS! SERVIS OVERHEAD ⚡"
+            : "BAGUS! SMASH ROCKET 💥"
+        showToast(toastText, "#33ff66")
+        onBallContactRef.current?.({
+          hitter: "player",
+          isSmash: type === "smash",
+          speed: 18 * powerMultiplier,
+          quality: "practice",
+        })
+        return
+      }
       const eng = engineRef.current
       if (eng) {
         // 1. Jika masih menunggu servis (idle_serve) dan servis milik player:
@@ -1080,9 +1100,42 @@ export const TennisCanvas = React.forwardRef<TennisCanvasHandle, TennisCanvasPro
         </div>
       )}
 
-      {/* Studio Hint Pill (Hanya muncul di mode Studio Karakter) */}
+      {/* Feedback Toast Notification Banner (NICE SHOT!, AYUNAN FOREHAND!, OUT!) */}
+      {feedback && (
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none text-center select-none animate-in zoom-in-75 duration-150">
+          <span
+            style={{ color: feedback.color }}
+            className="font-mono text-2xl sm:text-4xl font-black tracking-widest drop-shadow-[0_4px_10px_rgba(0,0,0,0.95)]"
+          >
+            {feedback.text}
+          </span>
+        </div>
+      )}
+
+      {/* Studio / Warm-up Header Banner (Otentik Wii Sports Swing Practice) */}
       {viewMode === "studio" && (
-        <div className="absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1 bg-black/75 backdrop-blur-sm text-lime-400 font-mono text-xs rounded border border-lime-400/30 z-10 pointer-events-none shadow-lg">
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-[#000080]/90 backdrop-blur-sm border-2 border-t-white border-l-white border-r-[#808080] border-b-[#808080] px-3 sm:px-5 py-2 text-center text-white font-mono shadow-2xl z-20 max-w-[94vw]">
+          <div className="flex items-center justify-center gap-1.5 text-yellow-300 font-black text-xs sm:text-sm tracking-wider">
+            <span>🎾 WII SPORTS: UJI COBA AYUNAN & KONEKSI</span>
+          </div>
+          <p className="text-[11px] text-slate-200 mt-0.5 max-w-md mx-auto leading-tight">
+            Ayunkan HP Anda untuk mencoba gerakan raket Mii & getaran haptic sebelum bertanding!
+          </p>
+          <div className="mt-2 flex items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleToggleViewMode("court")}
+              className="px-3.5 py-1.5 bg-[#33ff66] text-black font-black text-xs sm:text-sm border-2 border-t-white border-l-white border-r-[#008000] border-b-[#008000] active:border-t-[#008000] active:border-l-[#008000] hover:bg-[#4dff79] shadow-lg cursor-pointer flex items-center gap-1.5 animate-pulse"
+            >
+              <span>🎾 MASUK KE LAPANGAN (START MATCH)</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Studio Hint Pill */}
+      {viewMode === "studio" && (
+        <div className="absolute bottom-16 left-3 hidden sm:flex items-center gap-1.5 px-3 py-1 bg-black/75 backdrop-blur-sm text-lime-400 font-mono text-xs rounded border border-lime-400/30 z-10 pointer-events-none shadow-lg">
           <span>🔄 Klik & geser mouse untuk memutar karakter 360°</span>
         </div>
       )}

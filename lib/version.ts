@@ -5,12 +5,22 @@ export interface VersionRelease {
   changes: string[]
 }
 
-export const APP_VERSION = "v2.3.80"
+export const APP_VERSION = "v2.3.81"
 export const APP_BUILD = "2026.10.15"
 export const APP_NAME = "IT-THINGS 98"
 export const APP_EDITION = "Second Edition (SE)"
 
 export const APP_CHANGELOG: VersionRelease[] = [
+  {
+    version: "v2.3.81",
+    date: "15 Okt 2026",
+    codename: "TENNIS98.EXE - Authentic Wii Sports Warm-up & Swing Practice Screen",
+    changes: [
+      "Wii Sports Warm-up Flow: Saat pertama kali membuka Tennis 98, game menampilkan karakter 3D Mii terlebih dahulu dalam mode Latihan (Warm-up / Studio) di atas podium agar pemain bisa menguji ayunan raket, koneksi HP, dan getaran haptic sebelum masuk ke lapangan.",
+      "Instant Practice Swing Feedback: Ayunan HP maupun klik/keyboard di mode studio langsung memperagakan animasi ayunan Mii, memutar audio whoosh, menampilkan toast feedback pukulan, serta memicu getaran haptic remote.",
+      "Seamless Mode Switcher: Tombol [🎾 MASUK KE LAPANGAN (START MATCH)] dan switcher toolbar [🏸 LATIHAN] / [🎾 TANDING] untuk beralih mode secara instan dan mulus.",
+    ],
+  },
   {
     version: "v2.3.80",
     date: "15 Okt 2026",

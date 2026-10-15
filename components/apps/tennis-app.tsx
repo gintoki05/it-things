@@ -13,7 +13,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js"
 export function TennisApp() {
   const [muted, setMuted] = React.useState(false)
   const [infoOpen, setInfoOpen] = React.useState(false)
-  const viewMode = "court"
+  const [viewMode, setViewMode] = React.useState<"studio" | "court">("studio")
   const [resetKey, setResetKey] = React.useState(0)
   const canvasRef = React.useRef<TennisCanvasHandle | null>(null)
 
@@ -183,6 +183,36 @@ export function TennisApp() {
           <span className="text-[11px] font-mono text-slate-600 font-bold ml-1">
             WII SPORTS 3D MATCH
           </span>
+
+          {/* Mode Switcher: Studio (Warm-up / Latihan Ayunan) vs Court (Pertandingan) */}
+          <div className="flex items-center bg-[#808080] p-0.5 border border-t-[#808080] border-l-[#808080] border-r-white border-b-white ml-1">
+            <button
+              type="button"
+              onClick={() => setViewMode("studio")}
+              className={cn(
+                "px-2 py-0.5 text-[11px] font-bold cursor-pointer transition-colors",
+                viewMode === "studio"
+                  ? "bg-[#000080] text-white shadow-inner"
+                  : "bg-[#c0c0c0] text-slate-800 hover:bg-[#d4d0c8]"
+              )}
+              title="Mode Latihan Ayunan & Uji Coba Gerakan Karakter (Wii Warm-up)"
+            >
+              🏸 LATIHAN
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("court")}
+              className={cn(
+                "px-2 py-0.5 text-[11px] font-bold cursor-pointer transition-colors",
+                viewMode === "court"
+                  ? "bg-[#000080] text-white shadow-inner"
+                  : "bg-[#c0c0c0] text-slate-800 hover:bg-[#d4d0c8]"
+              )}
+              title="Mode Pertandingan Lapangan Tenis 3D (Wii Match)"
+            >
+              🎾 TANDING
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-1.5">
@@ -276,7 +306,8 @@ export function TennisApp() {
       <div className="flex-1 relative w-full h-full min-h-[360px] bg-black">
         <TennisCanvas
           ref={canvasRef}
-          viewMode="court"
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
           resetTrigger={resetKey}
           onBallContact={handleBallContact}
           onScoreChange={handleScoreChange}
